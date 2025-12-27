@@ -362,7 +362,6 @@ document.querySelectorAll("input[data-input]").forEach(inp => {
 });
 
 window.addEventListener("load", function () {
-    setTimeout( function(){
         updateStatus("Connecting…");
         initWebSocket();
         bindEvents();
@@ -370,7 +369,6 @@ window.addEventListener("load", function () {
         syncUI("temperature");
         syncUI("rpm");
         syncUI("psi");
-        },3000);
     setTimeout( function(){
         sendControlEvent("temperature_limit" , { upperdb : Number(params["temperature"]["l1Upper"]) , lowerdb : Number(params["temperature"]["l1Lower"]) , limitid : 0 });
         sendControlEvent("temperature_limit" , { upperdb : Number(params["temperature"]["l2Upper"]) , lowerdb : Number(params["temperature"]["l2Lower"]) , limitid : 1  });
@@ -378,6 +376,6 @@ window.addEventListener("load", function () {
         sendControlEvent("rpm_limit" , { upperdb : Number(params["rpm"]["l2Upper"]) , lowerdb : Number(params["rpm"]["l2Lower"]) , limitid : 3 });
         sendControlEvent("psi_limit" , { upperdb : Number(params["psi"]["l1Upper"]) , lowerdb : Number(params["psi"]["l1Lower"]) , limitid : 4 });
         sendControlEvent("psi_limit" , { upperdb : Number(params["psi"]["l2Upper"]) , lowerdb : Number(params["psi"]["l2Lower"]) , limitid : 5 });
-        },5000);
+        },2000);
 });
 

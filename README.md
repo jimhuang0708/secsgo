@@ -22,6 +22,7 @@ From the project root directory:
 
 cd secs
 make all
+sudo cp resource /srv/secs -r
 
 After a successful build, **two binaries** will be generated:
 
@@ -59,6 +60,7 @@ Open a web browser and navigate to:
 
 Note: port is different  
 
+--
 ## Dev note
 
 | Requirement                        | Section References | Description                                                                               |

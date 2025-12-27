@@ -25,10 +25,10 @@ make all
 
 After a successful build, **two binaries** will be generated:
 
-- **Equipment Server**
+- **Equipment Server**  
   src/webserver/main
 
-- **Host Server**
+- **Host Server**  
   src/webHost/main
 
 ---
@@ -37,8 +37,8 @@ After a successful build, **two binaries** will be generated:
 
 Start both servers in separate terminals (or run them in the background):
 
-./src/webserver/main
-./src/webHost/main
+./src/webserver/main  
+./src/webHost/main  
 
 Each binary launches its own HTTP web server:
 
@@ -59,7 +59,7 @@ Open a web browser and navigate to:
 
 Note: port is different  
 
-
+## Dev note
 
 | Requirement                        | Section References | Description                                                                               |
 | ---------------------------------- | ------------------ | -----------------------------------------------------------------------------------       |

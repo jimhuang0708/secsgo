@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel=stylesheet type="text/css" href="static/css/equipment.css">
+    <meta charset="UTF-8">
+    <title>Equipment Control Panel</title>
+</head>
+<body>
+    <h1>Equipment Control Panel</h1>
+
+    <!-- 第一組：Communication Enable / Disable -->
+    <fieldset>
+        <legend>Communication</legend>
+        <label>
+            <input type="radio" name="comm" value="enable" id="commEnable" checked>
+            Enable
+        </label>
+        <label>
+            <input type="radio" name="comm" value="disable" id="commDisable">
+            Disable
+        </label>
+    </fieldset>
+
+    <!-- 第二組：四個按鈕 -->
+    <fieldset>
+        <legend>Online Control</legend>
+        <div class="button-group">
+            <button type="button" id="btnOnlineRequest">Online Request</button>
+            <button type="button" id="btnOffline">Offline</button>
+            <button type="button" id="btnOnlineRemote">Online Remote</button>
+            <button type="button" id="btnOnlineLocal">Online Local</button>
+            <p id="ctrlstate" >?</p>
+        </div>
+    </fieldset>
+
+    <!-- 第三組：三個 slider -->
+    <fieldset>
+    <legend>SV</legend>
+
+        <!-- ========================================================== -->
+        <!-- Temperature Slider -->
+        <!-- ========================================================== -->
+        <div class="param-block">
+            <div class="param-title">Temperature</div>
+            <div class="slider" data-key="temperature">
+                <div class="slider-track"></div>
+                <div class="slider-handle h-l1-lower" data-point="l1Lower"></div>
+                <div class="slider-handle h-l1-upper" data-point="l1Upper"></div>
+                <div class="slider-handle h-current"  data-point="current"></div>
+                <div class="slider-handle h-l2-lower" data-point="l2Lower"></div>
+                <div class="slider-handle h-l2-upper" data-point="l2Upper"></div>
+            </div>
+
+            <div class="value-row">
+                <input type="number" step="0.1" data-input="temperature-l1Lower">
+                <input type="number" step="0.1" data-input="temperature-l1Upper">
+                <input type="number" step="0.1" data-input="temperature-current">
+                <input type="number" step="0.1" data-input="temperature-l2Lower">
+                <input type="number" step="0.1" data-input="temperature-l2Upper">
+            </div>
+        </div>
+
+	<!-- ========================================================== -->
+	<!-- RPM Slider -->
+	<!-- ========================================================== -->
+	<div class="param-block">
+            <div class="param-title">RPM</div>
+            <div class="slider" data-key="rpm">
+		<div class="slider-track"></div>
+                <div class="slider-handle h-l1-lower" data-point="l1Lower"></div>
+                <div class="slider-handle h-l1-upper" data-point="l1Upper"></div>
+                <div class="slider-handle h-current"  data-point="current"></div>
+	        <div class="slider-handle h-l2-lower" data-point="l2Lower"></div>
+	        <div class="slider-handle h-l2-upper" data-point="l2Upper"></div>
+	    </div>
+                <div class="value-row">
+                <input type="number" step="0.1" data-input="rpm-l1Lower">
+                <input type="number" step="0.1" data-input="rpm-l1Upper">
+	        <input type="number" step="0.1" data-input="rpm-current">
+	        <input type="number" step="0.1" data-input="rpm-l2Lower">
+	        <input type="number" step="0.1" data-input="rpm-l2Upper">
+	    </div>
+	</div>
+
+
+	<!-- ========================================================== -->
+	<!-- PSI Slider -->
+	<!-- ========================================================== -->
+	<div class="param-block">
+	    <div class="param-title">PSI</div>
+	    <div class="slider" data-key="psi">
+		<div class="slider-track"></div>
+                <div class="slider-handle h-l1-lower" data-point="l1Lower"></div>
+                <div class="slider-handle h-l1-upper" data-point="l1Upper"></div>
+		<div class="slider-handle h-current"  data-point="current"></div>
+		<div class="slider-handle h-l2-lower" data-point="l2Lower"></div>
+		<div class="slider-handle h-l2-upper" data-point="l2Upper"></div>
+	    </div>
+	    <div class="value-row">
+                <input type="number" step="0.1" data-input="psi-l1Lower">
+                <input type="number" step="0.1" data-input="psi-l1Upper">
+		<input type="number" step="0.1" data-input="psi-current">
+		<input type="number" step="0.1" data-input="psi-l2Lower">
+		<input type="number" step="0.1" data-input="psi-l2Upper">
+	    </div>
+	</div>
+
+    </fieldset>
+    <fieldset>
+        <legend>Chat</legend>
+        From Host : <p id="chatbox"> </p>
+        <button type="button" id="btnSendText">(S10F1)SendText</button><input type="text" id="sendtextcontent" style="margin:10px" value="I am fine">
+    </fieldset>
+
+    <fieldset>
+        <legend>Alarm Simulate</legend>
+        <button type="button" id="btnZombieAttack">Zombie attack</button>
+        <button type="button" id="btnRobotRebellion">Robot rebellion</button>
+    </fieldset>
+
+
+    <div id="status">WebSocket: <span id="wsState">Connecting…</span></div>
+    <script type="text/javascript" src="static/js/equipment.js"></script>
+</body>
+</html>

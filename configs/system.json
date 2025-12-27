@@ -1,0 +1,507 @@
+{
+  "syssv": [
+    {
+      "name": "MDLN",
+      "units": "",
+      "id": 1,
+      "nodevalue": {
+        "type": "A",
+        "value": "MDLN"
+      }
+    },
+    {
+      "name": "REV",
+      "units": "",
+      "id": 2,
+      "nodevalue": {
+        "type": "A",
+        "value": "SOFTREV"
+      }
+    },
+    {
+      "name": "CONTROL_STATE",
+      "units": "",
+      "id": 3,
+      "desc": "1= Offline/ Equipment Offline,2= Offline/Attempt Online,3= Offline/Host offline,4= Online Local,5= Online Remote",
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "PRE_CONTROL_STATE",
+      "units": "",
+      "id": 4,
+      "desc": "0=none,1= Offline/ Equipment Offline,2= Offline/Attempt Online,3= Offline/Host offline,4= Online Local,5= Online Remote",
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "TEST",
+      "units": "kilo",
+      "id": 5,
+      "nodevalue": {
+        "type": "L",
+        "items": [
+          {
+            "type": "L",
+            "items": []
+          },
+          {
+            "type": "L",
+            "items": [
+              {
+                "type": "A",
+                "value": "text  12312text1"
+              },
+              {
+                "type": "U8",
+                "values": [1234567890,9876543210]
+              },
+              {
+                "type": "B",
+                "bytes": "0A0B"
+              },
+              {
+                "type": "F4",
+                "values": [1.1,2.2]
+              }
+
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "temperature",
+      "units": "degree",
+      "id": 6,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          50
+        ]
+      },
+      "limitevt": 307,
+      "max": {
+        "type": "U4",
+        "values": [
+          60
+        ]
+      },
+      "min": {
+        "type": "U4",
+        "values": [
+          40
+        ]
+      }
+    },
+    {
+      "name": "Rotation",
+      "units": "rpm",
+      "id": 7,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          50
+        ]
+      },
+      "limitevt": 308,
+      "max": {
+        "type": "U4",
+        "values": [
+          100
+        ]
+      },
+      "min": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "Pressure",
+      "units": "psi",
+      "id": 8,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          50
+        ]
+      },
+      "limitevt": 309,
+      "max": {
+        "type": "U4",
+        "values": [
+          100
+        ]
+      },
+      "min": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    }
+
+
+  ],
+  "sysdv": [
+    {
+      "name": "ECID_CHANGED",
+      "units": "",
+      "id": 101,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "EC_VALUE_CHANGED",
+      "units": "",
+      "id": 102,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "PREVIOUS_EC_VALUE",
+      "units": "",
+      "id": 103,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "LM_LIMITID",
+      "id": 104,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+
+    },
+    {
+      "name": "LM_TRANSITION",
+      "id": 105,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "LM_VALUE",
+      "id": 106,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "LM_UPPER",
+      "id": 107,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "LM_LOWER",
+      "id": 108,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    }
+  ],
+  "sysec": [
+    {
+      "name": "INIT_COMM_STATE",
+      "units": "",
+      "id": 201,
+      "desc": "0:Disable, 1:Enable",
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      },
+      "max": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      },
+      "min": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      }
+    },
+    {
+      "name": "INIT_CONTROL_STATE",
+      "units": "",
+      "id": 202,
+      "desc": "1:OffLine, 2:OnLine",
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      },
+      "max": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      },
+      "min": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      }
+    },
+    {
+      "name": "OFF_LINE_SUBSTATE",
+      "units": "",
+      "id": 203,
+      "desc": "1:Eqp. OFF-line , 2:Attempt On-line , 3:Host Off-line",
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      },
+      "max": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      },
+      "min": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      }
+    },
+    {
+      "name": "ON_LINE_FAILED",
+      "units": "",
+      "id": 204,
+      "desc": "1:Eqp. OFF-line , 3:Host Off-line",
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      },
+      "max": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      },
+      "min": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      }
+    },
+    {
+      "name": "ON_LINE_SUBSTATE",
+      "units": "",
+      "id": 205,
+      "desc": "4:On-line/Local, 5:ON-line/Remote",
+      "nodevalue": {
+        "type": "F4",
+        "values": [
+          4,
+          5
+        ]
+      },
+      "max": {
+        "type": "F4",
+        "values": [
+          6.6,
+          7.7
+        ]
+      },
+      "min": {
+        "type": "F4",
+        "values": [
+          8.8,
+          9.9
+        ]
+      }
+    },
+    {
+      "name": "TEST",
+      "units": "myunits",
+      "id": 206,
+      "desc": "4:On-line/Local, 5:ON-line/Remote",
+      "nodevalue": {
+        "type": "A",
+        "value": "here is default value,but you can set later"
+      },
+      "max": {
+        "type": "A",
+        "value": "maxvalue"
+      },
+      "min": {
+        "type": "A",
+        "value": "minvalue"
+      }
+    }
+  ],
+
+  "sysevt" :  [
+               {
+                   "name"  : "CONTROL_STATE_LOCAL",
+                   "id"    : 300,
+                   "vid"   : [ ],
+                   "rpt"   : [ 1 ],
+                   "enable": true
+               },
+               {
+                   "name"  : "CONTROL_STATE_REMOTE",
+                   "id"    : 301,
+                   "vid"   : [ ],
+                   "rpt"   : [ 1 ],
+                   "enable": true
+
+
+               },
+               {
+                   "name"  : "CONTROL_STATE_OFFLINE",
+                   "id"    : 302,
+                   "vid"   : [ ],
+                   "rpt"   : [ 1 ],
+                   "enable": true
+
+               },
+               {
+                   "name"  : "EQ_CONST_CHANGED",
+                   "id"    : 303,
+                   "vid"  : [ 101,102,103 ],
+                   "rpt"   : [ ],
+                   "enable": true
+               },
+               {
+                   "name"  : "zombie_evt",
+                   "id"    : 304,
+                   "vid"  : [ ],
+                   "rpt"   : [1],
+                   "enable": true
+               },
+               {
+                   "name"  : "robot_evt",
+                   "id"    : 305,
+                   "vid"  : [ ],
+                   "rpt"   : [1],
+                   "enable": true
+               },
+               {
+                   "name"  : "msg_recognition",
+                   "id"    : 306,
+                   "vid"  : [ ],
+                   "rpt"   : [],
+                   "enable": true
+               },
+               {
+                   "name" : "limit_evt_vid6",
+                   "id"    : 307,
+                   "vid"  : [],
+                   "rpt"   : [2],
+                   "enable": true
+               },
+               {
+                   "name" : "limit_evt_vid7",
+                   "id"    : 308,
+                   "vid"  : [],
+                   "rpt"   : [3],
+                   "enable": true
+               },
+               {
+                   "name" : "limit_evt_vid8",
+                   "id"    : 309,
+                   "vid"  : [],
+                   "rpt"   : [4],
+                   "enable": true
+               }
+
+
+
+             ],
+
+  "sysalarm" : [
+               {
+                   "name"   : "zombie_attack",
+                   "id"     : 1,
+                   "text"   : "zombie comes",
+                   "evt"    : 304,
+                   "enable" : true
+               },
+               {
+                   "name"   : "robot_rebellion",
+                   "id"     : 2,
+                   "text"   : "AI crisis",
+                   "evt"    : 305,
+                   "enable" : true
+               }
+
+
+            ],
+
+  "sysrpt" :  [
+               {
+                   "name"  : "CONTROL_STATE_RPT",
+                   "id"    : 1,
+                   "vid"   : [ 3,4,5 ]
+               },
+               {
+                   "name"  : "LIMIT_RPT6",
+                   "id"    : 2,
+                   "vid"   : [ 6,104,105,106,107,108 ]
+               },
+               {
+                   "name"  : "LIMIT_RPT7",
+                   "id"    : 3,
+                   "vid"   : [ 7,104,105,106,107,108 ]
+               },
+               {
+                   "name"  : "LIMIT_RPT8",
+                   "id"    : 4,
+                   "vid"   : [ 8,104,105,106,107,108 ]
+               }
+            ]
+
+}

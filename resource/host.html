@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel=stylesheet type="text/css" href="static/css/host.css">
+    <meta charset="UTF-8">
+    <title>Host Control Panel</title>
+</head>
+<body>
+    <h1>Host Control Panel</h1>
+
+    <!-- 第二組：四個按鈕 -->
+    <fieldset>
+        <legend>Online Control</legend>
+        <div class="button-group">
+            <button type="button" id="btnOnlineRequest">Host request online </button>
+            <button type="button" id="btnOfflineRequest">Host request offline</button>
+        </div>
+    </fieldset>
+
+    <!-- 第三組：三個 slider -->
+    <fieldset>
+        <legend>Content</legend>
+        <div class="sv-container">
+            <!-- 左邊：textarea -->
+            <div class="sv-left">
+                <textarea id="sv-textarea" readonly></textarea>
+            </div>
+            <!-- 右邊：按鈕區（可捲動） -->
+            <div class="sv-right">
+                <div class="sv-buttons">
+                    <button type="button" id="cleartext" >Clear text</button>
+                    <div>
+                        <button type="button" id="s1f3" style="width:50%">(S1F3)Selected Equipment Status</button> 
+                        <input type="text" id="s1f3_param" style="height:25px;width:45%" value="6,7,8"></input>
+                    </div>
+                    <div>
+                        <button type="button" id="s1f11" style="width:50%">(S1F11)Status Variable Namelist</button>
+                        <input type="text" id="s1f11_param" style="height:25px;width:45%" value="6,7,8"></input>
+                     </div>
+                    <div>
+                        <button type="button" id="s2f13" style="width:50%">(S2F13)Equipment Constant</button>
+                        <input type="text" id="s2f13_param" style="height:25px;width:45%" value="201,202,203"></input>
+                    </div>
+                    <div>
+                        <button type="button" id="s2f15" style="width:50%">(S2F15)Set Equipment Constant</button>
+                        <input type="text" id="s2f15_param" style="height:25px;width:45%" value="201=10,202=11,203=12"></input>
+                    </div>
+                    <div>
+                        <button type="button" id="s2f29" style="width:50%">(S2F29)Equipment Constant Namelist </button>
+                        <input type="text" id="s2f29_param" style="height:25px;width:45%" value="201,202,203"></input>
+                    </div> 
+                    <button type="button">Button 4</button>
+                    <button type="button">Button 5</button>
+                    <button type="button">Button 6</button>
+                    <button type="button">Button 7</button>
+                    <button type="button">Button 8</button>
+                </div>
+            </div>
+        </div>
+    </fieldset>
+
+    <fieldset>
+        <legend>Chat</legend>
+        From Equipment : <p id="chatbox"> </p>
+        <button type="button" id="s10f3">(S10F3)SendText</button><input type="text" id="sendtextcontent" style="margin:10px" value="How are you?">
+    </fieldset>
+
+    <fieldset>
+        <legend>Remote Command</legend>
+        <button type="button" id="s2f41">(S2F41)SendRemoteCommand</button>
+    </fieldset>
+    <fieldset>
+        <legend>Trace Data Collection</legend>
+        <div>
+            <button type="button" id="s2f23" style="height:25px;width:200px">(S2F23)Trace Initialize Send</button>
+            TRID&nbsp  <input type="number" id="s2f23_trid" style="height:25px;width:50px" value=1>
+            DSPER&nbsp<input type="text" id="s2f23_dsper" style="height:25px;width:50px" value="000001"></input>
+            TOTSMP&nbsp<input type="number" id="s2f23_totsmp" style="height:25px;width:50px" value=10 >
+            REPGSZ&nbsp<input type="number" id="s2f23_repgsz" style="height:25px;width:50px" value=2>
+            VIDs&nbsp<input type="text" id="s2f23_vids" style="height:25px;width:45%" value="6,7,8"></input>
+        </div>
+
+
+    </fieldset>
+    <fieldset>
+        <legend>Limit monitor</legend>
+        <button type="button" id="s2f45">(S2F45)Define Variable Limit Attributes</button>
+        <button type="button" id="s2f47">(S2F47)Variable Limit Attribute Request</button>
+    </fieldset>
+
+
+
+    <div id="status">WebSocket: <span id="wsState">Connecting…</span></div>
+    <script type="text/javascript" src="static/js/host.js"></script>
+</body>
+</html>

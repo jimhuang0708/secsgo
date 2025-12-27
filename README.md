@@ -12,7 +12,7 @@
 
 2. Extract the archive and move the `go` directory to `/var`:
 
-   tar -xzf go*.tar.gz
+   tar -xzf go*.tar.gz  
    sudo mv go /var/
 ---
 

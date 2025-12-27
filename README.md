@@ -20,9 +20,9 @@
 
 From the project root directory:
 
-cd secs
-make all
-sudo cp resource /srv/secs -r
+cd secs  
+make all  
+sudo cp resource /srv/secs -r  
 
 After a successful build, **two binaries** will be generated:
 

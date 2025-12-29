@@ -51,10 +51,10 @@ func (cs * CTRLSTATE)TellUI(){
 }
 
 
-func (cs * CTRLSTATE)trigEvt(e uint32){
+func (cs * CTRLSTATE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
     p := make(map[string]interface{})
     p["evtid"] = e
-    p["dvctx"] = make(map[uint32]interface{})
+    p["dvctx"] = dvCtx
     cs.oChan <- Evt{ cmd : "TRIG_EVENT" , msg : p ,ts : time.Now().Unix()  }
     return
 }
@@ -104,12 +104,17 @@ func (cs * CTRLSTATE)updateCTRLSTATE(CTRLSTATE string,ctrlSubState string){
         //fill related sv
         data.SetVidValue(3,sm.CreateUintNode(4,stateCodeWill) )
         data.SetVidValue(4,sm.CreateUintNode(4,stateCodeNow) )
+        dvContext := make(map[uint32]interface{})
+        vidList := data.GetDvbyName( "CURRENT_STATE_NAME")
         if(stateCodeWill == 1 || stateCodeWill == 2 || stateCodeWill == 3){
-            cs.trigEvt(302) //offline
+            dvContext[ vidList[0] ] = sm.CreateASCIINode("OFFLINE")
+            cs.trigEvt(302,dvContext) //offline
         } else if(stateCodeWill == 4){
-            cs.trigEvt(300) //local
+            dvContext[ vidList[0] ] =  sm.CreateASCIINode("ONLINE_LOCAL")
+            cs.trigEvt(300,dvContext) //local
         } else if(stateCodeWill == 5){
-            cs.trigEvt(301) //remote
+            dvContext[ vidList[0] ] =  sm.CreateASCIINode("ONLINE_REMOTE")
+            cs.trigEvt(301,dvContext) //remote
        }
     }
     cs.TellUI()

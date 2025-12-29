@@ -217,6 +217,7 @@ func (conn *WsConn) readWebSocket(ctx context.Context,cmdChan *chan string) {
 }
 
 func StartHostActive(hc *secs.HostContext){
+    //conn, err := net.Dial("tcp", "192.168.51.118:5000")
     conn, err := net.Dial("tcp", ":5000")
     if err != nil {
         fmt.Println("Error dialing:", err)

@@ -237,6 +237,14 @@
           0
         ]
       }
+    },
+    {
+      "name": "CURRENT_STATE_NAME",
+      "id": 109,
+      "nodevalue": {
+        "type": "A",
+        "value": ""
+      }
     }
   ],
   "sysec": [
@@ -485,7 +493,7 @@
                {
                    "name"  : "CONTROL_STATE_RPT",
                    "id"    : 1,
-                   "vid"   : [ 3,4,5 ]
+                   "vid"   : [ 109 ]
                },
                {
                    "name"  : "LIMIT_RPT6",

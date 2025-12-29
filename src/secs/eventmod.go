@@ -127,8 +127,12 @@ func (em * EVENTMODULE)sendS2F38(msg *sm.DataMessage,result string){
     return
 }
 
-func (em * EVENTMODULE)sendS6F11(node sm.ElementType){
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 11, true, node ,em.deviceID , 0 , "ALL"),
+func (em * EVENTMODULE)sendS6F11(node sm.ElementType,force bool){
+    cmd :=  "send"
+    if(force){
+        cmd = "sendforce"
+    }
+    act := Evt{ cmd : cmd , msg : sm.CreateDataMessage( 6, 11, true, node ,em.deviceID , 0 , "ALL"),
                 ts : time.Now().Unix()   }
     fmt.Printf("send report\n")
     em.oChan <- act
@@ -458,24 +462,32 @@ func (em * EVENTMODULE)processMsg(msg *sm.DataMessage)(bool){
     return true
 }
 
-func (em * EVENTMODULE)buildEventReport(evt Evt){
+func (em * EVENTMODULE)buildEventReport(evt Evt,force bool){
     paraemeter := evt.msg.(map[string]interface{})
     evtID := paraemeter["evtid"].(uint32)
     dvCtx := paraemeter["dvctx"].(map[uint32]interface{})
     rootNode := data.GetEventReport(evtID ,dvCtx )
     //fmt.Printf("rootNode : %v\n",rootNode);
     if(rootNode != nil){
-        em.sendS6F11(rootNode)
+        em.sendS6F11(rootNode,force)
     }
     return;
-
 }
 
+
+
 func (em * EVENTMODULE)processEvt(evt Evt){
+
     if(evt.cmd == "TRIG_EVENT"){
-        em.buildEventReport(evt)
+        em.buildEventReport(evt,false)
         return;
     }
+
+    if(evt.cmd == "TRIG_EVENT_FORCE"){
+        em.buildEventReport(evt,true)
+        return;
+    }
+
     msg := evt.msg.(*sm.DataMessage)
     em.processMsg(msg)
 }

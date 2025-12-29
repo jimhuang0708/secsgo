@@ -59,6 +59,15 @@ func (cs * CTRLSTATE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
     return
 }
 
+func (cs * CTRLSTATE)trigEvtForce(e uint32,dvCtx map[uint32]interface{}){
+    p := make(map[string]interface{})
+    p["evtid"] = e
+    p["dvctx"] = dvCtx
+    cs.oChan <- Evt{ cmd : "TRIG_EVENT_FORCE" , msg : p ,ts : time.Now().Unix()  }
+    return
+}
+
+
 /*
 0 : none cbange,//previous control state use
 1 : Offline/ Equipment Offline,
@@ -102,19 +111,19 @@ func (cs * CTRLSTATE)updateCTRLSTATE(CTRLSTATE string,ctrlSubState string){
     if(stateCodeNow != stateCodeWill){
         //changed
         //fill related sv
-        data.SetVidValue(3,sm.CreateUintNode(4,stateCodeWill) )
-        data.SetVidValue(4,sm.CreateUintNode(4,stateCodeNow) )
+        data.SetVidValue(3 , sm.CreateUintNode(4,stateCodeWill))
+        data.SetVidValue(4 , sm.CreateUintNode(4,stateCodeNow ))
         dvContext := make(map[uint32]interface{})
         vidList := data.GetDvbyName( "CURRENT_STATE_NAME")
         if(stateCodeWill == 1 || stateCodeWill == 2 || stateCodeWill == 3){
             dvContext[ vidList[0] ] = sm.CreateASCIINode("OFFLINE")
-            cs.trigEvt(302,dvContext) //offline
+            cs.trigEvtForce(302,dvContext) //offline
         } else if(stateCodeWill == 4){
             dvContext[ vidList[0] ] =  sm.CreateASCIINode("ONLINE_LOCAL")
-            cs.trigEvt(300,dvContext) //local
+            cs.trigEvtForce(300,dvContext) //local
         } else if(stateCodeWill == 5){
             dvContext[ vidList[0] ] =  sm.CreateASCIINode("ONLINE_REMOTE")
-            cs.trigEvt(301,dvContext) //remote
+            cs.trigEvtForce(301,dvContext) //remote
        }
     }
     cs.TellUI()
@@ -385,7 +394,11 @@ func (cs *CTRLSTATE)stateRun(){
     for cs.run == "run" {
         select {
             case evt := <-cs.iChan:
-                if(cs.ctrlState == "OFFLINE"){
+                /*
+                  after enter offline state , equipment have to send offline event
+                  so use sendforce to send event
+                */
+                if(cs.ctrlState == "OFFLINE" && evt.cmd != "sendforce" ){
                     fmt.Printf("State is offline,don't send anything back\n");
                     break
                 }

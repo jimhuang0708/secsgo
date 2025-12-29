@@ -214,7 +214,7 @@ func (ec *EquipmentContext)stateTrig(evt Evt){
         if( ec.UIEvtChan != nil ){
             ec.processUIEvt(evt.msg.(string))
         }
-    } else if(evt.cmd == "TRIG_EVENT"){
+    } else if(evt.cmd == "TRIG_EVENT" || evt.cmd == "TRIG_EVENT_FORCE"){
         ec.trigEvent(evt) //just proxy to eventMod
         return
     } else {
@@ -232,7 +232,7 @@ func (ec *EquipmentContext )doEvt(act Evt){
         return
     }
 
-    if(act.cmd == "send"){//proxy only
+    if(act.cmd == "send" || act.cmd == "sendforce"){//proxy only
         ec.ctrlState.iChan <- act
         return
     }

@@ -135,7 +135,7 @@ func (t *Transport)handleSend() {
     for {
         select {
             case act := <-t.iChan:
-                if(act.cmd == "send"){
+                if(act.cmd == "send" || act.cmd == "sendforce"){
                     fmt.Printf("Put %s\n", act.msg.(sm.HSMSMessage).ToSml() )
                     ret := t.SendAct(act.msg.(sm.HSMSMessage))
                     if (ret == "WRITEERROR") {

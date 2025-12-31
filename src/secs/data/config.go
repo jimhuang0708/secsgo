@@ -70,7 +70,6 @@ type BaseItem struct {
 type EventItem struct {
     Name   string `json:"name"`
     ID     int    `json:"id"`
-    VID    []int  `json:"vid"`
     Rpt    []int  `json:"rpt"`
     Enable bool   `json:"enable"`
 }

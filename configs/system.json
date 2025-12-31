@@ -395,14 +395,12 @@
                {
                    "name"  : "CONTROL_STATE_LOCAL",
                    "id"    : 300,
-                   "vid"   : [ ],
                    "rpt"   : [ 1 ],
                    "enable": true
                },
                {
                    "name"  : "CONTROL_STATE_REMOTE",
                    "id"    : 301,
-                   "vid"   : [ ],
                    "rpt"   : [ 1 ],
                    "enable": true
 
@@ -411,7 +409,6 @@
                {
                    "name"  : "CONTROL_STATE_OFFLINE",
                    "id"    : 302,
-                   "vid"   : [ ],
                    "rpt"   : [ 1 ],
                    "enable": true
 
@@ -419,49 +416,42 @@
                {
                    "name"  : "EQ_CONST_CHANGED",
                    "id"    : 303,
-                   "vid"  : [ 101,102,103 ],
                    "rpt"   : [ ],
                    "enable": true
                },
                {
                    "name"  : "zombie_evt",
                    "id"    : 304,
-                   "vid"  : [ ],
                    "rpt"   : [1],
                    "enable": true
                },
                {
                    "name"  : "robot_evt",
                    "id"    : 305,
-                   "vid"  : [ ],
                    "rpt"   : [1],
                    "enable": true
                },
                {
                    "name"  : "msg_recognition",
                    "id"    : 306,
-                   "vid"  : [ ],
                    "rpt"   : [],
                    "enable": true
                },
                {
                    "name" : "limit_evt_vid6",
                    "id"    : 307,
-                   "vid"  : [],
                    "rpt"   : [2],
                    "enable": true
                },
                {
                    "name" : "limit_evt_vid7",
                    "id"    : 308,
-                   "vid"  : [],
                    "rpt"   : [3],
                    "enable": true
                },
                {
                    "name" : "limit_evt_vid8",
                    "id"    : 309,
-                   "vid"  : [],
                    "rpt"   : [4],
                    "enable": true
                }
@@ -493,7 +483,7 @@
                {
                    "name"  : "CONTROL_STATE_RPT",
                    "id"    : 1,
-                   "vid"   : [ 109 ]
+                   "vid"   : [ 109,3,4 ]
                },
                {
                    "name"  : "LIMIT_RPT6",

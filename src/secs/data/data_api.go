@@ -358,9 +358,9 @@ func cmdSetAlarm(alid uint64, alcd int, reply chan<- AlarmSetResult) ACCESS_CMD 
     }
 }
 
-// getDvbyName(namelist...) []uint32
+// getDvByName(namelist...) []uint32
 
-func GetDvbyName(namelist ...string) []uint32 {
+func GetDvByName(namelist ...string) []uint32 {
     reply := make(chan []uint32, 1)
     gData.iChan <- cmdGetDvByName(namelist, reply)
     return <-reply
@@ -369,7 +369,24 @@ func GetDvbyName(namelist ...string) []uint32 {
 func cmdGetDvByName(namelist []string, reply chan<- []uint32) ACCESS_CMD {
     return ACCESS_CMD{
         fn: func(sd *SECS_DATA) {
-            ret := sd.getDvbyName(namelist)
+            ret := sd.getDvByName(namelist)
+            reply <- ret
+        },
+    }
+}
+
+// getEvtByName(namelist...) []uint32
+
+func GetEvtByName(namelist ...string) []uint32 {
+    reply := make(chan []uint32, 1)
+    gData.iChan <- cmdGetEvtByName(namelist, reply)
+    return <-reply
+}
+
+func cmdGetEvtByName(namelist []string, reply chan<- []uint32) ACCESS_CMD {
+    return ACCESS_CMD{
+        fn: func(sd *SECS_DATA) {
+            ret := sd.getEvtByName(namelist)
             reply <- ret
         },
     }

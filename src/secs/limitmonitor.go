@@ -359,7 +359,7 @@ func (lm * LIMITMONITORMODULE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
 
 
 func (lm * LIMITMONITORMODULE)doMonitor(){
-    vidList := data.GetDvbyName( "LM_LIMITID","LM_TRANSITION","LM_VALUE","LM_UPPER","LM_LOWER" )
+    vidList := data.GetDvByName( "LM_LIMITID","LM_TRANSITION","LM_VALUE","LM_UPPER","LM_LOWER" )
     for k, _ := range lm.lmtWatch {
         //fmt.Printf("monitor %d\n",k)
         ok , valueNode , _  , _  , evt , _ := data.GetVidElementType(k)

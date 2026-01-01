@@ -114,7 +114,7 @@ func (cs * CTRLSTATE)updateCTRLSTATE(CTRLSTATE string,ctrlSubState string){
         data.SetVidValue(3 , sm.CreateUintNode(4,stateCodeWill))
         data.SetVidValue(4 , sm.CreateUintNode(4,stateCodeNow ))
         dvContext := make(map[uint32]interface{})
-        vidList := data.GetDvbyName( "CURRENT_STATE_NAME")
+        vidList := data.GetDvByName( "CURRENT_STATE_NAME")
         if(stateCodeWill == 1 || stateCodeWill == 2 || stateCodeWill == 3){
             dvContext[ vidList[0] ] = sm.CreateASCIINode("OFFLINE")
             cs.trigEvtForce(302,dvContext) //offline

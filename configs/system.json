@@ -416,7 +416,7 @@
                {
                    "name"  : "EQ_CONST_CHANGED",
                    "id"    : 303,
-                   "rpt"   : [ ],
+                   "rpt"   : [5],
                    "enable": true
                },
                {
@@ -499,7 +499,11 @@
                    "name"  : "LIMIT_RPT8",
                    "id"    : 4,
                    "vid"   : [ 8,104,105,106,107,108 ]
+               },
+               {
+                   "name" :  "EC_CHANGED_RPT",
+                   "id"   : 5,
+                   "vid"  : [ 101,102,103 ]
                }
             ]
-
 }

@@ -452,7 +452,7 @@ func (sd *SECS_DATA) setAlarm(alid uint64, alcd int) (uint32, bool) {
     return 0, false
 }
 
-func (sd *SECS_DATA) getDvbyName(namelist []string) []uint32 {
+func (sd *SECS_DATA) getDvByName(namelist []string) []uint32 {
     vidList := make([]uint32, 0)
     for _, name := range namelist {
         for id, dv := range sd.dvs {
@@ -462,4 +462,16 @@ func (sd *SECS_DATA) getDvbyName(namelist []string) []uint32 {
         }
     }
     return vidList
+}
+
+func (sd *SECS_DATA) getEvtByName(namelist []string) []uint32 {
+    evtList := make([]uint32, 0)
+    for _, name := range namelist {
+        for id, evt := range sd.evt {
+            if evt.name == name {
+                evtList = append(evtList, id)
+            }
+        }
+    }
+    return evtList
 }

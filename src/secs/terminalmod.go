@@ -5,6 +5,7 @@ import (
     sm "secs/secs_message"
     "sync"
     "encoding/json"
+    "secs/data"
 )
 
 type TERMINALMODULE struct{
@@ -31,6 +32,15 @@ func NewTERMINALMODULE(deviceID int) *TERMINALMODULE {
 func (tm * TERMINALMODULE) PutEvt(e Evt) {
     tm.iChan <- e
 }
+
+func (tm * TERMINALMODULE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
+    p := make(map[string]interface{})
+    p["evtid"] = e
+    p["dvctx"] = dvCtx
+    tm.oChan <- Evt{ cmd : "TRIG_EVENT" , msg : p ,ts : time.Now().Unix()  }
+    return
+}
+
 
 func (tm * TERMINALMODULE)sendS9FX(msg *sm.DataMessage,f int){
     bin := make([]interface{}, 10)
@@ -98,6 +108,12 @@ func (tm * TERMINALMODULE)handleS10F3(msg *sm.DataMessage){
     tm.oChan <- act
 }
 
+func (tm * TERMINALMODULE)sendRecognizeEvent(){
+    evtIdLst := data.GetEvtByName("MSG_RECOGNITION")
+    dvContext := make(map[uint32]interface{})
+    tm.trigEvt(evtIdLst[0],dvContext)
+}
+
 func (tm * TERMINALMODULE)TellUI(text string){
     uievt := &UIEvt{ EvtType : "S10F3" , Source : "TERMINALMODULE" , Data : text }
     jsonData, _ := json.Marshal(uievt)
@@ -116,8 +132,6 @@ func (tm * TERMINALMODULE)processMsg(msg *sm.DataMessage)(bool){
         }
 
     }
-
-
     return true
 }
 

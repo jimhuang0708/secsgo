@@ -254,6 +254,10 @@ func (conn *WsConn) readWebSocket(ctx context.Context, ec *secs.EquipmentContext
             data := genericData["data"].(map[string]interface{})["value"].(string)
             ec.SendText(data)
         }
+        if( TypeStr == "recognize" ) {
+            ec.SendRecognizeEvent()
+        }
+
         if( TypeStr == "setalarm" ){
             alid := genericData["data"].(map[string]interface{})["alid"].(float64)
             alcd := genericData["data"].(map[string]interface{})["alcd"].(float64)

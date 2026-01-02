@@ -432,7 +432,7 @@
                    "enable": true
                },
                {
-                   "name"  : "msg_recognition",
+                   "name"  : "MSG_RECOGNITION",
                    "id"    : 306,
                    "rpt"   : [],
                    "enable": true

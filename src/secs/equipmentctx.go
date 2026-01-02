@@ -345,6 +345,12 @@ func (ec *EquipmentContext)SendText(text string){
     ec.terminalModule.sendS10F1(text)
 }
 
+func (ec *EquipmentContext)SendRecognizeEvent(){
+    fmt.Printf("SendRecognizeEvent\n");
+    ec.terminalModule.sendRecognizeEvent()
+}
+
+
 func (ec *EquipmentContext)SetAlarm(id uint64,v int){
     ec.alarmModule.setAlarm(id,v)
 }

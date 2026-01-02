@@ -191,7 +191,12 @@ function initWebSocket() {
             }
         }
         if(obj["evttype"] == "S10F3"){
-            document.getElementById("chatbox").innerText = obj["data"]
+            document.getElementById("chatbox").innerHTML = obj["data"] + ' <button type="button" id="btnRecognize">Recognize</button>'
+            document.getElementById("btnRecognize").addEventListener("click", function () {
+                sendControlEvent("recognize", { });
+                document.getElementById("btnRecognize").remove()
+            });
+
         }
         if(obj["evttype"] == "S2F41"){
             //document.getElementById("chatbox").innerText = obj["data"]

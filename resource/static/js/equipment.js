@@ -253,6 +253,21 @@ function bindEvents() {
         alcd =128
         sendControlEvent("setalarm", { alid : alid , alcd : alcd });
     });
+
+    document.getElementById("btnSetEC").addEventListener("click", function () {
+        dataitem = { "type": "L", "items": [] }
+        let pairList = document.getElementById("setec_param").value.split(",")
+        for(let i = 0 ; i < pairList.length ; i++){
+            if( pairList[i] == "" ){
+                alert("empty not allowed")
+                return;
+            }
+            let pair = pairList[i].split("=")
+            dataitem.items.push( { "type" : "L", "items" :[ { "type" : "U4" , "values" : [   parseInt(pair[0],10) ] } , { "type" : "U4" , "values" : [   parseInt(pair[1],10) ] } ] } )
+        }
+        sendControlEvent("setec", {  dataitem : JSON.stringify(dataitem) } );
+    });
+
 }
 
 function clamp(v){ return Math.max(MIN, Math.min(MAX, v)); }

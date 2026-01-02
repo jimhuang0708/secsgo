@@ -5,6 +5,7 @@ import (
     "net"
     sm "secs/secs_message"
     "secs/data"
+    "encoding/json"
 )
 
 const T1 = 1000 //Inter char timeout (RS232)
@@ -322,6 +323,7 @@ func (ec *EquipmentContext)Operate_Ctrl(value int){
 func (ec *EquipmentContext) GetRun() bool{
     return ec.run
 }
+
 func (ec *EquipmentContext)SetVidUint(vid uint32 ,v uint32){
     fmt.Printf("SetVidUint %d : %d\n",vid,v);
     data.SetVidValue(vid,sm.CreateUintNode(4,v))
@@ -356,3 +358,44 @@ func (ec *EquipmentContext)AttachUIEvtChan(uiChan *chan string){
     ec.ctrlState.TellUI()
 }
 
+
+
+func (ec *EquipmentContext)SetEC(s string){
+    raw := []byte(s)
+    var c data.NodeValue
+    json.Unmarshal( raw,&c)
+    node ,_ := c.EncodeSecs();
+    if(node == nil){
+        node = sm.CreateEmptyElementType()
+    }
+    ecs := make(map[uint32]interface{} )
+    evtIdLst := data.GetEvtByName( "EQ_CONST_CHANGED")
+    for k := 0; k < node.Size() ; k++ {
+        ecNode , err := node.(*sm.ListNode).Get(k);
+        if(ecNode.Type() != "L" || ecNode.Size() != 2  || err != nil ){
+            fmt.Printf("error SetEC format\n");
+            return;
+        }
+        ecIDNode , err := ecNode.(*sm.ListNode).Get(0)
+        if(ecIDNode.Type() != "U4" || ecIDNode.Size() != 1  || err != nil ){
+            fmt.Printf("error SetEC format\n");
+            return;
+        }
+        ecID := uint32(ecIDNode.Values().([]uint64)[0])
+        ecValueNode , err := ecNode.(*sm.ListNode).Get(1)
+        ecs[ecID] = ecValueNode
+
+        dvContext := make(map[uint32]interface{})
+        vidList := data.GetDvByName("ECID_CHANGED","EC_VALUE_CHANGED","PREVIOUS_EC_VALUE")
+        dvContext[ vidList[0] ] = sm.CreateUintNode(4,ecID)
+        dvContext[ vidList[1] ] = ecValueNode.Clone()
+        ecIDLst := make([]uint32, 1 )
+        ecIDLst[0] = ecID
+        oldNodeLst := data.GetEC(ecIDLst)
+        oldNode , _ := oldNodeLst.(*sm.ListNode).Get(0)
+        dvContext[ vidList[2] ] = oldNode.Clone()
+        ec.ecModule.trigEvt(evtIdLst[0],dvContext)
+    }
+    ret := data.SetEC(ecs)
+    fmt.Printf("ret : %v \n",ret);
+}

@@ -259,6 +259,10 @@ func (conn *WsConn) readWebSocket(ctx context.Context, ec *secs.EquipmentContext
             alcd := genericData["data"].(map[string]interface{})["alcd"].(float64)
             ec.SetAlarm(uint64(alid),int(alcd))
         }
+        if( TypeStr == "setec" ){
+            s := genericData["data"].(map[string]interface{})["dataitem"].(string)
+            ec.SetEC(s)
+        }
 
     }
 }

@@ -83,7 +83,7 @@ func (em * EQCONSTMODULE)handleS2F13(msg *sm.DataMessage){
 
 }
 
-func (em * EQCONSTMODULE)handleS2F15(msg *sm.DataMessage,notify bool){
+func (em * EQCONSTMODULE)handleS2F15(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "L" || item.Size() < 1 || err != nil){
         fmt.Printf("Error S2F15 format\n")
@@ -91,7 +91,6 @@ func (em * EQCONSTMODULE)handleS2F15(msg *sm.DataMessage,notify bool){
         return ;
     }
     ecs := make(map[uint32]interface{} )
-    evtIdLst := data.GetEvtByName( "EQ_CONST_CHANGED")
 
     for k := 0; k < item.Size() ; k++ {
         ecNode , err := item.(*sm.ListNode).Get(k);
@@ -109,20 +108,6 @@ func (em * EQCONSTMODULE)handleS2F15(msg *sm.DataMessage,notify bool){
         ecID := uint32(ecIDNode.Values().([]uint64)[0])
         ecValueNode , err := ecNode.(*sm.ListNode).Get(1)
         ecs[ecID] = ecValueNode
-        if notify {
-            ///////////////When operator change EC , equipment should notify host
-            dvContext := make(map[uint32]interface{})
-            vidList := data.GetDvByName("ECID_CHANGED","EC_VALUE_CHANGED","PREVIOUS_EC_VALUE")
-            dvContext[ vidList[0] ] = sm.CreateUintNode(4,ecID)
-            dvContext[ vidList[1] ] = ecValueNode.Clone()
-            ecIDLst := make([]uint32, 1 )
-            ecIDLst[0] = ecID
-            oldNodeLst := data.GetEC(ecIDLst)
-            oldNode , _ := oldNodeLst.(*sm.ListNode).Get(0)
-            dvContext[ vidList[2] ] = oldNode.Clone()
-            em.trigEvt(evtIdLst[0],dvContext)
-            //////////////
-        }
     }
     ret := data.SetEC(ecs)
     fmt.Printf("ret : %v \n",ret);
@@ -163,7 +148,7 @@ func (em * EQCONSTMODULE)processMsg(msg *sm.DataMessage)(bool){
             em.handleS2F13(msg)
         }
         if(msg.FunctionCode() == 15){
-            em.handleS2F15(msg,false)
+            em.handleS2F15(msg)
         }
         if(msg.FunctionCode() == 29){
             em.handleS2F29(msg)

@@ -69,7 +69,7 @@ func (cs * CTRLSTATE)trigEvtForce(e uint32,dvCtx map[uint32]interface{}){
 
 
 /*
-0 : none cbange,//previous control state use
+0 : no change,//previous control state use
 1 : Offline/ Equipment Offline,
 2 : Offline/Attempt Online,
 3 : Offline/Host offline,
@@ -335,7 +335,7 @@ func (cs *CTRLSTATE)processEvt(evt Evt ,sessionID string){
         return
     }
     if(evt.cmd == "disconnect"){
-        fmt.Printf("CTRLSTATE get diconnect notify => dleete session %s\n",sessionID);
+        fmt.Printf("CTRLSTATE get disconnect notify => delete session %s\n",sessionID);
         delete (cs.session,sessionID)
         if( len(cs.session) == 0 ){
             fmt.Printf("All host leave!\n");

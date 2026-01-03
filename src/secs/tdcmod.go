@@ -159,7 +159,7 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
             svidLst = append(svidLst , svID)
         } else {
             act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 24, false,
-                                         sm.CreateBinaryNode( interface{}(byte(4))) , //unknow vid return 4
+                                         sm.CreateBinaryNode( interface{}(byte(4))) , //unknown vid return 4
                                          tm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix() }
             tm.oChan <- act
             return

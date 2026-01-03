@@ -58,7 +58,7 @@ func (hm *HOSTMODULE)handleS1F14(msg *sm.DataMessage){
             return;
         }
     } else {
-        fmt.Printf("HOST S1F14 invalid formart just restartS1F13 timer!\n")
+        fmt.Printf("HOST S1F14 invalid format just restartS1F13 timer!\n")
         hm.restartS1F13();
     }
     return

@@ -100,9 +100,9 @@ Note: port is different
 
 
 
-S1F0  SEND by qruipment(not format check)  
-S1F1  formar checked | SEND by both  
-S1F2  formar checked | SEND by both  
+S1F0  SEND by equipment (not format checked)  
+S1F1  format checked | SEND by both  
+S1F2  format checked | SEND by both  
 S1F3  format checked | SEND by HOST  
 S1F4                 | SEND by EQUIPMENT  
 S1F11 format checked | SEND by HOST  

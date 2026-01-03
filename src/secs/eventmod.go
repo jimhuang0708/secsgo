@@ -149,7 +149,7 @@ func (em * EVENTMODULE)handleS1F23(msg *sm.DataMessage){
     for k := 0; k < item.Size() ; k++ {
         child , err := item.(*sm.ListNode).Get(k)
         if(child.Type() != "U4" || err != nil){
-            fmt.Printf("Error S1F23 formart error\n");
+            fmt.Printf("Error S1F23 format error\n");
             em.sendS9FX(msg,7)
             return;
         }

@@ -103,15 +103,15 @@ Note: port is different
 S1F0  SEND by equipment (not format checked)  
 S1F1  format checked | SEND by both  
 S1F2  format checked | SEND by both  
-S1F3  format checked | SEND by HOST  
+S1F3  (V)            | SEND by HOST  
 S1F4                 | SEND by EQUIPMENT  
-S1F11 format checked | SEND by HOST  
-S1F12                  | SEND by EQUIPMENT  
-S1F13 format checked | SEND by both  
-S1F14 format checked | SEND by both  
-S1F15 format checked | SEND by HOST  
+S1F11 (V)            | SEND by HOST  
+S1F12                | SEND by EQUIPMENT  
+S1F13 (V)            | SEND by both  
+S1F14 (V)            | SEND by both  
+S1F15 (V)            | SEND by HOST  
 S1F16                | SEND by EQUIPMENT  
-S1F17 format checked | SEND by HOST  
+S1F17 (V)            | SEND by HOST  
 S1F18                | SEND by EQUIPMENT  
 
 S2F13 format checked | SEND by HOST  

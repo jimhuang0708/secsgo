@@ -309,7 +309,7 @@ func (sd *SECS_DATA) setEC(ecs map[uint32]interface{}) int {
         }
         if ec.value.(sm.ElementType).Type() != v.(sm.ElementType).Type() {
             fmt.Printf("ECID : %d Type mismatch\n", k)
-            return 3 // one or more values out of range
+            return 3 // one or more values Type mismatch
         }
         if (ec.value.(sm.ElementType).Type() != "A") && (ec.value.(sm.ElementType).Size() != v.(sm.ElementType).Size()) {
             fmt.Printf("ECID : %d Size mismatch\n", k)

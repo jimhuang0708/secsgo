@@ -1,0 +1,27 @@
+{
+"customdv": [
+    {
+      "name": "ECID_CHANGED",
+      "units": "",
+      "id": 1110,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "EC_VALUE_CHANGED",
+      "units": "",
+      "id": 1111,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    }
+  ]
+
+}

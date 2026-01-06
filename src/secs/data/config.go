@@ -1,7 +1,6 @@
 package data
 
 import (
-    //"fmt"
     "fmt"
     "reflect"
     //"encoding/json"
@@ -40,18 +39,34 @@ func LoadConfig() {
     viper.SetConfigType("json")   // Look for specific type
     viper.ReadInConfig()
     viper.AddConfigPath("./configs/system")
-    viper.SetConfigName("sv.json")
+    viper.SetConfigName("system_sv.json")
     viper.MergeInConfig()
-    viper.SetConfigName("dv.json")
+    viper.SetConfigName("system_dv.json")
     viper.MergeInConfig()
-    viper.SetConfigName("ec.json")
+    viper.SetConfigName("system_ec.json")
     viper.MergeInConfig()
-    viper.SetConfigName("evt.json")
+    viper.SetConfigName("system_evt.json")
     viper.MergeInConfig()
-    viper.SetConfigName("rpt.json")
+    viper.SetConfigName("system_rpt.json")
     viper.MergeInConfig()
-    viper.SetConfigName("alarm.json")
+    viper.SetConfigName("system_alarm.json")
     viper.MergeInConfig()
+
+    // Merge optional custom overrides/extensions
+    viper.AddConfigPath("./configs/custom")
+    viper.SetConfigName("custom_sv.json")
+    viper.MergeInConfig()
+    viper.SetConfigName("custom_dv.json")
+    viper.MergeInConfig()
+    viper.SetConfigName("custom_ec.json")
+    viper.MergeInConfig()
+    viper.SetConfigName("custom_evt.json")
+    viper.MergeInConfig()
+    viper.SetConfigName("custom_rpt.json")
+    viper.MergeInConfig()
+    viper.SetConfigName("custom_alarm.json")
+    viper.MergeInConfig()
+
     G_STATE.DEFAULT_CTRLSTATE = viper.Get("DEFAULT_CTRLSTATE").(string)
     G_STATE.DEFAULT_CTRLSUBSTATE = viper.Get("DEFAULT_CTRLSUBSTATE").(string)
     G_STATE.DEFAULT_REJECT_CTRLSUBSTATE = viper.Get("DEFAULT_REJECT_CTRLSUBSTATE").(string)
@@ -128,6 +143,7 @@ type SecsConfig struct {
     log.Printf("%v\n",cfg);
     return &cfg, nil
 }*/
+
 
 func (n *NodeValue) EncodeSecs() (sm.ElementType, error) {
 

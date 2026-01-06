@@ -1,0 +1,22 @@
+{
+"customsv": [
+    {
+      "name": "CUSTOM_MDLN",
+      "units": "",
+      "id": 1001,
+      "nodevalue": {
+        "type": "A",
+        "value": "MDLN"
+      }
+    },
+    {
+      "name": "CUSTOM_REV",
+      "units": "",
+      "id": 1002,
+      "nodevalue": {
+        "type": "A",
+        "value": "SOFTREV"
+      }
+    }
+  ]
+}

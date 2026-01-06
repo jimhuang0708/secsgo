@@ -1,0 +1,18 @@
+{
+"customevt" :  [
+        {
+            "name"  : "CUSTOM_EVT1",
+            "id"    : 1300,
+            "rpt"   : [ 1001 ],
+            "enable": true
+        },
+        {
+            "name"  : "CUSTOM_EVT2",
+            "id"    : 1301,
+            "rpt"   : [ 1001 ],
+            "enable": true
+
+
+        }
+    ]
+}

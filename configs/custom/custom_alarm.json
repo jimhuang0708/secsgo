@@ -1,0 +1,20 @@
+{
+"customalarm" : [
+        {
+            "name"   : "custom_zombie_attack",
+            "id"     : 3,
+            "text"   : "zombie comes",
+            "evt"    : 1300,
+            "enable" : true
+        },
+        {
+            "name"   : "custom_robot_rebellion",
+            "id"     : 4,
+            "text"   : "AI crisis",
+            "evt"    : 1301,
+            "enable" : true
+        }
+
+
+    ]
+}

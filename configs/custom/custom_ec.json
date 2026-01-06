@@ -1,0 +1,41 @@
+{
+"customec": [
+    {
+      "name": "CUSTOM_TEST1",
+      "units": "myunits",
+      "id": 1206,
+      "desc": "4:On-line/Local, 5:ON-line/Remote",
+      "nodevalue": {
+        "type": "A",
+        "value": "here is default value,but you can set later"
+      },
+      "max": {
+        "type": "A",
+        "value": "maxvalue"
+      },
+      "min": {
+        "type": "A",
+        "value": "minvalue"
+      }
+    },
+    {
+      "name": "CUSTOM_TEST2",
+      "units": "myunits",
+      "id": 1207,
+      "desc": "4:On-line/Local, 5:ON-line/Remote",
+      "nodevalue": {
+        "type": "A",
+        "value": "here is default value,but you can set later"
+      },
+      "max": {
+        "type": "A",
+        "value": "maxvalue"
+      },
+      "min": {
+        "type": "A",
+        "value": "minvalue"
+      }
+    }
+
+  ]    
+}

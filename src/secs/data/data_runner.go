@@ -1,13 +1,22 @@
 package data
 
 import (
-    "fmt"
     "strconv"
     "sync"
 
     "github.com/spf13/viper"
+    "secs/logger"
     sm "secs/secs_message"
 )
+
+var log = logger.New(nil)
+
+// SetLogger configures the logger used by the data package.
+func SetLogger(l *logger.Logger) {
+    if l != nil {
+        log = l
+    }
+}
 
 // ----------------------------
 // Runner / lifecycle
@@ -51,7 +60,7 @@ func (sd *SECS_DATA) moduleLoadData() {
         for j := 0; j < len(vid); j++ {
             temp_rpt.vids = append(temp_rpt.vids, uint32(vid[j]))
         }
-        fmt.Printf("sysrpt : %v\n", temp_rpt)
+        log.Printf("sysrpt : %v\n", temp_rpt)
         sd.rpt[temp_rpt.id] = temp_rpt
     }
 
@@ -70,7 +79,7 @@ func (sd *SECS_DATA) moduleLoadData() {
         for j := 0; j < len(vid); j++ {
             temp_ce.dvLst = append(temp_ce.dvLst, uint32(vid[j]))
         }
-        fmt.Printf("sysevt : %v\n", temp_ce)
+        log.Printf("sysevt : %v\n", temp_ce)
         sd.evt[temp_ce.id] = temp_ce
     }
 
@@ -84,22 +93,22 @@ func (sd *SECS_DATA) moduleLoadData() {
         var valueNode NodeValue
         viper.UnmarshalKey(idx+".nodevalue", &valueNode)
         value, _ := valueNode.EncodeSecs()
-        fmt.Printf("value %v\n", value)
+        log.Printf("value %v\n", value)
         var maxNode NodeValue
         viper.UnmarshalKey(idx+".max", &maxNode)
         max, _ := maxNode.EncodeSecs()
-        fmt.Printf("max %v\n", max)
+        log.Printf("max %v\n", max)
         var minNode NodeValue
         viper.UnmarshalKey(idx+".min", &minNode)
         min, _ := minNode.EncodeSecs()
-        fmt.Printf("min %v\n", min)
+        log.Printf("min %v\n", min)
 
         if value == nil {
             panic("syssv lack of default value!\n")
         }
-        fmt.Printf("id : %d | name : %s | units : %s | limitEvt : %d\n", id, name, units, limitEvt)
+        log.Printf("id : %d | name : %s | units : %s | limitEvt : %d\n", id, name, units, limitEvt)
         temp_sv := &SECSVARIABLE{id: id, name: name, units: units, value: value, limitEvt: limitEvt, max: max, min: min}
-        fmt.Printf("sysesv : %v\n", temp_sv)
+        log.Printf("sysesv : %v\n", temp_sv)
         sd.svs[temp_sv.id] = temp_sv
     }
 
@@ -113,19 +122,19 @@ func (sd *SECS_DATA) moduleLoadData() {
         var valueNode NodeValue
         viper.UnmarshalKey(idx+".nodevalue", &valueNode)
         value, _ := valueNode.EncodeSecs()
-        fmt.Printf("value %v\n", value)
+        log.Printf("value %v\n", value)
         var maxNode NodeValue
         viper.UnmarshalKey(idx+".max", &maxNode)
         max, _ := maxNode.EncodeSecs()
-        fmt.Printf("max %v\n", max)
+        log.Printf("max %v\n", max)
         var minNode NodeValue
         viper.UnmarshalKey(idx+".min", &minNode)
         min, _ := minNode.EncodeSecs()
-        fmt.Printf("min %v\n", min)
+        log.Printf("min %v\n", min)
         if value == nil {
             panic("sysdv lack of default value!\n")
         }
-        fmt.Printf("id : %d | name : %s | units : %s | limitEvt : %d\n", id, name, units, limitEvt)
+        log.Printf("id : %d | name : %s | units : %s | limitEvt : %d\n", id, name, units, limitEvt)
         temp_dv := &SECSVARIABLE{id: id, name: name, units: units, value: value, limitEvt: limitEvt, max: max, min: min}
         sd.dvs[temp_dv.id] = temp_dv
     }
@@ -139,20 +148,20 @@ func (sd *SECS_DATA) moduleLoadData() {
         var valueNode NodeValue
         viper.UnmarshalKey(idx+".nodevalue", &valueNode)
         value, _ := valueNode.EncodeSecs()
-        fmt.Printf("value %v\n", value)
+        log.Printf("value %v\n", value)
         var maxNode NodeValue
         viper.UnmarshalKey(idx+".max", &maxNode)
         max, _ := maxNode.EncodeSecs()
-        fmt.Printf("max %v\n", max)
+        log.Printf("max %v\n", max)
         var minNode NodeValue
         viper.UnmarshalKey(idx+".min", &minNode)
         min, _ := minNode.EncodeSecs()
-        fmt.Printf("min %v\n", min)
+        log.Printf("min %v\n", min)
 
         if value == nil {
             panic("sysec lack of default value!\n")
         }
-        fmt.Printf("id : %d | name : %s | units : %s \n", id, name, units)
+        log.Printf("id : %d | name : %s | units : %s \n", id, name, units)
         temp_ec := &SECSVARIABLE{id: id, name: name, units: units, min: min, max: max, defv: value, value: value, limitEvt: nil}
         sd.ecs[temp_ec.id] = temp_ec
     }
@@ -166,11 +175,11 @@ func (sd *SECS_DATA) moduleLoadData() {
         text := viper.GetString(idx + ".text")
         evt := viper.GetUint32(idx + ".evt")
         temp_alarm := &SECSALARM{id: id, name: name, enable: enable, set: false, text: text, evt: evt}
-        fmt.Printf("sysalarm : %v\n", temp_alarm)
+        log.Printf("sysalarm : %v\n", temp_alarm)
         sd.alarm[temp_alarm.id] = temp_alarm
     }
 
-    fmt.Printf("%v \n", gData)
+    log.Printf("%v \n", gData)
 }
 
 // 單純呼叫 closure
@@ -201,6 +210,6 @@ func (sd *SECS_DATA) moduleRun() {
         sd.handleAccess(e)
     }
     sd.run = "stop"
-    fmt.Printf("Exit SECS_DATA\n")
+    log.Printf("Exit SECS_DATA\n")
     return
 }

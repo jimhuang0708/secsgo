@@ -1,8 +1,8 @@
 package secs_message
 
 import (
-    "reflect"
     "fmt"
+    "reflect"
     "strconv"
     "strings"
     "encoding/binary"
@@ -39,7 +39,7 @@ func (node *UintNode) Code() byte {
     } else if(node.symbol == "U8"){
         return 0o50
     } else {
-        fmt.Printf("Error unknown uint symbol %s\n",node.symbol);
+        log.Printf("Error unknown uint symbol %s\n",node.symbol);
         return 0
     }
 }
@@ -129,4 +129,3 @@ func (node *UintNode) ToSml() string {
     }
     return fmt.Sprintf("<%s[%d] %v>", node.symbol , node.Size(), strings.Join(values, " "))
 }
-

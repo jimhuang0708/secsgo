@@ -1,26 +1,23 @@
 package main
 
 import (
-    "net/http"
-    "github.com/gorilla/websocket"
-    "github.com/gin-gonic/gin"
-    "strings"
-    "net"
-//    "os"
-    "fmt"
-//    "os/exec"
-    "time"
     "bytes"
-//    "io/ioutil"
-//    "strconv"
-//    "io"
+    "context"
+    "encoding/binary"
     "encoding/json"
     "errors"
-    "encoding/binary"
-    "context"
+    "fmt"
+    "log/slog"
+    "net"
+    "net/http"
+    "os"
+    "strings"
+    "time"
+
+    "github.com/gin-gonic/gin"
+    "github.com/gorilla/websocket"
     "secs"
     "secs/data"
-//    "strconv"
 )
 
 
@@ -32,6 +29,8 @@ type WsConn struct {
     recvBuf *bytes.Buffer
     run bool 
 }
+
+var modlog *slog.Logger
 
 var gWsUpgrader = &websocket.Upgrader{
         CheckOrigin: func(r *http.Request) bool {
@@ -98,7 +97,8 @@ func wsEquipment(c *gin.Context) {
         fmt.Printf("WebSocket error: %v\n", err)
         return
     }
-    ec := secs.NewEquipmentContext(0);
+    ctxLog := modlog.With("client", wsConn.addr)
+    ec := secs.NewEquipmentContext(0, ctxLog);
     evtChan := make(chan string,10)
     cmdChan := make(chan string,10)
     ec.AttachUIEvtChan(&evtChan)
@@ -323,6 +323,12 @@ func StartEquipmentPassive(ec *secs.EquipmentContext) {
 }
 
 func main() {
+    h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+                Level: slog.LevelDebug,
+                // AddSource: true, // 需要檔名/行號時開
+        })
+    base := slog.New(h)
+    modlog = base.With("module", "SERVER")
     /* init data module */
     data.LoadConfig();
     data.InitSECSData();

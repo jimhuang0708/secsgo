@@ -1,11 +1,13 @@
 package secs
+
 import (
-    "fmt"
-    "time"
-    sm "secs/secs_message"
-    "sync"
     "encoding/json"
+    "sync"
+    "time"
+
     "secs/data"
+    "secs/logger"
+    sm "secs/secs_message"
 )
 
 type TERMINALMODULE struct{
@@ -14,15 +16,17 @@ type TERMINALMODULE struct{
     run      string
     wg *sync.WaitGroup
     deviceID int
+    log *logger.Logger
 }
 
-func NewTERMINALMODULE(deviceID int) *TERMINALMODULE {
+func NewTERMINALMODULE(deviceID int, log *logger.Logger) *TERMINALMODULE {
     o := TERMINALMODULE{
                          run : "stop",
                          iChan : make(chan Evt,10),
                          oChan : make(chan Evt,10 ) ,
                          wg : new(sync.WaitGroup),
                          deviceID : deviceID,
+                         log: log,
                   }
     o.wg.Add(1)
     go o.stateRun()
@@ -69,38 +73,38 @@ func (tm * TERMINALMODULE)sendS10F1(text string){
 func (tm * TERMINALMODULE)handleS10F2(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "B" || item.Size() != 1 ||err != nil){
-        fmt.Printf("Error S10F2 format\n")
+        tm.log.Printf("Error S10F2 format\n")
         tm.sendS9FX(msg, 7)
         return ;
     }
     v := item.Values().([]uint8)[0]
-    fmt.Printf("S10F2 ack code : %v\n",v);
+    tm.log.Printf("S10F2 ack code : %v\n",v);
 
 }
 
 func (tm * TERMINALMODULE)handleS10F3(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "L" || item.Size() != 2 ||err != nil){
-        fmt.Printf("Error S10F3 format\n")
+        tm.log.Printf("Error S10F3 format\n")
         tm.sendS9FX(msg, 7)
         return ;
     }
     tidNode , err := item.(*sm.ListNode).Get(0) //TID node ,don't care
     if( tidNode.Type() != "B" || tidNode.Size() != 1 ||err != nil){
-        fmt.Printf("Error S10F3 format\n")
+        tm.log.Printf("Error S10F3 format\n")
         tm.sendS9FX(msg, 7)
         return ;
     }
     textNodce , err := item.(*sm.ListNode).Get(1)
     if( textNodce.Type() != "A" || textNodce.Size() > 120 || textNodce.Size() == 0  || err != nil){
-        fmt.Printf("Error S10F3 format\n")
+        tm.log.Printf("Error S10F3 format\n")
         tm.sendS9FX(msg, 7)
         return ;
     }
 
     text := textNodce.Values().(string)
     tm.TellUI(text)
-    fmt.Printf("Get message from host : \n %s\n",text);
+    tm.log.Printf("Get message from host : \n %s\n",text);
 
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 10,4, false,
                                      sm.CreateBinaryNode( byte(0) )   ,
@@ -160,6 +164,6 @@ func (tm * TERMINALMODULE)stateRun(){
         }
     }
     tm.run = "stop"
-    fmt.Printf("Exit TERMINALMODULE \n");
+    tm.log.Printf("Exit TERMINALMODULE \n");
     return
 }

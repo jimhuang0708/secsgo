@@ -1,6 +1,6 @@
 package secs_message
+
 import (
-    "fmt"
     "encoding/binary"
 )
 const (
@@ -81,7 +81,7 @@ func CreateControlMessageRsp(req HSMSMessage,parameter ...byte) HSMSMessage {
     } else if(msg.MsgType() == TypeLinktestReq){
         header[5] =TypeLinktestRsp
     } else {
-        fmt.Printf("Error CreateControlMessageRsp");
+        log.Printf("Error CreateControlMessageRsp");
         return nil
     }
     header[6] = msg.header[6]

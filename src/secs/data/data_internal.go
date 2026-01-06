@@ -1,7 +1,6 @@
 package data
 
 import (
-    "fmt"
     "sort"
 
     sm "secs/secs_message"
@@ -20,7 +19,7 @@ func (sd *SECS_DATA) createReport(id uint32, v ...uint32) {
 }
 
 func (sd *SECS_DATA) deleteAllReport() {
-    fmt.Printf("Delete all report \n")
+    log.Printf("Delete all report \n")
     sd.rpt = make(map[uint32]*SECSRPT)
 }
 
@@ -108,14 +107,14 @@ func (sd *SECS_DATA) setEvtRptLink(id uint32, v ...uint32) string {
         sd.evt[id].rptLst = make([]uint32, 0)
         for _, value := range v {
             if !sd.isRptExtist(value) {
-                fmt.Printf("Error , rpt %d not exist\n", id)
+                log.Printf("Error , rpt %d not exist\n", id)
                 return "norpt"
             }
             sd.evt[id].rptLst = append(sd.evt[id].rptLst, value)
         }
         return "ok"
     } else {
-        fmt.Printf("Error , event %d not exist\n", id)
+        log.Printf("Error , event %d not exist\n", id)
         return "noevt"
     }
 }
@@ -125,10 +124,10 @@ func (sd *SECS_DATA) enableEvent(act bool, v ...uint32) bool {
         for k, e := range sd.evt {
             if act {
                 e.enable = true
-                fmt.Printf("Enable All Event -> %d\n", k)
+                log.Printf("Enable All Event -> %d\n", k)
             } else {
                 e.enable = false
-                fmt.Printf("Disable All Event -> %d\n", k)
+                log.Printf("Disable All Event -> %d\n", k)
             }
         }
         return true
@@ -138,18 +137,18 @@ func (sd *SECS_DATA) enableEvent(act bool, v ...uint32) bool {
             val, ok := sd.evt[uint32(value)]
             if ok {
                 val.enable = true
-                fmt.Printf("Enable Event %d Accept\n", value)
+                log.Printf("Enable Event %d Accept\n", value)
             } else {
-                fmt.Printf("Enable Event %d Reject\n", value)
+                log.Printf("Enable Event %d Reject\n", value)
                 return false
             }
         } else {
             val, ok := sd.evt[uint32(value)]
             if ok {
                 val.enable = false
-                fmt.Printf("Disable Event %d Accept\n", value)
+                log.Printf("Disable Event %d Accept\n", value)
             } else {
-                fmt.Printf("Disable Event %d Reject\n", value)
+                log.Printf("Disable Event %d Reject\n", value)
                 return false
             }
         }
@@ -179,7 +178,7 @@ func (sd *SECS_DATA) getEventNameList(evtLst []uint32) sm.ElementType {
         }
     }
     node := sm.CreateListNode(evtNodes...)
-    fmt.Printf("getEventNameList : %v \n", node)
+    log.Printf("getEventNameList : %v \n", node)
     return node
 }
 
@@ -187,11 +186,11 @@ func (sd *SECS_DATA) getEventReport(evtID uint32, dvCtx map[uint32]interface{}) 
     /*dataid is 流水號 for multiblock or 0*/
     evt_entry, ok := sd.evt[evtID]
     if !ok {
-        fmt.Printf("event ID not found\n", evtID)
+        log.Printf("event ID not found\n", evtID)
         return nil
     }
     if !evt_entry.enable {
-        fmt.Printf("event ID %d disable\n", evtID)
+        log.Printf("event ID %d disable\n", evtID)
         return nil
     }
 
@@ -204,7 +203,7 @@ func (sd *SECS_DATA) getEventReport(evtID uint32, dvCtx map[uint32]interface{}) 
         rptID_Node := sm.CreateUintNode(4, uint32(rptId))
         rpt_entry, ok := sd.rpt[rptId]
         if !ok {
-            fmt.Printf("RPT ID not found\n", rptId)
+            log.Printf("RPT ID not found\n", rptId)
             return nil
         }
         vidLst := make([]interface{}, 0)
@@ -214,7 +213,7 @@ func (sd *SECS_DATA) getEventReport(evtID uint32, dvCtx map[uint32]interface{}) 
             if !ok {
                 ok, value, _, _, _, _ := sd.getVidElementType(vid)
                 if !ok || value == nil {
-                    fmt.Printf("VID not found\n", vid)
+                    log.Printf("VID not found\n", vid)
                     return nil
                 }
                 vidLst = append(vidLst, value)
@@ -225,14 +224,14 @@ func (sd *SECS_DATA) getEventReport(evtID uint32, dvCtx map[uint32]interface{}) 
         rptLst = append(rptLst, sm.CreateListNode(rptID_Node, sm.CreateListNode(vidLst...)))
     }
     rootNode := sm.CreateListNode(dataID_Node, evtID_Node, sm.CreateListNode(rptLst...))
-    fmt.Printf("getEventReport : %v \n", rootNode)
+    log.Printf("getEventReport : %v \n", rootNode)
     return rootNode
 }
 
 func (sd *SECS_DATA) getRptReport(rptID uint32) sm.ElementType {
     rpt_entry, ok := sd.rpt[rptID]
     if !ok {
-        fmt.Printf("RPT ID not found\n", rptID)
+        log.Printf("RPT ID not found\n", rptID)
         return nil
     }
     vidLst := make([]interface{}, 0)
@@ -240,13 +239,13 @@ func (sd *SECS_DATA) getRptReport(rptID uint32) sm.ElementType {
         vid := rpt_entry.vids[j]
         ok, value, _, _, _, _ := sd.getVidElementType(vid)
         if !ok || value == nil {
-            fmt.Printf("VID not found\n", vid)
+            log.Printf("VID not found\n", vid)
             return nil
         }
         vidLst = append(vidLst, value)
     }
     rootNode := sm.CreateListNode(vidLst...)
-    fmt.Printf("getRptReport : %v \n", rootNode)
+    log.Printf("getRptReport : %v \n", rootNode)
     return rootNode
 }
 
@@ -268,7 +267,7 @@ func (sd *SECS_DATA) getSVElementTypeLst(svidLst []uint32) sm.ElementType {
         }
     }
     rootNode := sm.CreateListNode(svNodeLst...)
-    fmt.Printf("getSVElementTypeLst : %v \n", rootNode)
+    log.Printf("getSVElementTypeLst : %v \n", rootNode)
     return rootNode
 }
 
@@ -296,7 +295,7 @@ func (sd *SECS_DATA) getSVNameLst(svidLst []uint32) sm.ElementType {
         }
     }
     rootNode := sm.CreateListNode(svNodeLst...)
-    fmt.Printf("getSVNameLst : %v \n", rootNode)
+    log.Printf("getSVNameLst : %v \n", rootNode)
     return rootNode
 }
 
@@ -304,22 +303,22 @@ func (sd *SECS_DATA) setEC(ecs map[uint32]interface{}) int {
     for k, v := range ecs {
         ec, ok := sd.ecs[k]
         if !ok {
-            fmt.Printf("ECID : %d not exist\n", k)
+            log.Printf("ECID : %d not exist\n", k)
             return 1 // one or more constants does not exist
         }
         if ec.value.(sm.ElementType).Type() != v.(sm.ElementType).Type() {
-            fmt.Printf("ECID : %d Type mismatch\n", k)
+            log.Printf("ECID : %d Type mismatch\n", k)
             return 3 // one or more values Type mismatch
         }
         if (ec.value.(sm.ElementType).Type() != "A") && (ec.value.(sm.ElementType).Size() != v.(sm.ElementType).Size()) {
-            fmt.Printf("ECID : %d Size mismatch\n", k)
+            log.Printf("ECID : %d Size mismatch\n", k)
             return 3 // one or more values out of range
         }
     }
 
     for k, v := range ecs {
         sd.ecs[k].value = v
-        fmt.Printf("setup%d %v\n", k, v)
+        log.Printf("setup%d %v\n", k, v)
     }
     return 0 // ok
 }
@@ -343,7 +342,7 @@ func (sd *SECS_DATA) getEC(ecLst []uint32) sm.ElementType {
         }
     }
     rootNode := sm.CreateListNode(ecNodeLst...)
-    fmt.Printf("getEC : %v\n", rootNode)
+    log.Printf("getEC : %v\n", rootNode)
     return rootNode
 }
 
@@ -381,7 +380,7 @@ func (sd *SECS_DATA) getECName(ecLst []uint32) sm.ElementType {
         }
     }
     rootNode := sm.CreateListNode(ecNodeLst...)
-    fmt.Printf("getECName : %v \n", rootNode)
+    log.Printf("getECName : %v \n", rootNode)
     return rootNode
 }
 
@@ -391,10 +390,10 @@ func (sd *SECS_DATA) setAlarmEnable(alid uint64, aled int) int {
         if k == uint32(alid) || alid == uint64(0xFFFFFFFFFFFFFFFF) {
             if aled == 128 {
                 alarm.enable = true
-                fmt.Printf("set %v %v enable\n", alid, aled)
+                log.Printf("set %v %v enable\n", alid, aled)
             } else if aled == 0 {
                 alarm.enable = false
-                fmt.Printf("set %v %v disable\n", alid, aled)
+                log.Printf("set %v %v disable\n", alid, aled)
             }
             if k == uint32(alid) {
                 ret = 0

@@ -1,26 +1,21 @@
 package main
 
 import (
-    "net/http"
-    "github.com/gorilla/websocket"
-    "github.com/gin-gonic/gin"
-    "strings"
-    "net"
-//    "os"
-    "fmt"
-//    "os/exec"
-    "time"
     "bytes"
-//    "io/ioutil"
-//    "strconv"
-//    "io"
-//    "encoding/json"
-    "errors"
-    "encoding/binary"
     "context"
+    "encoding/binary"
+    "errors"
+    "fmt"
+    "log/slog"
+    "net"
+    "net/http"
+    "os"
+    "strings"
+    "time"
+
+    "github.com/gin-gonic/gin"
+    "github.com/gorilla/websocket"
     "secs"
-//    "secs/data"
-//    "strconv"
 )
 
 type WsConn struct {
@@ -30,6 +25,8 @@ type WsConn struct {
         recvBuf *bytes.Buffer
         run        bool
 }
+
+var modlog *slog.Logger
 
 var gWsUpgrader = &websocket.Upgrader{
         CheckOrigin: func(r *http.Request) bool {
@@ -93,7 +90,8 @@ func wsHost(c *gin.Context) {
         fmt.Printf("WebSocket error: %v\n", err)
         return
     }
-    hc := secs.NewHostContext( 0 )
+    ctxLog := modlog.With("client", wsConn.addr)
+    hc := secs.NewHostContext( 0 , ctxLog )
     evtChan := make(chan string,10)
     cmdChan := make(chan string,10)
     hc.AttachUIEvtChan(&evtChan)
@@ -261,6 +259,12 @@ func StartHostPassive(hc *secs.HostContext) {
 
 
 func main() {
+    h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+                Level: slog.LevelDebug,
+                // AddSource: true, // 需要檔名/行號時開
+        })
+    base := slog.New(h)
+    modlog = base.With("module", "HOST")
     router := gin.Default()
     router.Static("/site", "/srv/secs/")
     router.GET("/api/host", wsHost);

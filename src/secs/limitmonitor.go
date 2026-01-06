@@ -1,11 +1,14 @@
 package secs
+
 import (
-    "fmt"
-    "time"
-    sm "secs/secs_message"
-    "secs/data"
-    "sync"
     "encoding/json"
+    "fmt"
+    "sync"
+    "time"
+
+    "secs/data"
+    "secs/logger"
+    sm "secs/secs_message"
 )
 
 type LIMITBOUND struct{
@@ -26,9 +29,10 @@ type LIMITMONITORMODULE struct{
     wg *sync.WaitGroup
     lmtWatch     map[uint32] *LIMITTARGE;
     deviceID int
+    log *logger.Logger
 }
 
-func NewLIMITMONITORMODULE(deviceID int) *LIMITMONITORMODULE {
+func NewLIMITMONITORMODULE(deviceID int, log *logger.Logger) *LIMITMONITORMODULE {
     o := LIMITMONITORMODULE{
                          run : "stop",
                          iChan : make(chan Evt,10),
@@ -36,6 +40,7 @@ func NewLIMITMONITORMODULE(deviceID int) *LIMITMONITORMODULE {
                          wg : new(sync.WaitGroup),
                          lmtWatch : make( map[uint32]*LIMITTARGE),
                          deviceID : deviceID,
+                         log: log,
                   }
     o.wg.Add(1)
     go o.stateRun()
@@ -136,18 +141,18 @@ func (lm * LIMITMONITORMODULE)sendS9FX(msg *sm.DataMessage,f int){
 func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "L" || err != nil){
-        fmt.Printf("Error S2F45 format\n")
+        lm.log.Printf("Error S2F45 format\n")
         lm.sendS9FX(msg, 7)
         return ;
     }
     if(item.Size() != 2){
-        fmt.Printf("Error S2F45 list size\n")
+        lm.log.Printf("Error S2F45 list size\n")
         lm.sendS9FX(msg, 7)
         return ;
     }
     dataidNode ,err := item.(*sm.ListNode).Get(0);
     if(dataidNode.Type() != "U4" || dataidNode.Size() != 1 || err != nil){
-        fmt.Printf("Error S2F45 dataid wrong\n")
+        lm.log.Printf("Error S2F45 dataid wrong\n")
         lm.sendS9FX(msg, 7)
         return ;
     }
@@ -155,7 +160,7 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
     attrLst , err := item.(*sm.ListNode).Get(1);
     if(attrLst.Size() == 0 ){
         //clean all limitbound
-        fmt.Printf("Clean all limit bounds\n");
+        lm.log.Printf("Clean all limit bounds\n");
         lm.lmtWatch = make( map[uint32]*LIMITTARGE )
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 46, false,
                                      sm.CreateListNode( sm.CreateBinaryNode( byte(0)  ) , sm.CreateListNode() ) ,
@@ -164,7 +169,7 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
         return
     }
     if(attrLst.Type() != "L" || err != nil){
-        fmt.Printf("Error S2F45 attrlist wrong\n")
+        lm.log.Printf("Error S2F45 attrlist wrong\n")
         lm.sendS9FX(msg, 7)
         return ;
     }
@@ -173,13 +178,13 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
     for k := 0; k < attrLst.Size() ; k++ {
         attrNode , err := attrLst.(*sm.ListNode).Get(k)
         if(attrNode.Type() != "L" || attrNode.Size() != 2 || err != nil){
-            fmt.Printf("error S2F45 attrNode type error\n");
+            lm.log.Printf("error S2F45 attrNode type error\n");
             lm.sendS9FX(msg, 7)
             return;
         }
         vidNode ,err := attrNode.(*sm.ListNode).Get(0);
         if(vidNode.Type() != "U4" || vidNode.Size() != 1 || err != nil){
-            fmt.Printf("Error S2F45 vid wrong\n")
+            lm.log.Printf("Error S2F45 vid wrong\n")
             lm.sendS9FX(msg, 7)
             return ;
         }
@@ -187,30 +192,30 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
         vid := vidNode.Values().([]uint64)[0]
         ok , _ , maxNode , minNode , _ , _ := data.GetVidElementType( uint32(vid) )
         if(!ok ){
-            fmt.Printf("Error | vid : %d not exist\n ",vid);
+            lm.log.Printf("Error | vid : %d not exist\n ",vid);
             rptNode := sm.CreateListNode( sm.CreateUintNode(4,vid) , sm.CreateBinaryNode( byte(1) ) , sm.CreateListNode()  ) //no such vid
             rptNodes = append(rptNodes , rptNode)
             vlaack = 1
             continue
         }
 
-        fmt.Printf("vid : %d\n",vid);
+        lm.log.Printf("vid : %d\n",vid);
         _ , max := converToFloat64( maxNode.(sm.ElementType) )
         _ , min := converToFloat64( minNode.(sm.ElementType) )
-        fmt.Printf("max : %f | min : %f \n",max[0],min[0]);
+        lm.log.Printf("max : %f | min : %f \n",max[0],min[0]);
 
 
 
         limitLst , err :=  attrNode.(*sm.ListNode).Get(1);
         if( limitLst.Size() == 0){
-            fmt.Printf("vid : %d clean limitbounds\n",vid)
+            lm.log.Printf("vid : %d clean limitbounds\n",vid)
             delete (lm.lmtWatch , uint32(vid))
             continue;
         }
 
 
         if(limitLst.Type() != "L" || err != nil){
-            fmt.Printf("Error S2F45 limitlist wrong\n")
+            lm.log.Printf("Error S2F45 limitlist wrong\n")
             lm.sendS9FX(msg, 7)
             return ;
         }
@@ -218,23 +223,23 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
         for j := 0; j < limitLst.Size() ; j++ {
             lmtNode , err := limitLst.(*sm.ListNode).Get(j)
             if(lmtNode.Type() != "L" || lmtNode.Size() != 2 || err != nil){
-                fmt.Printf("error S2F45 lmtNode type error\n");
+                lm.log.Printf("error S2F45 lmtNode type error\n");
                 lm.sendS9FX(msg, 7)
                 return;
             }
             lmtidNode ,err := lmtNode.(*sm.ListNode).Get(0);
             if(lmtidNode.Type() != "B" || lmtidNode.Size() != 1 || err != nil){
-                fmt.Printf("Error S2F45 lmtid wrong\n")
+                lm.log.Printf("Error S2F45 lmtid wrong\n")
                 lm.sendS9FX(msg, 7)
                 return ;
             }
 
             lmtid := lmtidNode.Values().([]uint8)[0]
-            fmt.Printf("lmtid : %d\n",lmtid);
+            lm.log.Printf("lmtid : %d\n",lmtid);
 
             boundNode , err := lmtNode.(*sm.ListNode).Get(1);
             if(boundNode.Size() == 0 ){
-                fmt.Printf("vid : %d | limitid : %d | clean limitbounds\n",vid,lmtid)
+                lm.log.Printf("vid : %d | limitid : %d | clean limitbounds\n",vid,lmtid)
                 _ , ok :=  lm.lmtWatch[uint32(vid)]
                 if(ok){
                     lm.lmtWatch[uint32(vid)] = &LIMITTARGE{ vid : uint32(vid) }
@@ -245,7 +250,7 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
             }
 
             if(boundNode.Type() != "L" || boundNode.Size() != 2 || err != nil){
-                fmt.Printf("error S2F45 boundNode type error\n");
+                lm.log.Printf("error S2F45 boundNode type error\n");
                 lm.sendS9FX(msg, 7)
                 return;
             }
@@ -256,7 +261,7 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
             _ , lowerbound := converToFloat64(lowerboundNode)
 
             if(  lowerbound[0] > upperbound[0]  ){
-                fmt.Printf("Error | lowerbound : %d > upperbound : %d\n ",lowerbound[0] , upperbound[0]);
+                lm.log.Printf("Error | lowerbound : %d > upperbound : %d\n ",lowerbound[0] , upperbound[0]);
                 lmtErrNode := sm.CreateListNode( lmtidNode , sm.CreateBinaryNode( byte(4)) ) //UPPERDB < LOWERDB
                 rptNode := sm.CreateListNode( sm.CreateUintNode(4,vid) , sm.CreateBinaryNode( byte(4) ) , lmtErrNode  ) //limit value error
                 rptNodes = append(rptNodes , rptNode)
@@ -264,7 +269,7 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
                 break;
             }
             if( upperbound[0] > max[0] ){
-                fmt.Printf("Error | upperbound : %d > max : %d\n ",upperbound[0] , max[0]);
+                lm.log.Printf("Error | upperbound : %d > max : %d\n ",upperbound[0] , max[0]);
                 lmtErrNode := sm.CreateListNode( lmtidNode , sm.CreateBinaryNode( byte(2)) )
                 rptNode := sm.CreateListNode( sm.CreateUintNode(4,vid) , sm.CreateBinaryNode( byte(4) ) , lmtErrNode  ) //limit value error
                 rptNodes = append(rptNodes , rptNode)
@@ -273,7 +278,7 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
             }
 
             if( lowerbound[0] < min[0] ){
-                fmt.Printf("Error | lowerbound : %d < min : %d\n ",lowerbound[0] , min[0]);
+                lm.log.Printf("Error | lowerbound : %d < min : %d\n ",lowerbound[0] , min[0]);
                 lmtErrNode := sm.CreateListNode( lmtidNode , sm.CreateBinaryNode( byte(3)) )
                 rptNode := sm.CreateListNode( sm.CreateUintNode(4,vid) , sm.CreateBinaryNode( byte(4) ) , lmtErrNode  ) //limit value error
                 rptNodes = append(rptNodes , rptNode)
@@ -282,12 +287,12 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
             }
             lm.setLimits(uint32(vid),uint32(lmtid), upperboundNode.Clone() , lowerboundNode.Clone() )
             lm.TellUI(uint32(vid),uint32(lmtid),upperbound[0] ,lowerbound[0] );
-            fmt.Printf("bound : %v | %v\n",upperboundNode,lowerboundNode);
+            lm.log.Printf("bound : %v | %v\n",upperboundNode,lowerboundNode);
         }
     }
     vlaackNODE :=sm.CreateBinaryNode( vlaack  )
     rptNodes = append( []interface{}{ vlaackNODE  } , rptNodes...  )
-    fmt.Printf("%v \n",vlaackNODE);
+    lm.log.Printf("%v \n",vlaackNODE);
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 46, false,
                                      sm.CreateListNode(rptNodes...) ,
                                      lm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
@@ -298,7 +303,7 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
 func (lm * LIMITMONITORMODULE)handleS2F47(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "L" || err != nil){
-        fmt.Printf("Error S2F47 format\n")
+        lm.log.Printf("Error S2F47 format\n")
         lm.sendS9FX(msg, 7)
         return ;
     }
@@ -316,12 +321,12 @@ func (lm * LIMITMONITORMODULE)handleS2F47(msg *sm.DataMessage){
     for k := 0; k < item.Size() ; k++ {
         vidNode , err := item.(*sm.ListNode).Get(k)
         if(vidNode.Type() != "U4" || vidNode.Size() != 1 || err != nil){
-            fmt.Printf("Error S2F47 vid wrong\n")
+            lm.log.Printf("Error S2F47 vid wrong\n")
             lm.sendS9FX(msg, 7)
             return ;
         }
         vid := vidNode.Values().([]uint64)[0]
-        fmt.Printf("vid %d\n",vid);
+        lm.log.Printf("vid %d\n",vid);
         ok , _ , maxNode , minNode , _  , unit:= data.GetVidElementType( uint32(vid) )
         if(!ok ){
             limitNodes = append(limitNodes ,sm.CreateListNode(vidNode,sm.CreateListNode()))
@@ -361,20 +366,20 @@ func (lm * LIMITMONITORMODULE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
 func (lm * LIMITMONITORMODULE)doMonitor(){
     vidList := data.GetDvByName( "LM_LIMITID","LM_TRANSITION","LM_VALUE","LM_UPPER","LM_LOWER" )
     for k, _ := range lm.lmtWatch {
-        //fmt.Printf("monitor %d\n",k)
+        //lm.log.Printf("monitor %d\n",k)
         ok , valueNode , _  , _  , evt , _ := data.GetVidElementType(k)
         if(!ok){
-            fmt.Printf("Error | no such vid %d\n",k);
+            lm.log.Printf("Error | no such vid %d\n",k);
             continue
         }
         _ , value_now := converToFloat64( valueNode.(sm.ElementType) )
         for limitid , v1 := range lm.lmtWatch[k].lmtbounds {
-            //fmt.Printf("bound  %d %v %v\n",limitid, v1.upper , v1.lower)
+            //lm.log.Printf("bound  %d %v %v\n",limitid, v1.upper , v1.lower)
             _ , upperbound := converToFloat64( v1.upper.(sm.ElementType) )
             _ , lowerbound := converToFloat64( v1.lower.(sm.ElementType) )
 
             if( value_now[0] > upperbound[0] && v1.state != "ABOVELIMIT" ){
-                fmt.Printf("Evt ABOVE upperbound vid : %d | limitid : %d | upperdb : %f | lowerdb : %f | value : %f \n",k,limitid,upperbound[0],lowerbound[0],value_now[0]);
+                lm.log.Printf("Evt ABOVE upperbound vid : %d | limitid : %d | upperdb : %f | lowerdb : %f | value : %f \n",k,limitid,upperbound[0],lowerbound[0],value_now[0]);
                 v1.state = "ABOVELIMIT"
                 dvContext := make(map[uint32]interface{})
                 dvContext[ vidList[0] ] = sm.CreateUintNode( 4, limitid )
@@ -386,7 +391,7 @@ func (lm * LIMITMONITORMODULE)doMonitor(){
             }
 
             if( value_now[0] < lowerbound[0] && v1.state != "BELOWLIMIT"){
-                fmt.Printf("Evt BELOW lowerbound vid : %d | limitid : %d | upperdb : %f | lowerdb : %f | value : %f \n",k,limitid,upperbound[0],lowerbound[0],value_now[0]);
+                lm.log.Printf("Evt BELOW lowerbound vid : %d | limitid : %d | upperdb : %f | lowerdb : %f | value : %f \n",k,limitid,upperbound[0],lowerbound[0],value_now[0]);
                 v1.state = "BELOWLIMIT"
                 dvContext := make(map[uint32]interface{})
                 dvContext[ vidList[0] ] = sm.CreateUintNode( 4, limitid )
@@ -439,6 +444,6 @@ func (lm * LIMITMONITORMODULE)stateRun(){
         }
     }
     lm.run = "stop"
-    fmt.Printf("Exit LIMITMONITORMODULE \n");
+    lm.log.Printf("Exit LIMITMONITORMODULE \n");
     return
 }

@@ -35,7 +35,7 @@ func (node *FloatNode) Code() byte {
     } else if(node.symbol == "F8"){
         return 0o40
     } else {
-        fmt.Printf("Error unknown float symbol %s\n",node.symbol);
+        log.Printf("Error unknown float symbol %s\n",node.symbol);
         return 0 //error
     }
 }
@@ -121,4 +121,3 @@ func (node *FloatNode) ToSml() string {
     }
     return fmt.Sprintf("<%s[%d] %v>", node.symbol, node.Size(), strings.Join(values, " "))
 }
-

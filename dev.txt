@@ -1,0 +1,2 @@
+log
+src/webserver/main | jq -Rr 'fromjson? | .msg'

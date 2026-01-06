@@ -1,14 +1,17 @@
 package data
+
 import (
     //"fmt"
-    "github.com/spf13/viper"
+    "fmt"
     "reflect"
     //"encoding/json"
     //"encoding/hex"
-    "fmt"
     //"os"
-    sm "secs/secs_message"
     "strconv"
+
+    "github.com/spf13/viper"
+    //seclog "secs/logger"
+    sm "secs/secs_message"
 )
 
 type DEFAULT_STATE struct{
@@ -111,7 +114,7 @@ type SecsConfig struct {
     if err := json.Unmarshal(raw, &cfg); err != nil {
         return nil, fmt.Errorf("json unmarshal: %w", err)
     }
-    fmt.Printf("%v\n",cfg);
+    log.Printf("%v\n",cfg);
     return &cfg, nil
 }*/
 

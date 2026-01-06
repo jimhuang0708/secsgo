@@ -1,11 +1,13 @@
 package secs
+
 import (
-    "fmt"
-    "time"
-    sm "secs/secs_message"
-    "secs/data"
-    "sync"
     "strconv"
+    "sync"
+    "time"
+
+    "secs/data"
+    "secs/logger"
+    sm "secs/secs_message"
 )
 
 /*
@@ -30,9 +32,10 @@ type TDCMODULE struct{
     wg *sync.WaitGroup
     jobs  map[uint32]*TDCJOB
     deviceID int
+    log *logger.Logger
 }
 
-func NewTDCMODULE(deviceID int) *TDCMODULE {
+func NewTDCMODULE(deviceID int, log *logger.Logger) *TDCMODULE {
     o := TDCMODULE{
                          run : "stop",
                          iChan : make(chan Evt,10),
@@ -40,6 +43,7 @@ func NewTDCMODULE(deviceID int) *TDCMODULE {
                          wg : new(sync.WaitGroup),
                          jobs : make(map[uint32]*TDCJOB),
                          deviceID : deviceID,
+                         log: log,
                   }
     o.wg.Add(1)
     go o.stateRun()
@@ -94,14 +98,14 @@ func (tm * TDCMODULE)removeTrace(trid uint32){
 func (tm * TDCMODULE)handleS6F2(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "B" ||  item.Size() != 1 || err != nil ){
-        fmt.Printf("Error S6F2 format\n")
+        tm.log.Printf("Error S6F2 format\n")
         tm.sendS9FX(msg, 7)
     }
 }
 
 func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
     doErr := func(){
-        fmt.Printf("Error S2F23 format\n")
+        tm.log.Printf("Error S2F23 format\n")
         tm.sendS9FX(msg, 7)
     }
     item , err := msg.Get()
@@ -115,7 +119,7 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
     }
     dsperNode , err  := item.(*sm.ListNode).Get(1)
     if( dsperNode.Type() != "A" || dsperNode.Size() != 6 || err != nil ){
-        fmt.Printf("dsperNode only support 6 bytes format\n");
+        tm.log.Printf("dsperNode only support 6 bytes format\n");
         doErr();return;
     }
     totsmpNode , err := item.(*sm.ListNode).Get(2)
@@ -154,7 +158,7 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
         }
         svID := uint32(svNode.Values().([]uint64)[0]);
         exist := data.IsVidExist(svID)
-        fmt.Printf("exist %v %v\n",exist,svID);
+        tm.log.Printf("exist %v %v\n",exist,svID);
         if(exist){
             svidLst = append(svidLst , svID)
         } else {
@@ -177,7 +181,7 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
     5 - bad REPGSZ
     */
 
-    fmt.Printf("%v %v %v %v %v %d\n",trid,dsper,totsmp,repgsz,svidLst,second_cnt)
+    tm.log.Printf("%v %v %v %v %v %d\n",trid,dsper,totsmp,repgsz,svidLst,second_cnt)
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 24, false,
                                      sm.CreateBinaryNode( interface{}(byte(0))) ,
                                      tm.deviceID , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
@@ -212,7 +216,7 @@ func (tm * TDCMODULE)doJob(job *TDCJOB){
     }
 
     if job.fireSampleTick == 0 {
-        fmt.Printf("sample fired\n")
+        tm.log.Printf("sample fired\n")
         nodes := data.GetSVElementTypeLst(job.svidLst)
         for k := 0 ; k < nodes.Size() ; k++ {
             n , _  := nodes.(*sm.ListNode).Get(k)
@@ -225,7 +229,7 @@ func (tm * TDCMODULE)doJob(job *TDCJOB){
     }
     if job.fireReportTick == 0 {
         job.totsmp = job.totsmp - job.repgsz
-        fmt.Printf("fired %v \n",job.samples)
+        tm.log.Printf("fired %v \n",job.samples)
         tm.sendS6F1( job.samples ,job )
         job.samples = make([]interface{},0)
         job.fireReportTick = job.repgsz
@@ -269,6 +273,6 @@ func (tm * TDCMODULE)stateRun(){
         }
     }
     tm.run = "stop"
-    fmt.Printf("Exit TDCMODULE \n");
+    tm.log.Printf("Exit TDCMODULE \n");
     return
 }

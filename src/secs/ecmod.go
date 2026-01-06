@@ -1,10 +1,12 @@
 package secs
+
 import (
-    "fmt"
-    "time"
-    sm "secs/secs_message"
-    "secs/data"
     "sync"
+    "time"
+
+    "secs/data"
+    "secs/logger"
+    sm "secs/secs_message"
 )
 
 type EQCONSTMODULE struct{
@@ -13,15 +15,17 @@ type EQCONSTMODULE struct{
     run      string
     wg *sync.WaitGroup
     deviceID int
+    log *logger.Logger
 }
 
-func NewEQCONSTMODULE(deviceID int) *EQCONSTMODULE {
+func NewEQCONSTMODULE(deviceID int, log *logger.Logger) *EQCONSTMODULE {
     o := EQCONSTMODULE{
                          run : "stop",
                          iChan : make(chan Evt,10),
                          oChan : make(chan Evt,10 ) ,
                          wg : new(sync.WaitGroup),
                          deviceID : deviceID,
+                         log: log,
                   }
     o.wg.Add(1)
     go o.stateRun()
@@ -60,7 +64,7 @@ func (em * EQCONSTMODULE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
 func (em * EQCONSTMODULE)handleS2F13(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "L" || err != nil){
-        fmt.Printf("Error S2F13 format\n")
+        em.log.Printf("Error S2F13 format\n")
         em.sendS9FX(msg, 7)
         return ;
     }
@@ -68,7 +72,7 @@ func (em * EQCONSTMODULE)handleS2F13(msg *sm.DataMessage){
     for k := 0; k < item.Size() ; k++ {
         ecNode , err := item.(*sm.ListNode).Get(k);
         if(ecNode.Type() != "U4" || ecNode.Size() != 1 || err != nil){
-            fmt.Printf("error S2F13 format\n");
+            em.log.Printf("error S2F13 format\n");
             em.sendS9FX(msg, 7)
             return;
         }
@@ -76,7 +80,7 @@ func (em * EQCONSTMODULE)handleS2F13(msg *sm.DataMessage){
         ecLst = append(ecLst,ecID)
     }
     rootNode := data.GetEC(ecLst)
-    fmt.Printf("rootNode : %v \n",rootNode);
+    em.log.Printf("rootNode : %v \n",rootNode);
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 14, false,  rootNode  ,
                   em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     em.oChan <- act
@@ -86,7 +90,7 @@ func (em * EQCONSTMODULE)handleS2F13(msg *sm.DataMessage){
 func (em * EQCONSTMODULE)handleS2F15(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "L" || item.Size() < 1 || err != nil){
-        fmt.Printf("Error S2F15 format\n")
+        em.log.Printf("Error S2F15 format\n")
         em.sendS9FX(msg, 7)
         return ;
     }
@@ -95,13 +99,13 @@ func (em * EQCONSTMODULE)handleS2F15(msg *sm.DataMessage){
     for k := 0; k < item.Size() ; k++ {
         ecNode , err := item.(*sm.ListNode).Get(k);
         if(ecNode.Type() != "L" || ecNode.Size() != 2  || err != nil ){
-            fmt.Printf("error S2F15 format\n");
+            em.log.Printf("error S2F15 format\n");
             em.sendS9FX(msg, 7)
             return;
         }
         ecIDNode , err := ecNode.(*sm.ListNode).Get(0)
         if(ecIDNode.Type() != "U4" || ecIDNode.Size() != 1  || err != nil ){
-            fmt.Printf("error S2F15 format\n");
+            em.log.Printf("error S2F15 format\n");
             em.sendS9FX(msg, 7)
             return;
         }
@@ -110,7 +114,7 @@ func (em * EQCONSTMODULE)handleS2F15(msg *sm.DataMessage){
         ecs[ecID] = ecValueNode
     }
     ret := data.SetEC(ecs)
-    fmt.Printf("ret : %v \n",ret);
+    em.log.Printf("ret : %v \n",ret);
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 16, false,  sm.CreateBinaryNode( interface{}(byte( ret)))  ,
                   em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     em.oChan <- act
@@ -119,7 +123,7 @@ func (em * EQCONSTMODULE)handleS2F15(msg *sm.DataMessage){
 func (em * EQCONSTMODULE)handleS2F29(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "L" || err != nil){
-        fmt.Printf("Error S2F29 format\n")
+        em.log.Printf("Error S2F29 format\n")
         em.sendS9FX(msg, 7)
         return ;
     }
@@ -127,7 +131,7 @@ func (em * EQCONSTMODULE)handleS2F29(msg *sm.DataMessage){
     for k := 0; k < item.Size() ; k++ {
         ecNode , err := item.(*sm.ListNode).Get(k);
         if(ecNode.Type() != "U4" || ecNode.Size() != 1 || err != nil){
-            fmt.Printf("error S2F29 format\n");
+            em.log.Printf("error S2F29 format\n");
             em.sendS9FX(msg, 7)
             return;
         }
@@ -135,7 +139,7 @@ func (em * EQCONSTMODULE)handleS2F29(msg *sm.DataMessage){
         ecLst = append(ecLst,ecID)
     }
     rootNode := data.GetECName(ecLst)
-    fmt.Printf("rootNode : %v \n",rootNode);
+    em.log.Printf("rootNode : %v \n",rootNode);
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2, 30, false, rootNode  ,
                   em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     em.oChan <- act
@@ -182,6 +186,6 @@ func (em * EQCONSTMODULE)stateRun(){
         }
     }
     em.run = "stop"
-    fmt.Printf("Exit EQCONSTMODULE \n");
+    em.log.Printf("Exit EQCONSTMODULE \n");
     return
 }

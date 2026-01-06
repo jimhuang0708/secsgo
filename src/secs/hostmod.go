@@ -1,10 +1,12 @@
 package secs
+
 import (
-    "fmt"
-    "time"
-    sm "secs/secs_message"
-    "sync"
     "encoding/json"
+    "sync"
+    "time"
+
+    "secs/logger"
+    sm "secs/secs_message"
 )
 
 type HOSTMODULE struct{
@@ -15,9 +17,10 @@ type HOSTMODULE struct{
     wg *sync.WaitGroup
     deviceID int
     comState string
+    log *logger.Logger
 }
 
-func NewHOSTMODULE(deviceID int) *HOSTMODULE {
+func NewHOSTMODULE(deviceID int, log *logger.Logger) *HOSTMODULE {
     o := HOSTMODULE{
                              run : "stop",
                              iChan : make(chan Evt,10),
@@ -25,6 +28,7 @@ func NewHOSTMODULE(deviceID int) *HOSTMODULE {
                              timer_S1F13 : nil,
                              wg : new(sync.WaitGroup),
                              deviceID : deviceID,
+                             log: log,
                          }
     o.wg.Add(1)
     go o.stateRun()
@@ -43,7 +47,7 @@ func (hm * HOSTMODULE)TellUI(text string){
 
 
 func (hm *HOSTMODULE)handleS1F14(msg *sm.DataMessage){
-    fmt.Printf("HOST COMMUNICATE STATE %v\n",msg)
+    hm.log.Printf("HOST COMMUNICATE STATE %v\n",msg)
     item , err := msg.Get()
     if(err != nil) {
     }
@@ -53,12 +57,12 @@ func (hm *HOSTMODULE)handleS1F14(msg *sm.DataMessage){
     v := node.Values()
     if( len(v.([]byte)) == 1 && v.([]byte)[0] == 0){
         if( v.([]byte)[0] == 0) {//accept
-            fmt.Printf("HOST Enter COMMUNICATE STATE | Local initiated\n")
+            hm.log.Printf("HOST Enter COMMUNICATE STATE | Local initiated\n")
             hm.stopS1F13()
             return;
         }
     } else {
-        fmt.Printf("HOST S1F14 invalid format just restartS1F13 timer!\n")
+        hm.log.Printf("HOST S1F14 invalid format just restartS1F13 timer!\n")
         hm.restartS1F13();
     }
     return
@@ -67,26 +71,26 @@ func (hm *HOSTMODULE)handleS1F14(msg *sm.DataMessage){
 func (hm * HOSTMODULE)handleS10F1(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "L" || item.Size() != 2 ||err != nil){
-        fmt.Printf("Error S10F3 format\n")
+        hm.log.Printf("Error S10F3 format\n")
         hm.sendS9FX(msg, 7)
         return ;
     }
     tidNode , err := item.(*sm.ListNode).Get(0) //TID node ,don't care
     if( tidNode.Type() != "B" || tidNode.Size() != 1 ||err != nil){
-        fmt.Printf("Error S10F3 format\n")
+        hm.log.Printf("Error S10F3 format\n")
         hm.sendS9FX(msg, 7)
         return ;
     }
     textNodce , err := item.(*sm.ListNode).Get(1)
     if( textNodce.Type() != "A" || textNodce.Size() > 120 || textNodce.Size() == 0  || err != nil){
-        fmt.Printf("Error S10F3 format\n")
+        hm.log.Printf("Error S10F3 format\n")
         hm.sendS9FX(msg, 7)
         return ;
     }
 
     text := textNodce.Values().(string)
     hm.TellUI(text)
-    fmt.Printf("Get message from Equipment : \n %s\n",text);
+    hm.log.Printf("Get message from Equipment : \n %s\n",text);
 
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 10,2, false,
                                      sm.CreateBinaryNode( byte(0) )   ,
@@ -97,7 +101,7 @@ func (hm * HOSTMODULE)handleS10F1(msg *sm.DataMessage){
 
 
 func (hm *HOSTMODULE)sendS1F13_Timeout(){
-    fmt.Printf("HOST S1F13 T3 timeout\n");
+    hm.log.Printf("HOST S1F13 T3 timeout\n");
     hm.restartS1F13()
     return
 }
@@ -105,7 +109,7 @@ func (hm *HOSTMODULE)sendS1F13_Timeout(){
 func (hm *HOSTMODULE)sendS1F13(){
     msg := sm.CreateDataMessage( 1, 13, true, sm.CreateListNode(), hm.deviceID, 0 , "ALL" )
     act := Evt{ cmd : "send" , msg : msg,ts : time.Now().Unix()}
-    fmt.Printf("HOST sendS1F13()\n")
+    hm.log.Printf("HOST sendS1F13()\n")
     hm.oChan <- act
     return
 }
@@ -139,12 +143,12 @@ func (hm *HOSTMODULE)processMsg(msg *sm.DataMessage)(bool){
             node = sm.CreateListNode( )
             act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 2, false,
                                              node , msg.SessionID() , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
-            fmt.Printf("HOST do On-Line Identification\n")
+            hm.log.Printf("HOST do On-Line Identification\n")
             hm.oChan <- act
         }
 
         if(msg.FunctionCode() == 13) {
-            fmt.Printf("HOST Enter COMMUNICATE STATE | Remote initiated\n")
+            hm.log.Printf("HOST Enter COMMUNICATE STATE | Remote initiated\n")
             // Write error will quit , so don't worry send failed
             hm.sendS1F14(msg)
             hm.stopS1F13()
@@ -221,15 +225,15 @@ func (hm *HOSTMODULE)stateRun(){
                     break
                 }
                 if(evt.msg != nil){
-                    fmt.Printf("Host Get : %s\n",evt.msg.(sm.HSMSMessage).ToSml());
+                    hm.log.Printf("Host Get : %s\n",evt.msg.(sm.HSMSMessage).ToSml());
                 }
                 hm.processEvt(evt)
             case <-hm.timer_S1F13.C:
-                fmt.Printf("HOST S1F13 timer fired\n")
+                hm.log.Printf("HOST S1F13 timer fired\n")
                 hm.sendS1F13()
         }
     }
     hm.run = "stop"
-    fmt.Printf("Exit HOSTMODULE \n");
+    hm.log.Printf("Exit HOSTMODULE \n");
     return
 }

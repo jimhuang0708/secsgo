@@ -1,10 +1,12 @@
 package secs
+
 import (
-    "fmt"
-    "time"
-    sm "secs/secs_message"
-    "secs/data"
     "sync"
+    "time"
+
+    "secs/data"
+    "secs/logger"
+    sm "secs/secs_message"
 )
 
 type ALARMMODULE struct{
@@ -13,16 +15,18 @@ type ALARMMODULE struct{
     run      string
     wg *sync.WaitGroup
     deviceID int
+    log *logger.Logger
 }
 
-func NewALARMMODULE(deviceID int) *ALARMMODULE {
+func NewALARMMODULE(deviceID int, log *logger.Logger) *ALARMMODULE {
     o := ALARMMODULE{
                          run : "stop",
                          iChan : make(chan Evt,10),
                          oChan : make(chan Evt,10 ) ,
                          wg : new(sync.WaitGroup),
                          deviceID : deviceID,
-                  }
+                         log: log,
+                 }
     o.wg.Add(1)
     go o.stateRun()
     return &o
@@ -52,7 +56,7 @@ func (am * ALARMMODULE)sendS5F1(id uint64){
     node , _ := rootNode.(*sm.ListNode).Get(0)
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 5, 1, true,  node ,am.deviceID , 0 , "ALL"),
                 ts : time.Now().Unix() }
-    fmt.Printf("send report\n")
+    am.log.Printf("send report\n")
     am.oChan <- act
 }
 
@@ -75,7 +79,7 @@ func (am * ALARMMODULE)setAlarm(id uint64,v int){
 func (am * ALARMMODULE)handleS5F2(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "B" || item.Size() != 1 || err != nil){
-        fmt.Printf("Error S5F23 format\n")
+        am.log.Printf("Error S5F23 format\n")
         am.sendS9FX(msg, 7)
         return ;
     }
@@ -84,19 +88,19 @@ func (am * ALARMMODULE)handleS5F2(msg *sm.DataMessage){
 func (am * ALARMMODULE)handleS5F3(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "L" || item.Size() != 2 || err != nil){
-        fmt.Printf("Error S5F3 format\n")
+        am.log.Printf("Error S5F3 format\n")
         am.sendS9FX(msg, 7)
         return ;
     }
     aledNode , err := item.(*sm.ListNode).Get(0);
     if(aledNode.Type() != "B" || aledNode.Size() != 1 || err != nil){
-        fmt.Printf("Error S5F3 format\n")
+        am.log.Printf("Error S5F3 format\n")
         am.sendS9FX(msg, 7)
         return ;
     }
     alidNode , err := item.(*sm.ListNode).Get(1);
     if(alidNode.Type() != "U4" || err != nil){
-        fmt.Printf("Error S5F3 format\n")
+        am.log.Printf("Error S5F3 format\n")
         am.sendS9FX(msg, 7)
         return ;
     }
@@ -116,7 +120,7 @@ func (am * ALARMMODULE)handleS5F3(msg *sm.DataMessage){
 func (am * ALARMMODULE)handleS5F5(msg *sm.DataMessage){
     alidNode , err := msg.Get()
     if( alidNode.Type() != "U4" || err != nil){
-        fmt.Printf("Error S5F5 format\n")
+        am.log.Printf("Error S5F5 format\n")
         am.sendS9FX(msg, 7)
         return ;
     }
@@ -171,6 +175,6 @@ func (am * ALARMMODULE)stateRun(){
         }
     }
     am.run = "stop"
-    fmt.Printf("Exit ALARMMODULE \n");
+    am.log.Printf("Exit ALARMMODULE \n");
     return
 }

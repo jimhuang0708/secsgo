@@ -1,10 +1,12 @@
 package secs
+
 import (
-    "fmt"
-    "time"
-    sm "secs/secs_message"
-    "sync"
     "encoding/json"
+    "sync"
+    "time"
+
+    "secs/logger"
+    sm "secs/secs_message"
 )
 
 /*
@@ -17,15 +19,17 @@ type RCMODULE struct{
     run      string
     wg *sync.WaitGroup
     deviceID int
+    log *logger.Logger
 }
 
-func NewRCMODULE(deviceID int) *RCMODULE {
+func NewRCMODULE(deviceID int, log *logger.Logger) *RCMODULE {
     o := RCMODULE{
                          run : "stop",
                          iChan : make(chan Evt,10),
                          oChan : make(chan Evt,10 ) ,
                          wg : new(sync.WaitGroup),
                          deviceID : deviceID,
+                         log: log,
                   }
     o.wg.Add(1)
     go o.stateRun()
@@ -58,48 +62,48 @@ func (rcm * RCMODULE)sendS9FX(msg *sm.DataMessage,f int){
 func (rcm * RCMODULE)handleS2F41(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "L" || item.Size() != 2 || err != nil){
-        fmt.Printf("Error S2F41 format\n")
+        rcm.log.Printf("Error S2F41 format\n")
         rcm.sendS9FX(msg, 7)
         return ;
     }
     rcmdNode , err := item.(*sm.ListNode).Get(0)
     if( rcmdNode.Type() != "A" || err != nil ){
-        fmt.Printf("Error S2F41 format\n")
+        rcm.log.Printf("Error S2F41 format\n")
         rcm.sendS9FX(msg, 7)
         return ;
     }
     parametersNode , err := item.(*sm.ListNode).Get(1)
     if( parametersNode.Type() != "L" || err != nil ){
-        fmt.Printf("Error S2F41 format\n")
+        rcm.log.Printf("Error S2F41 format\n")
         rcm.sendS9FX(msg, 7)
         return ;
     }
     rcmd :=  rcmdNode.Values().(string)
-    fmt.Printf("Get Remote command: %s\n",rcmd)
+    rcm.log.Printf("Get Remote command: %s\n",rcmd)
     remotecmdstr := rcmd + "( "
     for i := 0 ; i < parametersNode.Size() ; i++ {
         pNode , err := parametersNode.(*sm.ListNode).Get(i)
         if(pNode.Type() != "L" || err != nil){
-            fmt.Printf("Error S2F41 format\n")
+            rcm.log.Printf("Error S2F41 format\n")
             rcm.sendS9FX(msg, 7)
             return ;
         }
         cpnameNode , err := pNode.(*sm.ListNode).Get(0)
         if(cpnameNode.Type() != "A" || err != nil){
-            fmt.Printf("Error S2F41 format\n")
+            rcm.log.Printf("Error S2F41 format\n")
             rcm.sendS9FX(msg, 7)
             return ;
         }
         cpvalNode , err := pNode.(*sm.ListNode).Get(1)
         if(err != nil){
-            fmt.Printf("Error S2F41 format\n")
+            rcm.log.Printf("Error S2F41 format\n")
             rcm.sendS9FX(msg, 7)
             return ;
         }
         cpname := cpnameNode.Values().(string)
         cpval := cpvalNode.Values().(string)
         remotecmdstr = remotecmdstr + cpname + " : " + cpval + " , "
-        fmt.Printf("cpname : %s , cpval %s\n",cpname,cpval);
+        rcm.log.Printf("cpname : %s , cpval %s\n",cpname,cpval);
     }
     remotecmdstr = remotecmdstr + " )"
     rcm.TellUI(remotecmdstr)
@@ -154,6 +158,6 @@ func (rcm * RCMODULE)stateRun(){
         }
     }
     rcm.run = "stop"
-    fmt.Printf("Exit RCMODULE \n");
+    rcm.log.Printf("Exit RCMODULE \n");
     return
 }

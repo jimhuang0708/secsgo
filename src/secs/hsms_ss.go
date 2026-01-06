@@ -1,10 +1,12 @@
 //HSMS-SS (High-Speed SECS Message Service Single Selected Mode）
 package secs
+
 import (
-    "fmt"
-    "time"
-    sm "secs/secs_message"
     "sync"
+    "time"
+
+    "secs/logger"
+    sm "secs/secs_message"
 )
 
 type WaitItem struct {
@@ -25,9 +27,10 @@ type HSMS_SS struct{
     sysByte    uint32
     waitQueue map[uint32]WaitItem
     timer_T7 *time.Timer
+    log *logger.Logger
 }
 
-func NewHSMS_SS(mode string,ts * Transport) *HSMS_SS {
+func NewHSMS_SS(mode string,ts * Transport, log *logger.Logger) *HSMS_SS {
     o := HSMS_SS{
                          connectState : "NOTSELECTED",
                          run : "stop",
@@ -37,6 +40,7 @@ func NewHSMS_SS(mode string,ts * Transport) *HSMS_SS {
                          sysByte    : 0,
                          waitQueue : make(map[uint32]WaitItem),
                          ts : ts,
+                         log: log,
                      }
     o.wg.Add(1)
     go o.stateRun(mode)
@@ -53,7 +57,7 @@ func (ss *HSMS_SS)incSysByte(){
 }
 
 func (ss *HSMS_SS)sendLinkTestReq(){
-    fmt.Printf("sendLinkTestReq()\n");
+    ss.log.Printf("sendLinkTestReq()\n");
     act := Evt{ cmd : "send" , msg : sm.CreateControlMessageReq(sm.TypeLinktestReq,ss.sysByte),ts : time.Now().Unix() }
     alarmEvt := Evt{ cmd : "T6_TIMEOUT" , msg : act.msg ,ts : time.Now().Unix() }
     ss.waitQueue[ss.sysByte] = WaitItem { evt : alarmEvt,ts : act.ts + (T6/1000) , evtChan : ss.iChan }
@@ -100,7 +104,7 @@ func (ss *HSMS_SS)processEvt(evt Evt){
     }
 
     if(evt.cmd == "disconnect"){
-        fmt.Printf("Disconnect detachTransport()\n");
+        ss.log.Printf("Disconnect detachTransport()\n");
         ss.detachTransport();
         return
     }
@@ -120,7 +124,7 @@ func (ss *HSMS_SS)processMsg(msg sm.HSMSMessage){
 
     if(msg.MsgType() == sm.TypeSeparateReq){
         ss.detachTransport();
-        fmt.Printf("Get separate.req\n");
+        ss.log.Printf("Get separate.req\n");
         return
     }
 
@@ -136,14 +140,14 @@ func (ss *HSMS_SS)processMsg(msg sm.HSMSMessage){
                 ss.connectState = "SELECTED"
                 ss.oChan <- Evt{ cmd : "NOTIFY_SELECTED" , msg : nil  }
             } else {
-                fmt.Printf("Select rejected & quit\n");
+                ss.log.Printf("Select rejected & quit\n");
             }
         } else {
             if(msg.MsgType() == sm.TypeDataMessage){
-                fmt.Printf("Got data message when hsms-ss not selected\n");
+                ss.log.Printf("Got data message when hsms-ss not selected\n");
                 ss.sendRejectReq(msg)
             } else {
-                fmt.Printf("checkSelect() failed ignore : %v\n",msg);
+                ss.log.Printf("checkSelect() failed ignore : %v\n",msg);
             }
         }
         return
@@ -158,7 +162,7 @@ func (ss *HSMS_SS)processMsg(msg sm.HSMSMessage){
         }
 
         if(msg.MsgType() == sm.TypeSelectReq || msg.MsgType() == sm.TypeSelectRsp){
-             fmt.Printf("Aready selected ignore : %v\n",msg);
+             ss.log.Printf("Aready selected ignore : %v\n",msg);
              return
         }
 
@@ -173,7 +177,7 @@ func (ss *HSMS_SS )StateStop(){
 }
 
 func (ss *HSMS_SS)stopT7() {
-    fmt.Print("STOP T7\n");
+    ss.log.Print("STOP T7\n");
     if !ss.timer_T7.Stop() {
         select {
             case <-ss.timer_T7.C:
@@ -185,11 +189,11 @@ func (ss *HSMS_SS)stopT7() {
 func (ss *HSMS_SS )handleInput( evt Evt ){
 
     if(evt.cmd == "T3_TIMEOUT"){
-        fmt.Printf("T3 timeout just log\n");
+        ss.log.Printf("T3 timeout just log\n");
         return
     }
     if(evt.cmd == "T6_TIMEOUT"){
-        fmt.Printf("T6 timeout  detachTransport()\n");
+        ss.log.Printf("T6 timeout  detachTransport()\n");
         ss.detachTransport();
         return
     }
@@ -216,7 +220,7 @@ func (ss *HSMS_SS )detachTransport(){
     ss.oChan <-Evt{ cmd : "disconnect" , msg : nil , ts : time.Now().Unix() }
     ss.run = "stop"
     ss.ts = nil
-    fmt.Printf("Get separate.req\n");
+    ss.log.Printf("Get separate.req\n");
 }
 
 func (ss *HSMS_SS )stateRun(mode string){
@@ -239,14 +243,14 @@ func (ss *HSMS_SS )stateRun(mode string){
             case <-lnktest_ticker.C:
                 ss.sendLinkTestReq()
             case <-ss.timer_T7.C:
-                fmt.Printf("T7 comes,Check if selected \n")
+                ss.log.Printf("T7 comes,Check if selected \n")
                 if(ss.connectState != "SELECTED"){
-                    fmt.Printf("NOT Selected Error T7_TIMEOUT -> EXIT\n")
+                    ss.log.Printf("NOT Selected Error T7_TIMEOUT -> EXIT\n")
                     ss.oChan <-Evt{ cmd : "disconnect" , msg : nil }
                     ss.run = "stop"
                     return
                 } else {
-                    fmt.Printf("yes , selected \n")
+                    ss.log.Printf("yes , selected \n")
                 }
             case <-waitAct_ticker.C:
                 for k , v := range ss.waitQueue {
@@ -261,7 +265,6 @@ func (ss *HSMS_SS )stateRun(mode string){
     if(ss.ts != nil){
         ss.ts.StateStop()
     }
-    fmt.Printf("Exit HSMS_SS \n");
+    ss.log.Printf("Exit HSMS_SS \n");
     return
 }
-

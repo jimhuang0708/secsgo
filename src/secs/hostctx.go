@@ -1,16 +1,19 @@
 package secs
 import (
-    "fmt"
-    "time"
     "encoding/json"
+    "log/slog"
     "net"
-    sm "secs/secs_message"
+    "time"
+
     "secs/data"
+    "secs/logger"
+    sm "secs/secs_message"
 )
 
 
 type HostContext struct {
     BaseContext
+    log *logger.Logger
     hsms_ss      *  HSMS_SS
     hostModule * HOSTMODULE //for host
     UICmdChan *chan string
@@ -36,15 +39,18 @@ type UICmd struct {
     DataItem data.NodeValue `json:"dataitem"`
 }
 
-func NewHostContext(deviceID int) *HostContext {
+func NewHostContext(deviceID int, l *slog.Logger) *HostContext {
+    baseLog := logger.New(l).With("context", "host", "deviceID", deviceID)
     hc := &HostContext{
                          BaseContext: BaseContext{
                              oChan : make(chan Evt,10 ) ,
                              iChan : make(chan Evt,10),
                              run : false,
                              deviceID : deviceID,
+                             log: baseLog,
                          },
-                         hostModule : NewHOSTMODULE(deviceID) ,
+                         log: baseLog,
+                         hostModule : NewHOSTMODULE(deviceID, baseLog.With("module", "HOSTMODULE")) ,
                          UICmdChan : nil,
                          UIEvtChan : nil,
                          hsms_ss : nil,
@@ -54,8 +60,8 @@ func NewHostContext(deviceID int) *HostContext {
 }
 
 func (hc *HostContext)AttachSession(conn net.Conn,mode string){
-    ts := NewTransport(conn);
-    hc.hsms_ss = NewHSMS_SS(mode,ts);
+    ts := NewTransport(conn, hc.log.With("component", "transport", "session_mode", mode))
+    hc.hsms_ss = NewHSMS_SS(mode,ts, hc.log.With("component", "hsms_ss", "session_mode", mode))
 }
 
 
@@ -73,7 +79,7 @@ func (hc *HostContext)doUICommand(s string) {
     }
     var c UICmd
     json.Unmarshal( raw,&c)
-    fmt.Printf("=============>%s  | %v \n",raw,c);
+    hc.log.Printf("=============>%s  | %v",raw,c);
     //
     stream := c.Stream
     function := c.Function
@@ -125,10 +131,10 @@ func (hc *HostContext)stateRun(){
         }
         select {
             case o := <-hsms_oChan:
-                fmt.Printf("get from hsms_ss.oChan %v\n",o);
+                hc.log.Printf("get from hsms_ss.oChan %v",o);
                 hc.processEvt(o)
             case o := <-hc.hostModule.oChan:
-                fmt.Printf("get from hc.hostModule.oChan %v\n",o);
+                hc.log.Printf("get from hc.hostModule.oChan %v",o);
                 if(o.cmd == "uievent"){
                     hc.processUIEvt(o.msg.(string))
                 } else {
@@ -141,7 +147,7 @@ func (hc *HostContext)stateRun(){
         }
     }
     hc.hostModule.stateStop()
-    fmt.Printf("Exit HostContext\n")
+    hc.log.Printf("Exit HostContext")
 }
 
 ////////////////////API
@@ -156,4 +162,3 @@ func (hc *HostContext)AttachUICmdChan(cmdChan *chan string){
 func (hc *HostContext)AttachUIEvtChan(uiChan *chan string){
     hc.UIEvtChan = uiChan
 }
-

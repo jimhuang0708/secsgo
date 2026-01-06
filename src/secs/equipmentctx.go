@@ -1,11 +1,14 @@
 package secs
+
 import (
-    "fmt"
-    "time"
-    "net"
-    sm "secs/secs_message"
-    "secs/data"
     "encoding/json"
+    "log/slog"
+    "net"
+    "time"
+
+    "secs/data"
+    "secs/logger"
+    sm "secs/secs_message"
 )
 
 const T1 = 1000 //Inter char timeout (RS232)
@@ -38,6 +41,7 @@ type BaseContext struct {
     run bool
     dispatchMap [255][255]MSGMODULE
     deviceID int
+    log *logger.Logger
 }
 
 
@@ -59,7 +63,7 @@ func (bc *BaseContext)dispatchHSMSDataMsg(evt Evt)(bool){
     if(msg.SessionID() != bc.deviceID){
         bc.buildError(msg,1)
         //TODO :  should send separate req
-        fmt.Printf("Incorrect session id : %d != %d | %s\n",msg.SessionID(),bc.deviceID,msg.ToSml())
+        bc.log.Printf("Incorrect session id : %d != %d | %s",msg.SessionID(),bc.deviceID,msg.ToSml())
         return true
     }
     s := msg.StreamCode()
@@ -86,6 +90,7 @@ func (bc *BaseContext)sendUnknownError(msg *sm.DataMessage){
 
 type EquipmentContext struct {
     BaseContext
+    log *logger.Logger
     UICmdChan *chan string
     UIEvtChan *chan string
     ctrlState * CTRLSTATE;
@@ -101,26 +106,29 @@ type EquipmentContext struct {
 }
 
 
-func NewEquipmentContext(deviceID int) *EquipmentContext {
+func NewEquipmentContext(deviceID int, l *slog.Logger) *EquipmentContext {
+    baseLog := logger.New(l).With("context", "equipment", "deviceID", deviceID)
     ec := &EquipmentContext{
         BaseContext: BaseContext{
                              oChan : make(chan Evt,10 ) ,
                              iChan : make(chan Evt,10),
                              run : false,
                              deviceID : deviceID,
+                             log: baseLog,
 
         },
+        log: baseLog,
         UICmdChan : nil,
         UIEvtChan : nil,
-        ctrlState : NewCTRLSTATE(deviceID,data.G_STATE.DEFAULT_CTRLSTATE,data.G_STATE.DEFAULT_CTRLSUBSTATE,data.G_STATE.DEFAULT_REJECT_CTRLSUBSTATE, data.G_STATE.DEFAULT_ACCEPT_CTRLSUBSTATE),
-        evtModule : NewEVENTMODULE(deviceID),
-        commonModule : NewCOMMONMODULE(deviceID),
-        ecModule : NewEQCONSTMODULE(deviceID),
-        tdcModule : NewTDCMODULE(deviceID),
-        alarmModule : NewALARMMODULE(deviceID),
-        terminalModule : NewTERMINALMODULE(deviceID),
-        rcModule : NewRCMODULE(deviceID),
-        lmtModule : NewLIMITMONITORMODULE(deviceID),
+        ctrlState : NewCTRLSTATE(deviceID,data.G_STATE.DEFAULT_CTRLSTATE,data.G_STATE.DEFAULT_CTRLSUBSTATE,data.G_STATE.DEFAULT_REJECT_CTRLSUBSTATE, data.G_STATE.DEFAULT_ACCEPT_CTRLSUBSTATE, baseLog.With("module", "CTRLSTATE")),
+        evtModule : NewEVENTMODULE(deviceID, baseLog.With("module", "EVENTMODULE")),
+        commonModule : NewCOMMONMODULE(deviceID, baseLog.With("module", "COMMONMODULE")),
+        ecModule : NewEQCONSTMODULE(deviceID, baseLog.With("module", "EQCONSTMODULE")),
+        tdcModule : NewTDCMODULE(deviceID, baseLog.With("module", "TDCMODULE")),
+        alarmModule : NewALARMMODULE(deviceID, baseLog.With("module", "ALARMMODULE")),
+        terminalModule : NewTERMINALMODULE(deviceID, baseLog.With("module", "TERMINALMODULE")),
+        rcModule : NewRCMODULE(deviceID, baseLog.With("module", "RCMODULE")),
+        lmtModule : NewLIMITMONITORMODULE(deviceID, baseLog.With("module", "LIMITMONITORMODULE")),
     }
     go ec.stateRun()
     return ec;
@@ -204,7 +212,7 @@ func (ec *EquipmentContext)processUIEvt(uievt string){
 
 
 func (ec *EquipmentContext)stateTrig(evt Evt){
-    fmt.Printf("evt %v\n",evt)
+    ec.log.Printf("evt %v",evt)
     if( evt.cmd == "recv" ) {
         ec.regProcessModule();
         if(ec.dispatchHSMSDataMsg(evt)){
@@ -220,7 +228,7 @@ func (ec *EquipmentContext)stateTrig(evt Evt){
         return
     } else {
         if(evt.cmd == "READERROR" || evt.cmd == "T8_TIMEOUT" || evt.cmd == "WRITEERROR"){
-            fmt.Printf("Error | Event : %s\n",evt.cmd)
+            ec.log.Printf("Error | Event : %s",evt.cmd)
             ec.ctrlState.iChan <-Evt{ cmd : "quit" , msg : nil }
             return
         }
@@ -250,7 +258,7 @@ func (ec *EquipmentContext )doEvt(act Evt){
         return
     }
 
-    fmt.Printf("doAct %v Failed\n",act);
+    ec.log.Printf("doAct %v Failed",act);
 }
 
 func (ec *EquipmentContext )stateRun(){
@@ -288,7 +296,7 @@ func (ec *EquipmentContext )stateRun(){
     ec.terminalModule.moduleStop()
     ec.rcModule.moduleStop()
     ec.lmtModule.moduleStop()
-    fmt.Printf("Exit EquipmentContext\n")
+    ec.log.Printf("Exit EquipmentContext")
 }
 
 func (ec *EquipmentContext )StateStop(){
@@ -298,10 +306,10 @@ func (ec *EquipmentContext )StateStop(){
 ////////////
 
 func (ec *EquipmentContext)AttachSession(conn net.Conn,mode string){
-    ts := NewTransport(conn);
-    ss := NewHSMS_SS( mode , ts);
+    ts := NewTransport(conn, ec.log.With("component", "transport", "session_mode", mode));
+    ss := NewHSMS_SS( mode , ts, ec.log.With("component", "hsms_ss", "session_mode", mode));
     /* communicate state will attach to ctrlstate */
-    NewCOMMUNICATESTATE( ec.deviceID , "ENABLED" , ss, ec.ctrlState);
+    NewCOMMUNICATESTATE( ec.deviceID , "ENABLED" , ss, ec.ctrlState, ec.log.With("component", "communicate", "session_mode", mode));
 }
 
 func (ec *EquipmentContext)Operate_Ctrl(value int){
@@ -325,28 +333,28 @@ func (ec *EquipmentContext) GetRun() bool{
 }
 
 func (ec *EquipmentContext)SetVidUint(vid uint32 ,v uint32){
-    fmt.Printf("SetVidUint %d : %d\n",vid,v);
+    ec.log.Printf("SetVidUint %d : %d",vid,v);
     data.SetVidValue(vid,sm.CreateUintNode(4,v))
 }
 
 /* TODO : limit id should be fixed in config and can't not dynamically add by host*/
 func (ec *EquipmentContext)SetVidLimit(vid uint32 ,limitid uint32,upperDB uint32,lowerDB uint32){
-    fmt.Printf("SetVidLimit vid : %d | limitid : %d | upperdb : %d | lowerdb : %d\n",vid,limitid,upperDB,lowerDB);
+    ec.log.Printf("SetVidLimit vid : %d | limitid : %d | upperdb : %d | lowerdb : %d",vid,limitid,upperDB,lowerDB);
     ec.lmtModule.setLimits( vid , limitid , sm.CreateUintNode(4,upperDB) , sm.CreateUintNode(4,lowerDB)  )
 }
 
 func (ec *EquipmentContext)SetCommunicate(enable bool){
-    fmt.Printf("SetCommunicate %t\n",enable);
+    ec.log.Printf("SetCommunicate %t",enable);
     ec.ctrlState.SetCommunicate(enable)
 }
 
 func (ec *EquipmentContext)SendText(text string){
-    fmt.Printf("SendText %s\n",text);
+    ec.log.Printf("SendText %s",text);
     ec.terminalModule.sendS10F1(text)
 }
 
 func (ec *EquipmentContext)SendRecognizeEvent(){
-    fmt.Printf("SendRecognizeEvent\n");
+    ec.log.Printf("SendRecognizeEvent");
     ec.terminalModule.sendRecognizeEvent()
 }
 
@@ -379,12 +387,12 @@ func (ec *EquipmentContext)SetEC(s string){
     for k := 0; k < node.Size() ; k++ {
         ecNode , err := node.(*sm.ListNode).Get(k);
         if(ecNode.Type() != "L" || ecNode.Size() != 2  || err != nil ){
-            fmt.Printf("error SetEC format\n");
+            ec.log.Printf("error SetEC format");
             return;
         }
         ecIDNode , err := ecNode.(*sm.ListNode).Get(0)
         if(ecIDNode.Type() != "U4" || ecIDNode.Size() != 1  || err != nil ){
-            fmt.Printf("error SetEC format\n");
+            ec.log.Printf("error SetEC format");
             return;
         }
         ecID := uint32(ecIDNode.Values().([]uint64)[0])
@@ -403,5 +411,5 @@ func (ec *EquipmentContext)SetEC(s string){
         ec.ecModule.trigEvt(evtIdLst[0],dvContext)
     }
     ret := data.SetEC(ecs)
-    fmt.Printf("ret : %v \n",ret);
+    ec.log.Printf("ret : %v",ret);
 }

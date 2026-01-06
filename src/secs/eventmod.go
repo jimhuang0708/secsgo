@@ -1,10 +1,12 @@
 package secs
+
 import (
-    "fmt"
-    sm "secs/secs_message"
-    "secs/data"
     "sync"
     "time"
+
+    "secs/data"
+    "secs/logger"
+    sm "secs/secs_message"
 )
 
 const GEM_CTRL_STATE_LOCAL  = 300
@@ -19,15 +21,17 @@ type EVENTMODULE struct{
     run      string
     wg  *sync.WaitGroup
     deviceID int
+    log *logger.Logger
 }
 
-func NewEVENTMODULE(deviceID int) *EVENTMODULE {
+func NewEVENTMODULE(deviceID int, log *logger.Logger) *EVENTMODULE {
     o := EVENTMODULE{
-                       run : "stop",
-                       iChan : make(chan Evt,10),
-                       oChan : make(chan Evt,10 ) ,
-                       wg : new(sync.WaitGroup),
-                       deviceID : deviceID,
+                         run : "stop",
+                         iChan : make(chan Evt,10),
+                         oChan : make(chan Evt,10 ) ,
+                         wg : new(sync.WaitGroup),
+                         deviceID : deviceID,
+                         log: log,
                     }
     o.wg.Add(1)
     go o.moduleRun()
@@ -134,14 +138,14 @@ func (em * EVENTMODULE)sendS6F11(node sm.ElementType,force bool){
     }
     act := Evt{ cmd : cmd , msg : sm.CreateDataMessage( 6, 11, true, node ,em.deviceID , 0 , "ALL"),
                 ts : time.Now().Unix()   }
-    fmt.Printf("send report\n")
+    em.log.Printf("send report\n")
     em.oChan <- act
 }
 
 func (em * EVENTMODULE)handleS1F23(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "L" || err != nil){
-        fmt.Printf("Error S1F23 format\n")
+        em.log.Printf("Error S1F23 format\n")
         em.sendS9FX(msg,7)
         return ;
     }
@@ -149,22 +153,22 @@ func (em * EVENTMODULE)handleS1F23(msg *sm.DataMessage){
     for k := 0; k < item.Size() ; k++ {
         child , err := item.(*sm.ListNode).Get(k)
         if(child.Type() != "U4" || err != nil){
-            fmt.Printf("Error S1F23 format error\n");
+            em.log.Printf("Error S1F23 format error\n");
             em.sendS9FX(msg,7)
             return;
         }
         evtID := uint32(child.Values().([]uint64)[0])
         if(!data.IsEvtExist(evtID)){
-            fmt.Printf("Error S1F23 Event %d not exist\n",evtID);
+            em.log.Printf("Error S1F23 Event %d not exist\n",evtID);
         } else {
-            fmt.Printf("S1F23 query Event %d\n",evtID);
+            em.log.Printf("S1F23 query Event %d\n",evtID);
         }
         evtQueryLst = append( evtQueryLst , evtID)
     }
     if(item.Size() == 0){
-        fmt.Printf("S1F23 query all Event\n");
+        em.log.Printf("S1F23 query all Event\n");
     }
-    fmt.Printf("S1F23 %#v\n",evtQueryLst)
+    em.log.Printf("S1F23 %#v\n",evtQueryLst)
     em.sendS1F24(msg,evtQueryLst)
     return;
 }
@@ -172,14 +176,14 @@ func (em * EVENTMODULE)handleS1F23(msg *sm.DataMessage){
 func (em * EVENTMODULE)handleS2F33(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type()  != "L" || item.Size() != 2 || err != nil){
-        fmt.Printf("Error S2F33 format\n")
+        em.log.Printf("Error S2F33 format\n")
         em.sendS9FX(msg,7)
         return ;
     }
     //item.Get(0) is DATA ID ,not used now
     node , err :=  item.(*sm.ListNode).Get(1)
     if( node.Type()  != "L" || err != nil){
-        fmt.Printf("node[1] should be list\n")
+        em.log.Printf("node[1] should be list\n")
         em.sendS9FX(msg,7)
         return ;
     }
@@ -187,18 +191,18 @@ func (em * EVENTMODULE)handleS2F33(msg *sm.DataMessage){
     for k := 0; k < node.Size() ; k++ {
         child , err := node.(*sm.ListNode).Get(k)
         if(child.Type() != "L" || err != nil){
-            fmt.Printf("child should be list but %s\n",child.Type())
+            em.log.Printf("child should be list but %s\n",child.Type())
             em.sendS9FX(msg,7)
             return
         }
         if( child.Size() != 2 || err != nil){
-            fmt.Printf("Error S2F33 format\n")
+            em.log.Printf("Error S2F33 format\n")
             em.sendS9FX(msg,7)
             return
         }
         grandChild1 , _  := child.(*sm.ListNode).Get(0)
         if(grandChild1.Type() != "U4"){
-            fmt.Printf("Error S2F33 format\n")
+            em.log.Printf("Error S2F33 format\n")
             em.sendS9FX(msg,7)
             return
         }
@@ -208,10 +212,10 @@ func (em * EVENTMODULE)handleS2F33(msg *sm.DataMessage){
             return
         }
 
-        fmt.Printf("S2F33 Define RPT ID : %d\n",rptID)
+        em.log.Printf("S2F33 Define RPT ID : %d\n",rptID)
         grandChild2,_ := child.(*sm.ListNode).Get(1)
         if( grandChild2.Type() != "L" || err != nil ){
-            fmt.Printf("grandchild should be list but %s\n",grandChild2.Type())
+            em.log.Printf("grandchild should be list but %s\n",grandChild2.Type())
             em.sendS9FX(msg,7)
             return
         }
@@ -220,17 +224,17 @@ func (em * EVENTMODULE)handleS2F33(msg *sm.DataMessage){
         for l := 0; l < grandChild2.Size() ; l++ {
             n , err := grandChild2.(*sm.ListNode).Get(l)
             if(n.Type() != "U4" || err != nil ){
-                fmt.Printf("vid should be u4 but %s\n",n.Type())
+                em.log.Printf("vid should be u4 but %s\n",n.Type())
                 em.sendS9FX(msg,7)
                 return
             }
             if( !data.IsVidExist( uint32(n.Values().([]uint64)[0]) )){
-                fmt.Printf("vid %d not exit\n", uint32(n.Values().([]uint64)[0]) )
+                em.log.Printf("vid %d not exit\n", uint32(n.Values().([]uint64)[0]) )
                 em.sendS2F34(msg, "novid");
                 return
             }
             vids = append(vids,uint32(n.Values().([]uint64)[0]) )
-            fmt.Printf("\tVID : %v \n", uint32(n.Values().([]uint64)[0]))
+            em.log.Printf("\tVID : %v \n", uint32(n.Values().([]uint64)[0]))
         }
         data.CreateReport( rptID ,vids...)
         markProcessRpt[rptID] = true
@@ -245,14 +249,14 @@ func (em * EVENTMODULE)handleS2F33(msg *sm.DataMessage){
 func (em * EVENTMODULE)handleS2F35(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type()  != "L" || item.Size() != 2 || err != nil){
-        fmt.Printf("Error S2F33 format\n")
+        em.log.Printf("Error S2F33 format\n")
         em.sendS9FX(msg,7)
         return ;
     }
     //item.Get(0) is DATA ID ,not used now
     node , err :=  item.(*sm.ListNode).Get(1)
     if( node.Type()  != "L" || err != nil){
-        fmt.Printf("node[1] should be list\n")
+        em.log.Printf("node[1] should be list\n")
         em.sendS9FX(msg,7)
         return ;
     }
@@ -260,18 +264,18 @@ func (em * EVENTMODULE)handleS2F35(msg *sm.DataMessage){
     for k := 0; k < node.Size() ; k++ {
         child , err := node.(*sm.ListNode).Get(k)
         if(child.Type() != "L" || err != nil){
-            fmt.Printf("child should be list but %s\n",child.Type())
+            em.log.Printf("child should be list but %s\n",child.Type())
             em.sendS9FX(msg,7)
             return
         }
         if( child.Size() != 2 || err != nil){
-            fmt.Printf("Error S2F33 format\n")
+            em.log.Printf("Error S2F33 format\n")
             em.sendS9FX(msg,7)
             return
         }
         grandChild1 , _  := child.(*sm.ListNode).Get(0)
         if(grandChild1.Type() != "U4"){
-            fmt.Printf("Error S2F33 format\n")
+            em.log.Printf("Error S2F33 format\n")
             em.sendS9FX(msg,7)
             return
         }
@@ -282,10 +286,10 @@ func (em * EVENTMODULE)handleS2F35(msg *sm.DataMessage){
         }
 
 
-        fmt.Printf("S2F33 Link ceID ID : %d\n",ceID)
+        em.log.Printf("S2F33 Link ceID ID : %d\n",ceID)
         grandChild2,_ := child.(*sm.ListNode).Get(1)
         if( grandChild2.Type() != "L" || err != nil ){
-            fmt.Printf("grandchild should be list but %s\n",grandChild2.Type())
+            em.log.Printf("grandchild should be list but %s\n",grandChild2.Type())
             em.sendS9FX(msg,7)
             return
         }
@@ -294,12 +298,12 @@ func (em * EVENTMODULE)handleS2F35(msg *sm.DataMessage){
         for l := 0; l < grandChild2.Size() ; l++ {
             n , err := grandChild2.(*sm.ListNode).Get(l)
             if(n.Type() != "U4" || err != nil){
-                fmt.Printf("rptID  should be u4 but %s\n",n.Type())
+                em.log.Printf("rptID  should be u4 but %s\n",n.Type())
                 em.sendS9FX(msg,7)
                 return
             }
             rids = append(rids,uint32(n.Values().([]uint64)[0]))
-            fmt.Printf("\trptID : %v \n", uint32(n.Values().([]uint64)[0]))
+            em.log.Printf("\trptID : %v \n", uint32(n.Values().([]uint64)[0]))
         }
         ret := data.SetEvtRptLink( ceID ,rids...)
         if(ret != "ok"){
@@ -316,13 +320,13 @@ func (em * EVENTMODULE)handleS2F35(msg *sm.DataMessage){
 func (em * EVENTMODULE)handleS2F37(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type()  != "L" || item.Size() != 2 || err != nil){
-        fmt.Printf("Error S2F37 format\n")
+        em.log.Printf("Error S2F37 format\n")
         em.sendS9FX(msg,7)
         return ;
     }
     node , err := item.(*sm.ListNode).Get(0)
     if( node.Type() != "BOOLEAN" || node.Size() !=  1 || err != nil){
-        fmt.Printf("node[0] should be boolean\n")
+        em.log.Printf("node[0] should be boolean\n")
         em.sendS9FX(msg,7)
         return ;
     }
@@ -335,7 +339,7 @@ func (em * EVENTMODULE)handleS2F37(msg *sm.DataMessage){
 
     node , err =  item.(*sm.ListNode).Get(1)
     if( node.Type()  != "L" || err != nil){
-        fmt.Printf("node[1] should be list\n")
+        em.log.Printf("node[1] should be list\n")
         em.sendS9FX(msg,7)
         return ;
     }
@@ -343,7 +347,7 @@ func (em * EVENTMODULE)handleS2F37(msg *sm.DataMessage){
     for k := 0; k < node.Size() ; k++ {
         child , err := node.(*sm.ListNode).Get(k)
         if(child.Type() != "U4" || err != nil){
-            fmt.Printf("child should be U4 but %s\n",child.Type())
+            em.log.Printf("child should be U4 but %s\n",child.Type())
             em.sendS9FX(msg,7)
             return
         }
@@ -367,7 +371,7 @@ func (em * EVENTMODULE)handleS2F37(msg *sm.DataMessage){
 func (em * EVENTMODULE)handleS6F12(msg *sm.DataMessage){
     node , err := msg.Get()
     if( node.Type()  != "B" || err != nil || node.Size() != 1){
-        fmt.Printf("handleS6F15 event id should be one u4\n")
+        em.log.Printf("handleS6F15 event id should be one u4\n")
         em.sendS9FX(msg,7)
         return ;
     }
@@ -378,20 +382,20 @@ func (em * EVENTMODULE)handleS6F12(msg *sm.DataMessage){
 func (em * EVENTMODULE)handleS6F15(msg *sm.DataMessage){
     node , err := msg.Get()
     if( node.Type()  != "U4" || err != nil || node.Size() != 1){
-        fmt.Printf("handleS6F15 event id should be one u4\n")
+        em.log.Printf("handleS6F15 event id should be one u4\n")
         em.sendS9FX(msg,7)
         return ;
     }
     evtID := uint32(node.Values().([]uint64)[0])
-    fmt.Printf("evtID %d\n",evtID);
+    em.log.Printf("evtID %d\n",evtID);
     rootNode := data.GetEventReport(evtID , nil )
-    //fmt.Printf("rootNode : %v\n",rootNode);
+    //em.log.Printf("rootNode : %v\n",rootNode);
     var act Evt
     if(rootNode != nil){
         act = Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 16, false,
                 rootNode , em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     } else {
-        fmt.Printf("evtID %d not found\n",evtID);
+        em.log.Printf("evtID %d not found\n",evtID);
         act = Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 16, false,
                 sm.CreateListNode() , em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     }
@@ -401,20 +405,20 @@ func (em * EVENTMODULE)handleS6F15(msg *sm.DataMessage){
 func (em * EVENTMODULE)handleS6F19(msg *sm.DataMessage){
     node , err := msg.Get()
     if( node.Type()  != "U4" || err != nil || node.Size() != 1){
-        fmt.Printf("handleS6F19 event id should be one u4\n")
+        em.log.Printf("handleS6F19 event id should be one u4\n")
         em.sendS9FX(msg,7)
         return ;
     }
     rptID := uint32(node.Values().([]uint64)[0])
-    fmt.Printf("rptID %d\n",rptID);
+    em.log.Printf("rptID %d\n",rptID);
     rootNode := data.GetRptReport( rptID )
-    //fmt.Printf("rootNode : %v\n",rootNode);
+    //em.log.Printf("rootNode : %v\n",rootNode);
     var act Evt
     if(rootNode != nil){
         act = Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 20, false,
                 rootNode , em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     } else {
-        fmt.Printf("rptID %d not found\n",rptID);
+        em.log.Printf("rptID %d not found\n",rptID);
         act = Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 20, false,
                 sm.CreateListNode() , em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     }
@@ -467,7 +471,7 @@ func (em * EVENTMODULE)buildEventReport(evt Evt,force bool){
     evtID := paraemeter["evtid"].(uint32)
     dvCtx := paraemeter["dvctx"].(map[uint32]interface{})
     rootNode := data.GetEventReport(evtID ,dvCtx )
-    //fmt.Printf("rootNode : %v\n",rootNode);
+    //em.log.Printf("rootNode : %v\n",rootNode);
     if(rootNode != nil){
         em.sendS6F11(rootNode,force)
     }
@@ -512,6 +516,6 @@ func (em *EVENTMODULE)moduleRun(){
         }
     }
     em.run = "stop"
-    fmt.Printf("Exit EVENTMODULE \n");
+    em.log.Printf("Exit EVENTMODULE \n");
     return
 }

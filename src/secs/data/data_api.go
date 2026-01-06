@@ -1,8 +1,6 @@
 package data
 
 import (
-    "fmt"
-
     sm "secs/secs_message"
 )
 
@@ -21,7 +19,7 @@ func SetVidValue(id uint32, v sm.ElementType) bool {
     reply := make(chan bool, 1)
     gData.iChan <- cmdSetVidValue(id, v, reply)
     answer := <-reply
-    fmt.Printf("setVidValue answer: %v\n", answer)
+    log.Printf("setVidValue answer: %v\n", answer)
     return answer
 }
 
@@ -40,7 +38,7 @@ func IsVidExist(id uint32) bool {
     reply := make(chan bool, 1)
     gData.iChan <- cmdIsVidExist(id, reply)
     answer := <-reply
-    fmt.Printf("isVidExist answer: %v\n", answer)
+    log.Printf("isVidExist answer: %v\n", answer)
     return answer
 }
 
@@ -59,7 +57,7 @@ func IsEvtExist(id uint32) bool {
     reply := make(chan bool, 1)
     gData.iChan <- cmdIsEvtExist(id, reply)
     answer := <-reply
-    fmt.Printf("isEvtExist answer: %v\n", answer)
+    log.Printf("isEvtExist answer: %v\n", answer)
     return answer
 }
 

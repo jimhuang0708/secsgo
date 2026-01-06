@@ -114,9 +114,9 @@ S1F16                | SEND by EQUIPMENT
 S1F17 (V)            | SEND by HOST  
 S1F18                | SEND by EQUIPMENT  
 
-S2F13 format checked | SEND by HOST  
+S2F13 (V)            | SEND by HOST  
 S2F14                | SEND by EQUIPMENT  
-S2F15 format checked | SEND by HOST  
+S2F15 (V)            | SEND by HOST  
 S2F16                | SEND by EQUIPMENT  
 S2F23 format checked | SEND by HOST  
 S2F24                | SEND by EQUIPMENT  

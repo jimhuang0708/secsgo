@@ -1,8 +1,8 @@
 package secs_message
 
 import (
-    "reflect"
     "fmt"
+    "reflect"
     "math"
     "strconv"
     "strings"
@@ -85,7 +85,7 @@ func (node *IntNode) Code() byte{
     }else if(node.symbol == "I8"){
         return 0o30
     }else{
-        fmt.Printf("Error unknown Int symbol %s\n",node.symbol);
+        log.Printf("Error unknown Int symbol %s\n",node.symbol);
         return 0
     }
 }
@@ -125,5 +125,3 @@ func (node *IntNode) ToSml() string {
     }
     return fmt.Sprintf("<%s[%d] %v>", node.symbol, node.Size(), strings.Join(values, " "))
 }
-
-

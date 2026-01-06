@@ -1,10 +1,12 @@
 package secs
+
 import (
-    "fmt"
-    "time"
-    sm "secs/secs_message"
-    "secs/data"
     "sync"
+    "time"
+
+    "secs/data"
+    "secs/logger"
+    sm "secs/secs_message"
 )
 
 type COMMONMODULE struct{
@@ -13,15 +15,17 @@ type COMMONMODULE struct{
     run      string
     wg *sync.WaitGroup
     deviceID int
+    log *logger.Logger
 }
 
-func NewCOMMONMODULE(deviceID int) *COMMONMODULE {
+func NewCOMMONMODULE(deviceID int, log *logger.Logger) *COMMONMODULE {
     o := COMMONMODULE{
                          run : "stop",
                          iChan : make(chan Evt,10),
                          oChan : make(chan Evt,10 ) ,
                          wg : new(sync.WaitGroup),
                          deviceID : deviceID,
+                         log: log,
                   }
     o.wg.Add(1)
     go o.stateRun()
@@ -47,7 +51,7 @@ func (cm * COMMONMODULE)sendS9FX(msg *sm.DataMessage,f int){
 func (cm * COMMONMODULE)handleS1F3(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "L" || err != nil){
-        fmt.Printf("Error S1F3 format\n")
+        cm.log.Printf("Error S1F3 format\n")
         cm.sendS9FX(msg, 7)
         return ;
     }
@@ -55,7 +59,7 @@ func (cm * COMMONMODULE)handleS1F3(msg *sm.DataMessage){
     for k := 0; k < item.Size() ; k++ {
         svNode , err := item.(*sm.ListNode).Get(k);
         if(svNode.Type() != "U4" || err != nil){
-            fmt.Printf("error S1F3 format\n");
+            cm.log.Printf("error S1F3 format\n");
             cm.sendS9FX(msg, 7)
             return;
         }
@@ -63,7 +67,7 @@ func (cm * COMMONMODULE)handleS1F3(msg *sm.DataMessage){
         svidLst = append(svidLst , svID)
     }
     rootNode := data.GetSVElementTypeLst(svidLst)
-    fmt.Printf("svLst : %v\n",rootNode);
+    cm.log.Printf("svLst : %v\n",rootNode);
 
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 4, false, rootNode , cm.deviceID , msg.SystemBytes() , msg.SourceHost() ) , ts : time.Now().Unix()  }
     cm.oChan <- act
@@ -72,7 +76,7 @@ func (cm * COMMONMODULE)handleS1F3(msg *sm.DataMessage){
 func (cm * COMMONMODULE)handleS1F11(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "L" || err != nil){
-        fmt.Printf("Error S1F11 format\n")
+        cm.log.Printf("Error S1F11 format\n")
         cm.sendS9FX(msg, 7)
         return ;
     }
@@ -80,7 +84,7 @@ func (cm * COMMONMODULE)handleS1F11(msg *sm.DataMessage){
     for k := 0; k < item.Size() ; k++ {
         svNode , err := item.(*sm.ListNode).Get(k);
         if(svNode.Type() != "U4" || err != nil){
-            fmt.Printf("error S1F11 format\n");
+            cm.log.Printf("error S1F11 format\n");
             cm.sendS9FX(msg, 7)
             return;
         }
@@ -88,7 +92,7 @@ func (cm * COMMONMODULE)handleS1F11(msg *sm.DataMessage){
         svidLst = append(svidLst , svID)
     }
     rootNode := data.GetSVNameLst(svidLst)
-    fmt.Printf("svLst : %v\n",rootNode);
+    cm.log.Printf("svLst : %v\n",rootNode);
 
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(1, 12, false, rootNode , cm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix() }
     cm.oChan <- act
@@ -99,7 +103,7 @@ func (cm * COMMONMODULE)processMsg(msg *sm.DataMessage)(bool){
         if(msg.FunctionCode() == 1){
             item , err := msg.Get()
             if(err != nil || item.Type()!= "empty" ){
-                fmt.Printf("error S1F1 format\n");
+                cm.log.Printf("error S1F1 format\n");
                 cm.sendS9FX(msg, 7)
                 return true;
             }
@@ -107,7 +111,7 @@ func (cm * COMMONMODULE)processMsg(msg *sm.DataMessage)(bool){
             var node sm.ElementType
             node = sm.CreateListNode( sm.CreateASCIINode("HMITaker") ,sm.CreateASCIINode("1.0") )
             act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 2, false, node , cm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
-            fmt.Printf("do On-Line Identification\n")
+            cm.log.Printf("do On-Line Identification\n")
             cm.oChan <- act
         }
 
@@ -147,6 +151,6 @@ func (cm * COMMONMODULE)stateRun(){
         }
     }
     cm.run = "stop"
-    fmt.Printf("Exit COMMONMODULE \n");
+    cm.log.Printf("Exit COMMONMODULE \n");
     return
 }

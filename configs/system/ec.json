@@ -1,0 +1,145 @@
+{
+"sysec": [
+    {
+      "name": "INIT_COMM_STATE",
+      "units": "",
+      "id": 201,
+      "desc": "0:Disable, 1:Enable",
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      },
+      "max": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      },
+      "min": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      }
+    },
+    {
+      "name": "INIT_CONTROL_STATE",
+      "units": "",
+      "id": 202,
+      "desc": "1:OffLine, 2:OnLine",
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      },
+      "max": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      },
+      "min": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      }
+    },
+    {
+      "name": "OFF_LINE_SUBSTATE",
+      "units": "",
+      "id": 203,
+      "desc": "1:Eqp. OFF-line , 2:Attempt On-line , 3:Host Off-line",
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      },
+      "max": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      },
+      "min": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      }
+    },
+    {
+      "name": "ON_LINE_FAILED",
+      "units": "",
+      "id": 204,
+      "desc": "1:Eqp. OFF-line , 3:Host Off-line",
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      },
+      "max": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      },
+      "min": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      }
+    },
+    {
+      "name": "ON_LINE_SUBSTATE",
+      "units": "",
+      "id": 205,
+      "desc": "4:On-line/Local, 5:ON-line/Remote",
+      "nodevalue": {
+        "type": "F4",
+        "values": [
+          4,
+          5
+        ]
+      },
+      "max": {
+        "type": "F4",
+        "values": [
+          6.6,
+          7.7
+        ]
+      },
+      "min": {
+        "type": "F4",
+        "values": [
+          8.8,
+          9.9
+        ]
+      }
+    },
+    {
+      "name": "TEST",
+      "units": "myunits",
+      "id": 206,
+      "desc": "4:On-line/Local, 5:ON-line/Remote",
+      "nodevalue": {
+        "type": "A",
+        "value": "here is default value,but you can set later"
+      },
+      "max": {
+        "type": "A",
+        "value": "maxvalue"
+      },
+      "min": {
+        "type": "A",
+        "value": "minvalue"
+      }
+    }
+  ]    
+}

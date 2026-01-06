@@ -1,0 +1,20 @@
+{
+"sysalarm" : [
+        {
+            "name"   : "zombie_attack",
+            "id"     : 1,
+            "text"   : "zombie comes",
+            "evt"    : 304,
+            "enable" : true
+        },
+        {
+            "name"   : "robot_rebellion",
+            "id"     : 2,
+            "text"   : "AI crisis",
+            "evt"    : 305,
+            "enable" : true
+        }
+
+
+    ]
+}

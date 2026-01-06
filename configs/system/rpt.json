@@ -1,0 +1,29 @@
+{
+"sysrpt" :  [
+            {
+                "name"  : "CONTROL_STATE_RPT",
+                "id"    : 1,
+                "vid"   : [ 109,3,4 ]
+            },
+            {
+                "name"  : "LIMIT_RPT6",
+                "id"    : 2,
+                "vid"   : [ 6,104,105,106,107,108 ]
+            },
+            {
+                "name"  : "LIMIT_RPT7",
+                "id"    : 3,
+                "vid"   : [ 7,104,105,106,107,108 ]
+            },
+            {
+                "name"  : "LIMIT_RPT8",
+                "id"    : 4,
+                "vid"   : [ 8,104,105,106,107,108 ]
+            },
+            {
+                "name" :  "EC_CHANGED_RPT",
+                "id"   : 5,
+                "vid"  : [ 101,102,103 ]
+            }
+        ]
+}

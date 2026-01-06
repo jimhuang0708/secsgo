@@ -1,0 +1,97 @@
+{
+"sysdv": [
+    {
+      "name": "ECID_CHANGED",
+      "units": "",
+      "id": 101,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "EC_VALUE_CHANGED",
+      "units": "",
+      "id": 102,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "PREVIOUS_EC_VALUE",
+      "units": "",
+      "id": 103,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "LM_LIMITID",
+      "id": 104,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+
+    },
+    {
+      "name": "LM_TRANSITION",
+      "id": 105,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "LM_VALUE",
+      "id": 106,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "LM_UPPER",
+      "id": 107,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "LM_LOWER",
+      "id": 108,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "CURRENT_STATE_NAME",
+      "id": 109,
+      "nodevalue": {
+        "type": "A",
+        "value": ""
+      }
+    }
+  ]
+
+}

@@ -118,9 +118,9 @@ S2F13 (V)            | SEND by HOST
 S2F14                | SEND by EQUIPMENT  
 S2F15 (V)            | SEND by HOST  
 S2F16                | SEND by EQUIPMENT  
-S2F23 format checked | SEND by HOST  
+S2F23 (V)            | SEND by HOST  
 S2F24                | SEND by EQUIPMENT  
-S2F29 format checked | SEND by HOST  
+S2F29 (V)            | SEND by HOST  
 S2F30                | SEND by EQUIPMENT  
 S2F33 format checked | SEND by HOST  
 S2F34                | SEND by EQUIPMENT  

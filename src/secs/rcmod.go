@@ -4,7 +4,7 @@ import (
     "encoding/json"
     "sync"
     "time"
-
+    "strconv"
     "secs/logger"
     sm "secs/secs_message"
 )
@@ -101,9 +101,37 @@ func (rcm * RCMODULE)handleS2F41(msg *sm.DataMessage){
             return ;
         }
         cpname := cpnameNode.Values().(string)
-        cpval := cpvalNode.Values().(string)
-        remotecmdstr = remotecmdstr + cpname + " : " + cpval + " , "
-        rcm.log.Printf("cpname : %s , cpval %s\n",cpname,cpval);
+        /* cpval is scalar , not array */
+        if( cpvalNode.Type() == "A" ){
+            cpval := cpvalNode.Values().(string)
+            remotecmdstr = remotecmdstr + cpname + " : " + cpval + " , "
+        } else if( cpvalNode.Type() == "B" ){
+            cpval := cpvalNode.Values().([]byte)
+            s := ""
+            for j := 0 ; j < len(cpval) ; j++ {
+                s = s + strconv.FormatUint(uint64(cpval[j]), 10)
+            }
+            remotecmdstr = remotecmdstr + cpname + " : " + s + " , "
+        } else if( cpvalNode.Type() == "BOOLEAN"){
+            cpval := cpvalNode.Values().([]bool)
+            s := strconv.FormatBool(cpval[0])
+            remotecmdstr = remotecmdstr + cpname + " : " + s + " , "
+        } else if( cpvalNode.Type() == "U1" || cpvalNode.Type() == "U2" || cpvalNode.Type() == "U4" || cpvalNode.Type() == "U8"){
+            cpval := cpvalNode.Values().([]uint64)
+            s := strconv.FormatUint(uint64(cpval[0]), 10)
+            remotecmdstr = remotecmdstr + cpname + " : " + s + " , "
+        } else if( cpvalNode.Type() == "I1" || cpvalNode.Type() == "I2" || cpvalNode.Type() == "I4" || cpvalNode.Type() == "I8"){
+            cpval := cpvalNode.Values().([]int64)
+            s := strconv.FormatUint(uint64(cpval[0]), 10)
+            remotecmdstr = remotecmdstr + cpname + " : " + s + " , "
+        } else if( cpvalNode.Type() == "F4" || cpvalNode.Type() == "F8"){
+            cpval := cpvalNode.Values().([]float64)
+            s := strconv.FormatFloat(cpval[0], 'f', 2, 64)
+            remotecmdstr = remotecmdstr + cpname + " : " + s + " , "
+        } else {
+            remotecmdstr = remotecmdstr + cpname + " : notparsenow , "
+        }
+        //rcm.log.Printf("cpname : %s , cpval %s\n",cpname,cpval);
     }
     remotecmdstr = remotecmdstr + " )"
     rcm.TellUI(remotecmdstr)

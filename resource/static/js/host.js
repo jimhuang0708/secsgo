@@ -187,6 +187,91 @@ function bindEvents() {
 
 
 
+    document.getElementById("s2f33").addEventListener("click", function () {
+        dataitem =  {
+            "type": "L",
+            "items": [
+                {
+                    "type": "U4",
+                    "values": [
+                        0
+                    ]
+                },
+                {
+                    "type": "L",
+                    "items": [
+                        {
+                            "type": "L",
+                            "items": [
+                                {
+                                    "type": "U4",
+                                    "values": [
+                                        8888
+                                    ]
+                                },
+                                {
+                                    "type": "L",
+                                    "items": [
+                                        {
+                                            "type": "U4",
+                                            "values": [
+                                                8
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+        cmd = { "stream" : 2 , "function" : 33 , "dataitem" : dataitem }
+        wsSend(JSON.stringify(cmd));
+
+    });
+    document.getElementById("s2f35").addEventListener("click", function () {
+        dataitem = {
+            "type": "L",
+            "items": [
+                {
+                    "type": "U4",
+                    "values": [
+                        0
+                    ]
+                },
+                {
+                    "type": "L",
+                    "items": [
+                        {
+                            "type": "L",
+                            "items": [
+                                {
+                                    "type": "U4",
+                                    "values": [
+                                        300
+                                    ]
+                                },
+                                {
+                                    "type": "L",
+                                    "items": [
+                                        {
+                                            "type": "U4",
+                                            "values": [
+                                                8888
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+        cmd = { "stream" : 2 , "function" : 35 , "dataitem" : dataitem }
+        wsSend(JSON.stringify(cmd));
+    });
 
 
 
@@ -225,50 +310,52 @@ function bindEvents() {
     });
 
     document.getElementById("s2f45").addEventListener("click", function () {
-dataitem = {
-        "type": "L",
-        "items": [
-            {
-                "type": "U4",
-                "values": [
-                    0
-                ]
-            },
-            {
+        dataitem = {
                 "type": "L",
                 "items": [
+                    {
+                        "type": "U4",
+                        "values": [
+                            0
+                        ]
+                    },
                     {
                         "type": "L",
                         "items": [
                             {
-                                "type": "U4",
-                                "values": [
-                                    6
-                                ]
-                            },
-                            {
                                 "type": "L",
                                 "items": [
+                                    {
+                                        "type": "U4",
+                                        "values": [
+                                            6
+                                        ]
+                                    },
                                     {
                                         "type": "L",
                                         "items": [
                                             {
-                                                "type": "B",
-                                                "bytes": "00"
-                                            },
-                                            {
                                                 "type": "L",
                                                 "items": [
                                                     {
-                                                        "type": "U4",
-                                                        "values": [
-                                                            55
-                                                        ]
+                                                        "type": "B",
+                                                        "bytes": "00"
                                                     },
                                                     {
-                                                        "type": "U4",
-                                                        "values": [
-                                                            44
+                                                        "type": "L",
+                                                        "items": [
+                                                            {
+                                                                "type": "U4",
+                                                                "values": [
+                                                                    55
+                                                                ]
+                                                            },
+                                                            {
+                                                                "type": "U4",
+                                                                "values": [
+                                                                    44
+                                                                ]
+                                                            }
                                                         ]
                                                     }
                                                 ]
@@ -280,9 +367,7 @@ dataitem = {
                         ]
                     }
                 ]
-            }
-        ]
-    }
+        }
         cmd = { "stream" : 2 , "function" : 45 , "dataitem" : dataitem }
         wsSend(JSON.stringify(cmd));
     });

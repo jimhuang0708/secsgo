@@ -188,6 +188,11 @@ function bindEvents() {
 
 
     document.getElementById("s2f33").addEventListener("click", function () {
+
+
+        let defrptid = parseInt( document.getElementById("defrptid").value  ,10)
+        let defrptvidlst = document.getElementById("defrptvidlst").value.split(",")
+
         dataitem =  {
             "type": "L",
             "items": [
@@ -206,19 +211,12 @@ function bindEvents() {
                                 {
                                     "type": "U4",
                                     "values": [
-                                        8888
+                                        defrptid
                                     ]
                                 },
                                 {
                                     "type": "L",
-                                    "items": [
-                                        {
-                                            "type": "U4",
-                                            "values": [
-                                                8
-                                            ]
-                                        }
-                                    ]
+                                    "items": []
                                 }
                             ]
                         }
@@ -226,11 +224,16 @@ function bindEvents() {
                 }
             ]
         }
+        for (let j = 0 ; j < defrptvidlst.length;j++){
+            dataitem.items[1].items[0].items[1].items.push( { "type" : "U4" , "values" : [ parseInt(defrptvidlst[j],10) ] })
+        }
         cmd = { "stream" : 2 , "function" : 33 , "dataitem" : dataitem }
         wsSend(JSON.stringify(cmd));
 
     });
     document.getElementById("s2f35").addEventListener("click", function () {
+        let linkevtid = parseInt( document.getElementById("linkevtid").value  ,10)
+        let linkrptid = parseInt( document.getElementById("linkrptid").value  ,10)
         dataitem = {
             "type": "L",
             "items": [
@@ -249,7 +252,7 @@ function bindEvents() {
                                 {
                                     "type": "U4",
                                     "values": [
-                                        300
+                                        linkevtid
                                     ]
                                 },
                                 {
@@ -258,7 +261,7 @@ function bindEvents() {
                                         {
                                             "type": "U4",
                                             "values": [
-                                                8888
+                                                linkrptid
                                             ]
                                         }
                                     ]

@@ -18,6 +18,10 @@ func (sd *SECS_DATA) createReport(id uint32, v ...uint32) {
     }
 }
 
+func (sd *SECS_DATA) deleteReport(id uint32) {
+    delete(sd.rpt , id)
+}
+
 func (sd *SECS_DATA) deleteAllReport() {
     log.Printf("Delete all report \n")
     sd.rpt = make(map[uint32]*SECSRPT)

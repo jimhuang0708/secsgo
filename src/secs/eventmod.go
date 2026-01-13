@@ -219,25 +219,30 @@ func (em * EVENTMODULE)handleS2F33(msg *sm.DataMessage){
             em.sendS9FX(msg,7)
             return
         }
-
-        vids := make( []uint32 , 0)
-        for l := 0; l < grandChild2.Size() ; l++ {
-            n , err := grandChild2.(*sm.ListNode).Get(l)
-            if(n.Type() != "U4" || err != nil ){
-                em.log.Printf("vid should be u4 but %s\n",n.Type())
-                em.sendS9FX(msg,7)
-                return
+        if( grandChild2.Size() == 0){
+            em.log.Printf("Delete  Report ID : %d\n",rptID)
+            data.DeleteReport(rptID)
+            continue
+        } else {
+            vids := make( []uint32 , 0)
+            for l := 0; l < grandChild2.Size() ; l++ {
+                n , err := grandChild2.(*sm.ListNode).Get(l)
+                if(n.Type() != "U4" || err != nil ){
+                    em.log.Printf("vid should be u4 but %s\n",n.Type())
+                    em.sendS9FX(msg,7)
+                    return
+                }
+                if( !data.IsVidExist( uint32(n.Values().([]uint64)[0]) )){
+                    em.log.Printf("vid %d not exit\n", uint32(n.Values().([]uint64)[0]) )
+                    em.sendS2F34(msg, "novid");
+                    return
+                }
+                vids = append(vids,uint32(n.Values().([]uint64)[0]) )
+                em.log.Printf("\tVID : %v \n", uint32(n.Values().([]uint64)[0]))
             }
-            if( !data.IsVidExist( uint32(n.Values().([]uint64)[0]) )){
-                em.log.Printf("vid %d not exit\n", uint32(n.Values().([]uint64)[0]) )
-                em.sendS2F34(msg, "novid");
-                return
-            }
-            vids = append(vids,uint32(n.Values().([]uint64)[0]) )
-            em.log.Printf("\tVID : %v \n", uint32(n.Values().([]uint64)[0]))
+            data.CreateReport( rptID ,vids...)
+            markProcessRpt[rptID] = true
         }
-        data.CreateReport( rptID ,vids...)
-        markProcessRpt[rptID] = true
     }
 
     if(node.Size() == 0){

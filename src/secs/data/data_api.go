@@ -106,6 +106,25 @@ func cmdDeleteAllReport(done chan<- struct{}) ACCESS_CMD {
     }
 }
 
+//deleteReport
+func DeleteReport(id uint32) {
+    done := make(chan struct{}, 1)
+    gData.iChan <- cmdDeleteReport(id,  done)
+    <-done
+    return
+}
+
+func cmdDeleteReport(id uint32, done chan<- struct{}) ACCESS_CMD {
+    return ACCESS_CMD{
+        fn: func(sd *SECS_DATA) {
+            sd.deleteReport(id)
+            done <- struct{}{}
+        },
+    }
+}
+
+
+
 // setEvtRptLink(id, v...) string
 
 func SetEvtRptLink(id uint32, v ...uint32) string {

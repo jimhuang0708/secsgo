@@ -55,6 +55,7 @@ func NewHostContext(deviceID int, l *slog.Logger) *HostContext {
                          UIEvtChan : nil,
                          hsms_ss : nil,
                      }
+    data.SetLogger(baseLog.With("module", "DATA"));
     go hc.stateRun()
     return hc
 }

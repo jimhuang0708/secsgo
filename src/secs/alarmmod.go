@@ -104,8 +104,7 @@ func (am * ALARMMODULE)handleS5F3(msg *sm.DataMessage){
         am.sendS9FX(msg, 7)
         return ;
     }
-
-    aled := aledNode.Values().([]int)[0]
+    aled := aledNode.Values().([]uint8)[0]
     alid := uint64(0xFFFFFFFFFFFFFFFF)
     if(alidNode.Size() > 0){
         alid = alidNode.Values().([]uint64)[0]

@@ -322,13 +322,13 @@ func cmdGetECName(ecLst []uint32, reply chan<- sm.ElementType) ACCESS_CMD {
 
 // setAlarmEnable(alid, aled) int
 
-func SetAlarmEnable(alid uint64, aled int) int {
+func SetAlarmEnable(alid uint64, aled uint8) int {
     reply := make(chan int, 1)
     gData.iChan <- cmdSetAlarmEnable(alid, aled, reply)
     return <-reply
 }
 
-func cmdSetAlarmEnable(alid uint64, aled int, reply chan<- int) ACCESS_CMD {
+func cmdSetAlarmEnable(alid uint64, aled uint8, reply chan<- int) ACCESS_CMD {
     return ACCESS_CMD{
         fn: func(sd *SECS_DATA) {
             ret := sd.setAlarmEnable(alid, aled)

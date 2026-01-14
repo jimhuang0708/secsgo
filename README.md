@@ -122,20 +122,20 @@ S2F23 (V)            | SEND by HOST
 S2F24                | SEND by EQUIPMENT  
 S2F29 (V)            | SEND by HOST  
 S2F30                | SEND by EQUIPMENT  
-S2F33 format checked | SEND by HOST  
+S2F33 (V)            | SEND by HOST  
 S2F34                | SEND by EQUIPMENT  
-S2F35 format checked | SEND by HOST  
+S2F35 (V)            | SEND by HOST  
 S2F36                | SEND by EQUIPMENT  
-S2F37 format checked | SEND by HOST  
+S2F37 (V)            | SEND by HOST  
 S2F38                | SEND by EQUIPMENT  
-S2F41 format checked | SEND by HOST  
+S2F41 (V)            | SEND by HOST  
 S2F42                | SEND by EQUIPMENT  
 
 S5F1                 | SEND by EQUIPMENT  
-S5F2  format checked | SEND by HOST  
-S5F3  format checked | SEND by HOST  
+S5F2  (V)            | SEND by HOST  
+S5F3  (V)            | SEND by HOST  
 S5F4                 | SEND by EQUIPMENT  
-S5F5  format checked | SEND by HOST  
+S5F5  (V)            | SEND by HOST  
 S5F6                 | SEND by EQUIPMENT  
 
 S6F1                 | SEND by EQUIPMENT  

@@ -130,6 +130,7 @@ func NewEquipmentContext(deviceID int, l *slog.Logger) *EquipmentContext {
         rcModule : NewRCMODULE(deviceID, baseLog.With("module", "RCMODULE")),
         lmtModule : NewLIMITMONITORMODULE(deviceID, baseLog.With("module", "LIMITMONITORMODULE")),
     }
+    data.SetLogger(baseLog.With("module", "DATA"));
     go ec.stateRun()
     return ec;
 }

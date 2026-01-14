@@ -388,7 +388,7 @@ func (sd *SECS_DATA) getECName(ecLst []uint32) sm.ElementType {
     return rootNode
 }
 
-func (sd *SECS_DATA) setAlarmEnable(alid uint64, aled int) int {
+func (sd *SECS_DATA) setAlarmEnable(alid uint64, aled uint8) int {
     ret := 1
     for k, alarm := range sd.alarm {
         if k == uint32(alid) || alid == uint64(0xFFFFFFFFFFFFFFFF) {
@@ -450,7 +450,7 @@ func (sd *SECS_DATA) setAlarm(alid uint64, alcd int) (uint32, bool) {
         } else {
             alarm.set = false
         }
-        return alarm.evt, true
+        return alarm.evt, alarm.enable
     }
     return 0, false
 }

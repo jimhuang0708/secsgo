@@ -139,12 +139,12 @@ S5F5  (V)            | SEND by HOST
 S5F6                 | SEND by EQUIPMENT  
 
 S6F1                 | SEND by EQUIPMENT  
-S6F2 format checked  | SEND by HOST  
+S6F2  (V)            | SEND by HOST  
 S6F11                | SEND by EQUIPMENT  
-S6F12 format checked | SEND by HOST  
-S6F15 format checked | SEND by HOST  
+S6F12 (V)            | SEND by HOST  
+S6F15 (V)            | SEND by HOST  
 S6F16                | SEND by EQUIPMENT  
-S6F19 format checked | SEND by HOST  
+S6F19 (V)            | SEND by HOST  
 S6F20                | SEND by EQUIPMENT  
 
 S9F1                 | SEND by EQUIPMENT  
@@ -153,7 +153,7 @@ S9F5                 | SEND by EQUIPMENT
 S9F7                 | SEND by EQUIPMENT  
 S9F9                 | SEND by EQUIPMENT  
 
-S10F1                 | SEND by EQUIPMENT  
-S10F2 format checked  | SEND by HOST  
-S10F3 format checked  | SEND by HOST  
-S10F4                 | SEND by EQUIPMENT  
+S10F1                | SEND by EQUIPMENT  
+S10F2 (V)            | SEND by HOST  
+S10F3 (V)            | SEND by HOST  
+S10F4                | SEND by EQUIPMENT  

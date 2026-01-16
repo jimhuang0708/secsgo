@@ -162,6 +162,13 @@ func (hm *HOSTMODULE)processMsg(msg *sm.DataMessage)(bool){
 
 
     if(msg.StreamCode() == 6){
+        if(msg.FunctionCode() == 1){
+            var node sm.ElementType
+            node = sm.CreateBinaryNode(  byte(0) )
+            act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 2, false,
+                                            node , msg.SessionID() , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
+            hm.oChan <- act
+        }
         if(msg.FunctionCode() == 11){
             act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 12, false,
                                         sm.CreateBinaryNode( []interface{}{byte(0)}... ) ,

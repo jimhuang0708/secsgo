@@ -6,6 +6,11 @@ import (
     "fmt"
     "secs/data"
     "secs/logger"
+    "os/exec"
+    "regexp"
+    "strings"
+    "strconv"
+    "errors"
     sm "secs/secs_message"
 )
 
@@ -18,6 +23,118 @@ type COMMONMODULE struct{
     log *logger.Logger
 }
 
+// SyncTime parses input time string then syncs to Linux system time.
+// Supported formats:
+// 1) "YYMMDDHHMMSS"               (assumes local timezone)
+// 2) "YYYYMMDDHHMMSScc"           (cc = centiseconds, assumes local timezone)
+// 3) RFC3339/RFC3339Nano: "YYYY-MM-DDTHH:MM:SS.s[s]*{Z|+hh:mm|-hh:mm}"
+//
+// Notes:
+// - Setting system time requires root or CAP_SYS_TIME.
+// - If NTP is enabled, it may immediately adjust the time back; we best-effort disable it via timedatectl.
+func SyncTime(input string) error {
+	t, err := ParseSyncTime(input, time.Local)
+	if err != nil {
+		return err
+	}
+
+	// Most common system setters are 1-second resolution. Drop sub-second.
+	t = t.Truncate(time.Second)
+
+	// Prefer timedatectl if available.
+	if td, _ := exec.LookPath("timedatectl"); td != "" {
+		_ = exec.Command(td, "set-ntp", "false").Run()
+
+		// timedatectl expects local time string: "YYYY-MM-DD HH:MM:SS"
+		localStr := t.In(time.Local).Format("2006-01-02 15:04:05")
+		cmd := exec.Command(td, "set-time", localStr)
+		if out, e := cmd.CombinedOutput(); e == nil {
+			return nil
+		} else {
+			// Fall back to date -s below; include timedatectl error context if date also fails.
+			_ = out
+		}
+	}
+
+	// Fallback: date -s "YYYY-MM-DD HH:MM:SS"
+	if d, _ := exec.LookPath("date"); d != "" {
+		localStr := t.In(time.Local).Format("2006-01-02 15:04:05")
+		cmd := exec.Command(d, "-s", localStr)
+		if out, e := cmd.CombinedOutput(); e != nil {
+			return fmt.Errorf("failed to set time via date: %v, output: %s", e, strings.TrimSpace(string(out)))
+		}
+		return nil
+	}
+
+	return errors.New("cannot set system time: neither timedatectl nor date found in PATH")
+}
+
+// ParseSyncTime parses the three supported formats.
+// - For YYMMDDHHMMSS and YYYYMMDDHHMMSScc, it assumes tz (pass time.Local typically).
+// - For RFC3339/RFC3339Nano it uses the timezone embedded in the string.
+func ParseSyncTime(input string, tz *time.Location) (time.Time, error) {
+	s := strings.TrimSpace(input)
+
+	// 3) RFC3339/RFC3339Nano (includes timezone)
+	// We try this first if it looks ISO-like.
+	if strings.Contains(s, "T") && (strings.HasSuffix(s, "Z") || strings.Contains(s, "+") || strings.LastIndex(s, "-") > strings.Index(s, "T")) {
+		if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
+			return t, nil
+		}
+		if t, err := time.Parse(time.RFC3339, s); err == nil {
+			return t, nil
+		}
+		// continue to numeric formats
+	}
+
+	// Normalize whitespace (though your formats likely have none)
+	s = strings.Join(strings.Fields(s), "")
+
+	// 1) YYMMDDHHMMSS (12 digits)
+	re12 := regexp.MustCompile(`^\d{12}$`)
+	if re12.MatchString(s) {
+		yy, _ := strconv.Atoi(s[0:2])
+		mo, _ := strconv.Atoi(s[2:4])
+		dd, _ := strconv.Atoi(s[4:6])
+		hh, _ := strconv.Atoi(s[6:8])
+		mm, _ := strconv.Atoi(s[8:10])
+		ss, _ := strconv.Atoi(s[10:12])
+
+		year := twoDigitYearToYear(yy)
+		return time.Date(year, time.Month(mo), dd, hh, mm, ss, 0, tz), nil
+	}
+
+	// 2) YYYYMMDDHHMMSScc (16 digits; cc=centiseconds)
+	re16 := regexp.MustCompile(`^\d{16}$`)
+	if re16.MatchString(s) {
+		year, _ := strconv.Atoi(s[0:4])
+		mo, _ := strconv.Atoi(s[4:6])
+		dd, _ := strconv.Atoi(s[6:8])
+		hh, _ := strconv.Atoi(s[8:10])
+		mm, _ := strconv.Atoi(s[10:12])
+		ss, _ := strconv.Atoi(s[12:14])
+		cc, _ := strconv.Atoi(s[14:16])
+
+		if cc < 0 || cc > 99 {
+			return time.Time{}, fmt.Errorf("invalid centiseconds (cc): %d", cc)
+		}
+		nsec := cc * 10_000_000 // 1 centisecond = 10ms = 1e7 ns
+		return time.Date(year, time.Month(mo), dd, hh, mm, ss, nsec, tz), nil
+	}
+
+	return time.Time{}, fmt.Errorf("unsupported time format: %q", input)
+}
+
+// twoDigitYearToYear converts YY into a full year with a pivot.
+// 00-69 => 2000-2069, 70-99 => 1970-1999
+func twoDigitYearToYear(yy int) int {
+	if yy >= 70 {
+		return 1900 + yy
+	}
+	return 2000 + yy
+}
+
+
 // FormatTime formats time t according to mode:
 // 0 => "A:12 YYMMDDHHMMSS"
 // 1 => "A:16 YYYYMMDDHHMMSScc" (cc = centiseconds, 00-99)
@@ -26,12 +143,12 @@ func FormatTime(mode int, t time.Time) (string, error) {
 	switch mode {
 	case 0:
 		// Two-digit year
-		return "A:12 " + t.Format("060102150405"), nil
+		return t.Format("060102150405"), nil
 
 	case 1:
 		// Centiseconds: truncate to 1/100s (not round)
 		cc := (t.Nanosecond() / 1e7) % 100 // 1e7 ns = 10ms
-		return fmt.Sprintf("A:16 %s%02d", t.Format("20060102150405"), cc), nil
+		return fmt.Sprintf("%s%02d", t.Format("20060102150405"), cc), nil
 
 	case 2:
 		// RFC3339Nano produces variable fractional seconds and timezone like Z or +hh:mm
@@ -126,7 +243,7 @@ func (cm * COMMONMODULE)handleS1F11(msg *sm.DataMessage){
 func (cm * COMMONMODULE)handleS2F17(msg *sm.DataMessage){
     //header only
     t:= time.Now()
-    timestr , _ := FormatTime( 2 , t )
+    timestr , _ := FormatTime( 1 , t )
     timeNode := sm.CreateASCIINode(timestr)
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2,18, false,
                                      timeNode , cm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
@@ -134,7 +251,19 @@ func (cm * COMMONMODULE)handleS2F17(msg *sm.DataMessage){
 }
 
 func (cm * COMMONMODULE)handleS2F31(msg *sm.DataMessage){
-    // NTP ?
+    //_ = SyncTime("260119101112")
+    item , err := msg.Get()
+    if( item.Type() != "A" || err != nil){
+        cm.log.Printf("Error S1F11 format\n")
+        cm.sendS9FX(msg, 7)
+        return ;
+    }
+    timestr :=  item.Values().(string)
+    _ = SyncTime(timestr)
+    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2,32, false,
+                                     sm.CreateBinaryNode( byte(0) ) , cm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+    cm.oChan <- act
+
 }
 
 

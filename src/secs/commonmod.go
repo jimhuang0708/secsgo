@@ -3,7 +3,7 @@ package secs
 import (
     "sync"
     "time"
-
+    "fmt"
     "secs/data"
     "secs/logger"
     sm "secs/secs_message"
@@ -16,6 +16,31 @@ type COMMONMODULE struct{
     wg *sync.WaitGroup
     deviceID int
     log *logger.Logger
+}
+
+// FormatTime formats time t according to mode:
+// 0 => "A:12 YYMMDDHHMMSS"
+// 1 => "A:16 YYYYMMDDHHMMSScc" (cc = centiseconds, 00-99)
+// 2 => "YYYY-MM-DDTHH:MM:SS.s[s]*{Z|+hh:mm|-hh:mm}" (RFC3339Nano-like)
+func FormatTime(mode int, t time.Time) (string, error) {
+	switch mode {
+	case 0:
+		// Two-digit year
+		return "A:12 " + t.Format("060102150405"), nil
+
+	case 1:
+		// Centiseconds: truncate to 1/100s (not round)
+		cc := (t.Nanosecond() / 1e7) % 100 // 1e7 ns = 10ms
+		return fmt.Sprintf("A:16 %s%02d", t.Format("20060102150405"), cc), nil
+
+	case 2:
+		// RFC3339Nano produces variable fractional seconds and timezone like Z or +hh:mm
+		// Example: 2026-01-19T12:34:56.123456789+08:00 or ...Z
+		return t.Format(time.RFC3339Nano), nil
+
+	default:
+		return "", fmt.Errorf("unsupported mode: %d (expect 0,1,2)", mode)
+	}
 }
 
 func NewCOMMONMODULE(deviceID int, log *logger.Logger) *COMMONMODULE {
@@ -98,6 +123,21 @@ func (cm * COMMONMODULE)handleS1F11(msg *sm.DataMessage){
     cm.oChan <- act
 }
 
+func (cm * COMMONMODULE)handleS2F17(msg *sm.DataMessage){
+    //header only
+    t:= time.Now()
+    timestr , _ := FormatTime( 2 , t )
+    timeNode := sm.CreateASCIINode(timestr)
+    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2,18, false,
+                                     timeNode , cm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+    cm.oChan <- act
+}
+
+func (cm * COMMONMODULE)handleS2F31(msg *sm.DataMessage){
+    // NTP ?
+}
+
+
 func (cm * COMMONMODULE)processMsg(msg *sm.DataMessage)(bool){
     if(msg.StreamCode() == 1){
         if(msg.FunctionCode() == 1){
@@ -122,7 +162,15 @@ func (cm * COMMONMODULE)processMsg(msg *sm.DataMessage)(bool){
             cm.handleS1F11(msg)
         }
     }
+    if(msg.StreamCode() == 2){
+         if(msg.FunctionCode() == 17){
+             cm.handleS2F17(msg)
+         }
+         if(msg.FunctionCode() == 31){
+             cm.handleS2F31(msg)
+         }
 
+    }
     return true
 }
 

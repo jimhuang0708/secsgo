@@ -184,6 +184,8 @@ func (ec *EquipmentContext)regProcessModule(){
     ec.dispatchMap[1][1] = ec.commonModule
     ec.dispatchMap[1][3] = ec.commonModule
     ec.dispatchMap[1][11] = ec.commonModule
+    ec.dispatchMap[2][17] = ec.commonModule //clock
+    ec.dispatchMap[2][31] = ec.commonModule //clock
 
     ec.dispatchMap[2][13] = ec.ecModule
     ec.dispatchMap[2][15] = ec.ecModule

@@ -102,6 +102,7 @@ type EquipmentContext struct {
     terminalModule * TERMINALMODULE
     rcModule * RCMODULE
     lmtModule* LIMITMONITORMODULE
+    dstModule * DSTMODULE
     processstate string;
 }
 
@@ -129,6 +130,7 @@ func NewEquipmentContext(deviceID int, l *slog.Logger) *EquipmentContext {
         terminalModule : NewTERMINALMODULE(deviceID, baseLog.With("module", "TERMINALMODULE")),
         rcModule : NewRCMODULE(deviceID, baseLog.With("module", "RCMODULE")),
         lmtModule : NewLIMITMONITORMODULE(deviceID, baseLog.With("module", "LIMITMONITORMODULE")),
+        dstModule : NewDSTMODULE(deviceID, baseLog.With("module", "DSTMODULE")),
     }
     data.SetLogger(baseLog.With("module", "DATA"));
     go ec.stateRun()
@@ -206,6 +208,10 @@ func (ec *EquipmentContext)regProcessModule(){
     //limit module
     ec.dispatchMap[2][45] = ec.lmtModule
     ec.dispatchMap[2][47] = ec.lmtModule
+    //dataset transfer module
+    ec.dispatchMap[13][1] = ec.dstModule
+    ec.dispatchMap[13][2] = ec.dstModule
+
 
 }
 
@@ -284,6 +290,8 @@ func (ec *EquipmentContext )stateRun(){
                 ec.doEvt(act);
             case act := <-ec.lmtModule.oChan:
                 ec.doEvt(act);
+            case act := <-ec.dstModule.oChan:
+                ec.doEvt(act);
             case evt := <-ec.ctrlState.oChan:
                 ec.stateTrig(evt)
             default:
@@ -299,6 +307,7 @@ func (ec *EquipmentContext )stateRun(){
     ec.terminalModule.moduleStop()
     ec.rcModule.moduleStop()
     ec.lmtModule.moduleStop()
+    ec.dstModule.moduleStop()
     ec.log.Printf("Exit EquipmentContext")
 }
 

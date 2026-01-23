@@ -251,7 +251,6 @@ func (cm * COMMONMODULE)handleS2F17(msg *sm.DataMessage){
 }
 
 func (cm * COMMONMODULE)handleS2F31(msg *sm.DataMessage){
-    //_ = SyncTime("260119101112")
     item , err := msg.Get()
     if( item.Type() != "A" || err != nil){
         cm.log.Printf("Error S1F11 format\n")
@@ -259,9 +258,13 @@ func (cm * COMMONMODULE)handleS2F31(msg *sm.DataMessage){
         return ;
     }
     timestr :=  item.Values().(string)
-    _ = SyncTime(timestr)
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2,32, false,
-                                     sm.CreateBinaryNode( byte(0) ) , cm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+    errCode := 0
+    if(err != SyncTime(timestr)){
+        errCode = 1
+    }
+    ack := sm.CreateBinaryNode( byte(errCode) )
+
+    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2,32, false, ack , cm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     cm.oChan <- act
 
 }

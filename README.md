@@ -93,7 +93,7 @@ Note: port is different
 | Material Movement                  | 4.7                |                                                         |
 | Equipment Terminal Services        | 4.8                | (S10F1/S10F2/S10F3/S10F4/S6F11/S6F12)                   |
 | Error Messages                     | 4.9                | (S9F1/S9F3/S9F5/S9F7/S9F9)                              |
-| Clock                              | 4.10               | (S2F17(X)/S2F18(X)/S2F31(X)/S2F32(X) NTP is preferred ) |
+| Clock                              | 4.10               | (S2F17/S2F18/S2F31/S2F32 NTP is preferred )             |
 | Spooling                           | 4.11               |                                                         |
 | Control (Operator-Initiated)       | 4.12               | (S1F0/S1F1/S1F2/S6F11/S6F12)                            |
 | Control (Host-Initiated)           | 4.12.5.1           | (S1F15/S1F16/S1F17/S1F18/S6F11/S6F12)                   |
@@ -118,6 +118,10 @@ S2F13 (V)            | SEND by HOST
 S2F14                | SEND by EQUIPMENT  
 S2F15 (V)            | SEND by HOST  
 S2F16                | SEND by EQUIPMENT  
+S2F17                | SEND by HOST  
+S2F18                | SEND by EQUIPMENT  
+S2F31                | SEND by HOST (timeformat not checked)  
+S2F32                | SEND by EQUIPMENT
 S2F23 (V)            | SEND by HOST  
 S2F24                | SEND by EQUIPMENT  
 S2F29 (V)            | SEND by HOST  

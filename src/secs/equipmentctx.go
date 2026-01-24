@@ -215,6 +215,9 @@ func (ec *EquipmentContext)regProcessModule(){
     ec.dispatchMap[13][4] = ec.dstModule
     ec.dispatchMap[13][5] = ec.dstModule
     ec.dispatchMap[13][6] = ec.dstModule
+    ec.dispatchMap[13][7] = ec.dstModule
+    ec.dispatchMap[13][8] = ec.dstModule
+
 }
 
 func (ec *EquipmentContext)processUIEvt(uievt string){

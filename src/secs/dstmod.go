@@ -95,13 +95,38 @@ func (dstm * DSTMODULE)handleS13F1(msg *sm.DataMessage){
     }
     dsName := item.Values().(string)
     dstm.log.Printf("dsname : %v\n",dsName);
-    rootNode := sm.CreateListNode( sm.CreateASCIINode(dsName),sm.CreateBinaryNode( byte(ACKC13OK) ) );
+    ack := ACKC13OK
+    // TODO: check if dataset exit or permission granted
+    // if(!dsexist){
+    //     ack = ACKC13RetryableError
+    //     ack = ACKC13UnknownDataSetName
+    //
+    // }
+
+    rootNode := sm.CreateListNode( sm.CreateASCIINode(dsName),sm.CreateBinaryNode( byte(ack) ) );
     replyMsg := sm.CreateDataMessage( 13, 2, false, rootNode , dstm.deviceID , msg.SystemBytes() , msg.SourceHost() )
     act := Evt{ cmd : "send" , msg : replyMsg , ts : time.Now().Unix()  }
     dstm.oChan <- act
 }
 
 func (dstm * DSTMODULE)handleS13F2(msg *sm.DataMessage){
+    item , err := msg.Get()
+    if( item.Type() != "L" || err != nil){
+        dstm.log.Printf("Error S13F1 format\n")
+        dstm.sendS9FX(msg, 7)
+        return ;
+    }
+    handleNode , err := item.(*sm.ListNode).Get(0)
+    handle := handleNode.Values().([]uint64)[0]
+    ackNode , err :=  item.(*sm.ListNode).Get(1)
+    ack := ackNode.Values().([]byte)[0]
+    dstm.log.Printf("handleS13F2 : %d | ack : %d \n",handle,ack);
+    if(ACKC13(ack) != ACKC13OK){
+        dstm.log.Printf("handleS13F2 error : %d\n",ack);
+        return;
+    }
+
+    return
 }
 
 
@@ -224,14 +249,78 @@ func (dstm * DSTMODULE)handleS13F5(msg *sm.DataMessage){
         dstm.log.Printf("SEND Handle not found\n",handle)
         ack = ACKC13NoOpenDataSet
     }
-
-    rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) , sm.CreateBinaryNode( byte(ack) ) , sm.CreateUintNode(4,ckPnt) , sm.CreateBinaryNode(buffer...) );
+    filDataLstNode := sm.CreateListNode(sm.CreateBinaryNode(buffer...))
+    rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) , sm.CreateBinaryNode( byte(ack) ) , sm.CreateUintNode(4,ckPnt) , filDataLstNode );
     replyMsg := sm.CreateDataMessage( 13, 6, false, rootNode , dstm.deviceID , msg.SystemBytes() , msg.SourceHost() )
     act := Evt{ cmd : "send" , msg : replyMsg , ts : time.Now().Unix()  }
     dstm.oChan <- act
 }
 
+func (dstm * DSTMODULE)handleS13F6(msg *sm.DataMessage){
+    item , err := msg.Get()
+    if( item.Type() != "L" || err != nil){
+        dstm.log.Printf("Error S13F1 format\n")
+        dstm.sendS9FX(msg, 7)
+        return ;
+    }
+    handleNode , err := item.(*sm.ListNode).Get(0)
+    handle := handleNode.Values().([]uint64)[0]
+    ackNode , err :=  item.(*sm.ListNode).Get(1)
+    ack := ackNode.Values().([]byte)[0]
+    ckPntNode  , err := item.(*sm.ListNode).Get(2)
+    ckPnt := ckPntNode.Values().([]uint64)[0]
+    filDataLstNode , err := item.(*sm.ListNode).Get(3)
+    filDataNode , err := filDataLstNode.(*sm.ListNode).Get(3)
+    filData := filDataNode.Values().([]byte)
+    dstm.log.Printf("handle : %d | ack : %d | ckPnt : %d | filData : %v\n",handle,ack,ckPnt,filData);
+}
 
+//close request
+func (dstm * DSTMODULE)sebdS13F7(handle uint,readlen uint){
+    rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) );
+    msg :=  sm.CreateDataMessage( 13 , 7 , true , rootNode , dstm.deviceID , 0 , "ALL" )
+    act := Evt{ cmd : "send" , msg : msg ,ts : time.Now().Unix()}
+    dstm.oChan <- act
+}
+
+func (dstm * DSTMODULE)handleS13F7(msg *sm.DataMessage){
+    item , err := msg.Get()
+    if( item.Type() != "L" || err != nil){
+        dstm.log.Printf("Error S13F1 format\n")
+        dstm.sendS9FX(msg, 7)
+        return ;
+    }
+    handleNode , err := item.(*sm.ListNode).Get(0)
+    handle := handleNode.Values().([]uint64)[0]
+    ack := ACKC13OK
+    if sendds , found := SEND_MAP[uint(handle)]; found {
+        dstm.log.Printf("Close Handle found\n")
+        sendds.file.Close()
+        delete(SEND_MAP, uint(handle))
+    } else {
+        dstm.log.Printf("Close Handle not found : %d\n",handle)
+        ack = ACKC13NoOpenDataSet
+    }
+    rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) , sm.CreateBinaryNode( byte(ack) ) );
+    replyMsg := sm.CreateDataMessage( 13, 8, false, rootNode , dstm.deviceID , msg.SystemBytes() , msg.SourceHost() )
+    act := Evt{ cmd : "send" , msg : replyMsg , ts : time.Now().Unix()  }
+    dstm.oChan <- act
+}
+
+func (dstm * DSTMODULE)handleS13F8(msg *sm.DataMessage){
+    item , err := msg.Get()
+    if( item.Type() != "L" || err != nil){
+        dstm.log.Printf("Error S13F1 format\n")
+        dstm.sendS9FX(msg, 7)
+        return ;
+    }
+    handleNode , err := item.(*sm.ListNode).Get(0)
+    handle := handleNode.Values().([]uint64)[0]
+    ackNode , err :=  item.(*sm.ListNode).Get(1)
+    ack := ackNode.Values().([]byte)[0]
+    dstm.log.Printf("handle : %d | ack : %d ",handle,ack);
+    return
+}
 
 
 func (dstm * DSTMODULE)processMsg(msg *sm.DataMessage)(bool){
@@ -252,8 +341,14 @@ func (dstm * DSTMODULE)processMsg(msg *sm.DataMessage)(bool){
             dstm.handleS13F5(msg)
         }
         if(msg.FunctionCode() == 6){
+            dstm.handleS13F6(msg)
         }
-
+        if(msg.FunctionCode() == 7){
+            dstm.handleS13F6(msg)
+        }
+        if(msg.FunctionCode() == 8){
+            dstm.handleS13F6(msg)
+        }
 
     }
     return true

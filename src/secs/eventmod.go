@@ -44,7 +44,7 @@ func (em * EVENTMODULE) PutEvt(e Evt) {
 
 
 func (em EVENTMODULE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]interface{}, 10)
+    bin := make([]byte, 10)
     raw := msg.EncodeBytes();
     for i := 0 ; i < 10; i++ {
         bin[i] = raw[i+4]
@@ -68,19 +68,19 @@ func (em * EVENTMODULE)sendS1F24(msg *sm.DataMessage,evtLst []uint32){
 func (em * EVENTMODULE)sendS2F34(msg *sm.DataMessage,result string){
     if(result == "ok"){
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 34, false,
-                    sm.CreateBinaryNode( []interface{}{byte(0)}... ) , em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(0) ) , em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
     if(result == "duprpt"){
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 34, false,
-                    sm.CreateBinaryNode( []interface{}{byte(3)}... ) , em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(3) ) , em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
     if(result == "novid"){
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 34, false,
-                    sm.CreateBinaryNode( []interface{}{byte(4)}... ) , em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(4) ), em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
@@ -91,25 +91,25 @@ func (em * EVENTMODULE)sendS2F34(msg *sm.DataMessage,result string){
 func (em * EVENTMODULE)sendS2F36(msg *sm.DataMessage,result string){
     if(result == "ok"){
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2, 36, false,
-                    sm.CreateBinaryNode( []interface{}{byte(0)}... ) , em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(0) ), em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
     if(result == "dupevt"){//duplicate evt
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 36, false,
-                    sm.CreateBinaryNode( []interface{}{byte(3)}... ) , em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(3) ), em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
     if(result == "noevt"){//invalid evnt id
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 36, false,
-                    sm.CreateBinaryNode( []interface{}{byte(4)}... ) , em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(4) ), em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
     if(result == "norpt"){//invalid rpt id
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2, 36, false,
-                    sm.CreateBinaryNode( []interface{}{byte(5)}... ) , em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(5) ), em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
@@ -120,12 +120,12 @@ func (em * EVENTMODULE)sendS2F36(msg *sm.DataMessage,result string){
 func (em * EVENTMODULE)sendS2F38(msg *sm.DataMessage,result string){
     if(result == "accept"){
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 38, false,
-                    sm.CreateBinaryNode( []interface{}{byte(0)}... ) , em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(0) ), em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
     if(result == "reject"){
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2, 38, false,
-                    sm.CreateBinaryNode( []interface{}{byte(1)}... ) , em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(1) ), em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
     return

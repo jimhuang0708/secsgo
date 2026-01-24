@@ -134,7 +134,7 @@ func (cs * CTRLSTATE)updateCTRLSTATE(CTRLSTATE string,ctrlSubState string){
 }
 
 func (cs *CTRLSTATE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]interface{}, 10)
+    bin := make([]byte, 10)
     raw := msg.EncodeBytes();
     for i := 0 ; i < 10; i++ {
         bin[i] = raw[i+4]
@@ -209,7 +209,7 @@ func (cs * CTRLSTATE)handleS1F17(msg *sm.DataMessage){
 /* send by Equipment only */
 func (cs * CTRLSTATE)sendS1F16(result byte,msg *sm.DataMessage){
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 16, false,
-                sm.CreateBinaryNode( []interface{}{byte(result)}... ) , cs.deviceID , msg.SystemBytes() , msg.SourceHost() ),ts : time.Now().Unix()}
+                sm.CreateBinaryNode( byte(result) ) , cs.deviceID , msg.SystemBytes() , msg.SourceHost() ),ts : time.Now().Unix()}
     cs.session[msg.SourceHost()].iChan <- act
     cs.log.Printf("do request offline\n")
     return
@@ -218,7 +218,7 @@ func (cs * CTRLSTATE)sendS1F16(result byte,msg *sm.DataMessage){
 /* send by Equipment only */
 func (cs * CTRLSTATE)sendS1F18(result byte,msg *sm.DataMessage){
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 18, false,
-                sm.CreateBinaryNode( []interface{}{byte(result)}... ) , cs.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                sm.CreateBinaryNode( byte(result) ) , cs.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     cs.session[msg.SourceHost()].iChan <- act
     cs.log.Printf("do request online\n")
 }

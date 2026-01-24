@@ -38,7 +38,7 @@ func (am * ALARMMODULE) PutEvt(e Evt) {
 
 
 func (am * ALARMMODULE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]interface{}, 10)
+    bin := make([]byte, 10)
     raw := msg.EncodeBytes();
     for i := 0 ; i < 10; i++ {
         bin[i] = raw[i+4]
@@ -111,7 +111,7 @@ func (am * ALARMMODULE)handleS5F3(msg *sm.DataMessage){
     }
     ret := data.SetAlarmEnable(alid,aled)
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 5, 4, false, 
-                                     sm.CreateBinaryNode( []interface{}{byte(ret)}... ) ,
+                                     sm.CreateBinaryNode( byte(ret) ) ,
                                      am.deviceID , msg.SystemBytes() , msg.SourceHost() ),ts : time.Now().Unix()}
     am.oChan <- act
 }

@@ -47,7 +47,7 @@ func (tm * TERMINALMODULE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
 
 
 func (tm * TERMINALMODULE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]interface{}, 10)
+    bin := make([]byte, 10)
     raw := msg.EncodeBytes();
     for i := 0 ; i < 10; i++ {
         bin[i] = raw[i+4]

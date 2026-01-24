@@ -157,7 +157,7 @@ func (cs *COMMUNICATESTATE)sendS1F13(){
 
 func (cs *COMMUNICATESTATE)sendS1F14(msg *sm.DataMessage){
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(1, 14, false,
-                               sm.CreateListNode ( sm.CreateBinaryNode( interface{}(byte(0))) ,  sm.CreateListNode( sm.CreateASCIINode("HMITaker") , sm.CreateASCIINode("1.0"))),
+                               sm.CreateListNode ( sm.CreateBinaryNode( byte(0) ) ,  sm.CreateListNode( sm.CreateASCIINode("HMITaker") , sm.CreateASCIINode("1.0"))),
                                cs.deviceID , msg.SystemBytes(), msg.SourceHost() ),ts : time.Now().Unix()}
     cs.hsms_ss.iChan <- act
     return
@@ -165,7 +165,7 @@ func (cs *COMMUNICATESTATE)sendS1F14(msg *sm.DataMessage){
 
 
 func (cs *COMMUNICATESTATE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]interface{}, 10)
+    bin := make([]byte, 10)
     raw := msg.EncodeBytes();
     for i := 0 ; i < 10; i++ {
         bin[i] = raw[i+4]

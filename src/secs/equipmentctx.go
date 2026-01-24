@@ -46,7 +46,7 @@ type BaseContext struct {
 
 
 func (bc *BaseContext)buildError(msg *sm.DataMessage,f int){
-    bin := make([]interface{}, 10)
+    bin := make([]byte, 10)
     raw := msg.EncodeBytes();
     for i := 0 ; i < 10; i++ {
         bin[i] = raw[i+4]
@@ -211,8 +211,10 @@ func (ec *EquipmentContext)regProcessModule(){
     //dataset transfer module
     ec.dispatchMap[13][1] = ec.dstModule
     ec.dispatchMap[13][2] = ec.dstModule
-
-
+    ec.dispatchMap[13][3] = ec.dstModule
+    ec.dispatchMap[13][4] = ec.dstModule
+    ec.dispatchMap[13][5] = ec.dstModule
+    ec.dispatchMap[13][6] = ec.dstModule
 }
 
 func (ec *EquipmentContext)processUIEvt(uievt string){

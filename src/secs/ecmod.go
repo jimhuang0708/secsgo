@@ -37,7 +37,7 @@ func (em * EQCONSTMODULE) PutEvt(e Evt) {
 }
 
 func (em * EQCONSTMODULE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]interface{}, 10)
+    bin := make([]byte, 10)
     raw := msg.EncodeBytes();
     for i := 0 ; i < 10; i++ {
         bin[i] = raw[i+4]
@@ -115,7 +115,7 @@ func (em * EQCONSTMODULE)handleS2F15(msg *sm.DataMessage){
     }
     ret := data.SetEC(ecs)
     em.log.Printf("ret : %v \n",ret);
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 16, false,  sm.CreateBinaryNode( interface{}(byte( ret)))  ,
+    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 16, false,  sm.CreateBinaryNode( byte( ret) )  ,
                   em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     em.oChan <- act
 

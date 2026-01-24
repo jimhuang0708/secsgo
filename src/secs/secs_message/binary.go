@@ -29,17 +29,13 @@ func (node *BinaryNode) Code() byte {
     return 0o10
 }
 
-func CreateBinaryNode(values ...interface{}) ElementType {
+func CreateBinaryNode(values ...byte) ElementType {
     if len(values) > MAX_BYTE_SIZE {
         panic("datalength too long\n")
     }
     var nodeValues []byte =  make([]byte, 0, len(values))
     for _ , value := range values {
-        if v, ok := value.(byte); ok {
-            nodeValues = append(nodeValues, byte(v))
-        } else {
-            panic("Conver to byte failed")
-        }
+        nodeValues = append(nodeValues,value)
     }
     node := &BinaryNode{nodeValues,  "B"}
     return node

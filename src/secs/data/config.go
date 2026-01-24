@@ -227,7 +227,7 @@ func (n *NodeValue) EncodeSecs() (sm.ElementType, error) {
             return nil, fmt.Errorf("invalid hex length for B: %s", n.Bytes)
         }
 
-        vals := make([]interface{}, 0, len(n.Bytes)/2)
+        vals := make([]byte, 0, len(n.Bytes)/2)
 
         for i := 0; i < len(n.Bytes); i += 2 {
             hexByte := n.Bytes[i : i+2]

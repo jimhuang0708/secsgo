@@ -117,14 +117,14 @@ func (hm *HOSTMODULE)sendS1F13(){
 
 func (hm *HOSTMODULE)sendS1F14(msg *sm.DataMessage){
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 14, false,
-                                   sm.CreateListNode ( sm.CreateBinaryNode( interface{}(byte(0))) ,  sm.CreateListNode() ),
+                                   sm.CreateListNode ( sm.CreateBinaryNode( byte(0) ) ,  sm.CreateListNode() ),
                                    hm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     hm.oChan <- act
     return
 }
 
 func (hm *HOSTMODULE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]interface{}, 10)
+    bin := make([]byte, 10)
     raw := msg.EncodeBytes();
     for i := 0 ; i < 10; i++ {
         bin[i] = raw[i+4]
@@ -171,7 +171,7 @@ func (hm *HOSTMODULE)processMsg(msg *sm.DataMessage)(bool){
         }
         if(msg.FunctionCode() == 11){
             act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 12, false,
-                                        sm.CreateBinaryNode( []interface{}{byte(0)}... ) ,
+                                        sm.CreateBinaryNode( byte(0) ) ,
                                         msg.SessionID() , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
             hm.oChan <- act
         }

@@ -175,7 +175,7 @@ func (p *decoder) decodeASCII(length int) (ElementType, bool) {
 func (p *decoder) decodeBinary(length int) (ElementType, bool) {
     buf := p.input[p.pos : p.pos+length]
     p.pos += length
-    values := make([]interface{}, length)
+    values := make([]byte, length)
     for i, v := range buf {
         values[i] = v
     }

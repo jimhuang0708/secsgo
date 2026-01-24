@@ -179,7 +179,7 @@ func (cm * COMMONMODULE) PutEvt(e Evt) {
 }
 
 func (cm * COMMONMODULE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]interface{}, 10)
+    bin := make([]byte, 10)
     raw := msg.EncodeBytes();
     for i := 0 ; i < 10; i++ {
         bin[i] = raw[i+4]

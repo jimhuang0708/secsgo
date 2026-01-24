@@ -55,7 +55,7 @@ func (tm * TDCMODULE) PutEvt(e Evt) {
 }
 
 func (tm * TDCMODULE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]interface{}, 10)
+    bin := make([]byte, 10)
     raw := msg.EncodeBytes();
     for i := 0 ; i < 10; i++ {
         bin[i] = raw[i+4]
@@ -143,7 +143,7 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
     if( totsmp == 0 ){
         tm.removeTrace(trid)
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 24, false,
-                                     sm.CreateBinaryNode( interface{}(byte(0))) ,
+                                     sm.CreateBinaryNode( byte(0) ) ,
                                      tm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
         tm.oChan <- act
         return
@@ -163,7 +163,7 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
             svidLst = append(svidLst , svID)
         } else {
             act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 24, false,
-                                         sm.CreateBinaryNode( interface{}(byte(4))) , //unknown vid return 4
+                                         sm.CreateBinaryNode( byte(4) ) , //unknown vid return 4
                                          tm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix() }
             tm.oChan <- act
             return
@@ -183,7 +183,7 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
 
     tm.log.Printf("%v %v %v %v %v %d\n",trid,dsper,totsmp,repgsz,svidLst,second_cnt)
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 24, false,
-                                     sm.CreateBinaryNode( interface{}(byte(0))) ,
+                                     sm.CreateBinaryNode( byte(0) ) ,
                                      tm.deviceID , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
     tm.oChan <- act
 }

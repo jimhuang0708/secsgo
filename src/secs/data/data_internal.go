@@ -426,9 +426,9 @@ func (sd *SECS_DATA) getAlarmsLst(alids []uint64) sm.ElementType {
         var textNode sm.ElementType
         if ok {
             if alarm.set == true {
-                alcdNode = sm.CreateBinaryNode([]interface{}{byte(128)}...)
+                alcdNode = sm.CreateBinaryNode( byte(128) )
             } else {
-                alcdNode = sm.CreateBinaryNode([]interface{}{byte(0)}...)
+                alcdNode = sm.CreateBinaryNode( byte(0) )
             }
             textNode = sm.CreateASCIINode(alarm.text)
         } else {

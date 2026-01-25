@@ -1,9 +1,9 @@
 package main
-
 import (
     "bytes"
     "context"
     "encoding/binary"
+    "encoding/json"
     "errors"
     "fmt"
     "log/slog"
@@ -202,14 +202,19 @@ func (conn *WsConn) readWebSocket(ctx context.Context,cmdChan *chan string) {
         }
 
         // Successfully got a full message
-        /*var genericData map[string]interface{}
+        var genericData map[string]interface{}
 	err = json.Unmarshal([]byte(msg[4:]), &genericData)
 	if err != nil {
-		fmt.Println("Error unmarshalling JSON to map:", err)
-		return
+            fmt.Println("Error unmarshalling JSON to map:", err)
+	    return
 	}
-        fmt.Printf("%v\n",genericData);*/
-        *cmdChan <- string(msg)
+        fmt.Printf("%v\n",genericData);
+        TypeStr := genericData["type"].(string)
+        if( TypeStr == "sxfy"){
+            data := genericData["data"].(string)
+            *cmdChan <- string(data)
+        }
+        // *cmdChan <- string(msg)
         fmt.Printf("%s\n",string(msg));
     }
 }

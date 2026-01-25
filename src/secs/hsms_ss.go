@@ -10,7 +10,6 @@ import (
 )
 
 type WaitItem struct {
-    msg sm.HSMSMessage
     ts  int64
     evtChan chan Evt
     evt Evt

@@ -75,12 +75,9 @@ func (hc *HostContext)sendSXFY(stream int , function int , node sm.ElementType) 
 
 func (hc *HostContext)doUICommand(s string) {
     raw := []byte(s)
-    if len(raw) > 4 {
-        raw = raw[4:]
-    }
     var c UICmd
     json.Unmarshal( raw,&c)
-    hc.log.Printf("=============>%s  | %v",raw,c);
+    hc.log.Printf("doUICommand %s | %v",raw,c);
     //
     stream := c.Stream
     function := c.Function

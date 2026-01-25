@@ -31,8 +31,7 @@ function wsSend(str) {
     ws.send(buffer);
 }
 
-
-function sendControlEvent(type, payload) {
+function sendHostEvent(type , payload) {
     const message = {
         type: type,
         data: payload,
@@ -45,6 +44,7 @@ function sendControlEvent(type, payload) {
         console.warn("WebSocket not open, cannot send:", message);
     }
 }
+
 
 function initWebSocket() {
     ws = new WebSocket("ws://" + location.hostname  + ":" + location.port + "/api/host");
@@ -90,14 +90,14 @@ function bindEvents() {
     document.getElementById("btnOnlineRequest").addEventListener("click", function () {
         dataitem = {}
         cmd = { "stream" : 1 , "function" : 17 , "dataitem" : dataitem }
-        wsSend(JSON.stringify(cmd));
+        sendHostEvent("sxfy",JSON.stringify(cmd))
 
     });
 
     document.getElementById("btnOfflineRequest").addEventListener("click", function () {
         dataitem = {}
         cmd = { "stream" : 1 , "function" : 15 , "dataitem" : dataitem }
-        wsSend(JSON.stringify(cmd));
+        sendHostEvent("sxfy",JSON.stringify(cmd))
     });
 
     //
@@ -115,7 +115,7 @@ function bindEvents() {
             dataitem.items.push( { "type" : "U4" ,  "values" : [ parseInt(vidList[i],10) ]  })
         }
         cmd = { "stream" : 1 , "function" : 3 , "dataitem" : dataitem }
-        wsSend(JSON.stringify(cmd));
+        sendHostEvent("sxfy",JSON.stringify(cmd))
     });
 
     document.getElementById("s1f11").addEventListener("click", function () {
@@ -129,7 +129,7 @@ function bindEvents() {
         }
 
         cmd = { "stream" : 1 , "function" : 11 , "dataitem" : dataitem }
-        wsSend(JSON.stringify(cmd));
+        sendHostEvent("sxfy",JSON.stringify(cmd))
     });
 
 
@@ -144,7 +144,7 @@ function bindEvents() {
         }
 
         cmd = { "stream" : 2 , "function" : 13 , "dataitem" : dataitem }
-        wsSend(JSON.stringify(cmd));
+        sendHostEvent("sxfy",JSON.stringify(cmd))
     });
 
     document.getElementById("s2f15").addEventListener("click", function () {
@@ -159,7 +159,7 @@ function bindEvents() {
             dataitem.items.push( { "type" : "L", "items" :[ { "type" : "U4" , "values" : [   parseInt(pair[0],10) ] } , { "type" : "U4" , "values" : [   parseInt(pair[1],10) ] } ] } )
         }
         cmd = { "stream" : 2 , "function" : 15 , "dataitem" : dataitem }
-        wsSend(JSON.stringify(cmd));
+        sendHostEvent("sxfy",JSON.stringify(cmd))
     });
 
     document.getElementById("s2f29").addEventListener("click", function () {
@@ -173,7 +173,7 @@ function bindEvents() {
         }
 
         cmd = { "stream" : 2 , "function" : 29 , "dataitem" : dataitem }
-        wsSend(JSON.stringify(cmd));
+        sendHostEvent("sxfy",JSON.stringify(cmd))
     });
 
 
@@ -182,7 +182,7 @@ function bindEvents() {
         textcontent = document.getElementById("sendtextcontent").value
         dataitem = { "type": "L", "items": [  { "type": "B", "bytes": "00" }, { "type": "A", "value": textcontent } ] }
         cmd = { "stream" : 10 , "function" : 3 , "dataitem" : dataitem }
-        wsSend(JSON.stringify(cmd));
+        sendHostEvent("sxfy",JSON.stringify(cmd))
     });
 
 
@@ -228,7 +228,7 @@ function bindEvents() {
             dataitem.items[1].items[0].items[1].items.push( { "type" : "U4" , "values" : [ parseInt(defrptvidlst[j],10) ] })
         }
         cmd = { "stream" : 2 , "function" : 33 , "dataitem" : dataitem }
-        wsSend(JSON.stringify(cmd));
+        sendHostEvent("sxfy",JSON.stringify(cmd))
 
     });
     document.getElementById("s2f35").addEventListener("click", function () {
@@ -273,7 +273,7 @@ function bindEvents() {
             ]
         }
         cmd = { "stream" : 2 , "function" : 35 , "dataitem" : dataitem }
-        wsSend(JSON.stringify(cmd));
+        sendHostEvent("sxfy",JSON.stringify(cmd))
     });
 
 
@@ -309,7 +309,7 @@ function bindEvents() {
                      ]
         }
         cmd = { "stream" : 2 , "function" : 41 , "dataitem" : dataitem }
-        wsSend(JSON.stringify(cmd));
+        sendHostEvent("sxfy",JSON.stringify(cmd))
     });
 
     document.getElementById("s2f45").addEventListener("click", function () {
@@ -372,7 +372,7 @@ function bindEvents() {
                 ]
         }
         cmd = { "stream" : 2 , "function" : 45 , "dataitem" : dataitem }
-        wsSend(JSON.stringify(cmd));
+        sendHostEvent("sxfy",JSON.stringify(cmd))
     });
 
 
@@ -383,7 +383,7 @@ function bindEvents() {
                                            ]
                    }
         cmd = { "stream" : 2 , "function" : 47 , "dataitem" : dataitem }
-        wsSend(JSON.stringify(cmd));
+        sendHostEvent("sxfy",JSON.stringify(cmd))
     });
 
 
@@ -412,7 +412,7 @@ function bindEvents() {
          dataitem.items.push( jvidLst )
 
         cmd = { "stream" : 2 , "function" : 23 , "dataitem" : dataitem }
-        wsSend(JSON.stringify(cmd));
+        sendHostEvent("sxfy",JSON.stringify(cmd))
     });
 
 

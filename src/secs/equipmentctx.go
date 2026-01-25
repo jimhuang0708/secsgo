@@ -103,7 +103,6 @@ type EquipmentContext struct {
     rcModule * RCMODULE
     lmtModule* LIMITMONITORMODULE
     dstModule * DSTMODULE
-    processstate string;
 }
 
 

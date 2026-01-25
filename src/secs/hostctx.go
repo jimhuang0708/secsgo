@@ -15,6 +15,7 @@ type HostContext struct {
     BaseContext
     log *logger.Logger
     hsms_ss      *  HSMS_SS
+    dstModule * DSTMODULE
     hostModule * HOSTMODULE //for host
     UICmdChan *chan string
     UIEvtChan *chan string
@@ -51,6 +52,7 @@ func NewHostContext(deviceID int, l *slog.Logger) *HostContext {
                          },
                          log: baseLog,
                          hostModule : NewHOSTMODULE(deviceID, baseLog.With("module", "HOSTMODULE")) ,
+                         dstModule : NewDSTMODULE(deviceID, baseLog.With("module", "DSTMODULE")),
                          UICmdChan : nil,
                          UIEvtChan : nil,
                          hsms_ss : nil,
@@ -121,11 +123,11 @@ func (hc *HostContext)StateStop(){
 func (hc *HostContext)stateRun(){
     hc.run = true
     for hc.run {
-        var hsms_oChan <-chan Evt   // 用實際型別
+        var hsms_oChan <-chan Evt
         if hc.hsms_ss != nil {
             hsms_oChan = hc.hsms_ss.oChan
         } else {
-            hsms_oChan = nil // 明確 disable
+            hsms_oChan = nil
         }
         select {
             case o := <-hsms_oChan:
@@ -138,6 +140,14 @@ func (hc *HostContext)stateRun(){
                 } else {
                     hc.hsms_ss.iChan <- o
                 }
+            case o := <-hc.dstModule.oChan:
+                hc.log.Printf("get from hc.dstModule.oChan %v",o);
+                if(o.cmd == "uievent"){
+                    hc.processUIEvt(o.msg.(string))
+                } else {
+                    hc.hsms_ss.iChan <- o
+                }
+
             case o := <- *hc.UICmdChan:
                 hc.doUICommand(o)
             default:
@@ -159,4 +169,16 @@ func (hc *HostContext)AttachUICmdChan(cmdChan *chan string){
 
 func (hc *HostContext)AttachUIEvtChan(uiChan *chan string){
     hc.UIEvtChan = uiChan
+}
+
+func (hc *HostContext)ReadEq(dsName string) {
+    hc.dstModule.sendS13F3(1 , dsName  , 0)
+    time.Sleep(200 * time.Millisecond)
+    hc.dstModule.sebdS13F5(1, 4096)
+    time.Sleep(200 * time.Millisecond)
+    hc.dstModule.sendS13F7(1)
+    time.Sleep(200 * time.Millisecond)
+}
+
+func (hc *HostContext)WriteEq(dsName string) {
 }

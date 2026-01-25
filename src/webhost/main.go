@@ -107,7 +107,7 @@ func wsHost(c *gin.Context) {
     go StartHostActive(hc)
     //go StartHostPassive(hc)
     go wsConn.readFromHost(&evtChan)
-    wsConn.readWebSocket(c,&cmdChan)
+    wsConn.readWebSocket(c,&cmdChan,hc)
     hc.StateStop()
 }
 
@@ -175,7 +175,7 @@ func (conn *WsConn) readFromHost(evtChan *chan string){
     fmt.Printf("Exit readFromHost()");
 }
 
-func (conn *WsConn) readWebSocket(ctx context.Context,cmdChan *chan string) {
+func (conn *WsConn) readWebSocket(ctx context.Context,cmdChan *chan string,hc *secs.HostContext) {
     defer func() {
         //errCh <- "readWebSocket Exit"
         fmt.Printf("readWebSocket exit\n")
@@ -214,7 +214,15 @@ func (conn *WsConn) readWebSocket(ctx context.Context,cmdChan *chan string) {
             data := genericData["data"].(string)
             *cmdChan <- string(data)
         }
-        // *cmdChan <- string(msg)
+        if( TypeStr == "readeq"){
+            dsName := genericData["data"].(string)
+            hc.ReadEq(dsName)
+
+        }
+        if( TypeStr == "writeeq"){
+            dsName := genericData["data"].(string)
+            hc.WriteEq(dsName)
+        }
         fmt.Printf("%s\n",string(msg));
     }
 }

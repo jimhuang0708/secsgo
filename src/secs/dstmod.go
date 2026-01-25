@@ -270,13 +270,14 @@ func (dstm * DSTMODULE)handleS13F6(msg *sm.DataMessage){
     ckPntNode  , err := item.(*sm.ListNode).Get(2)
     ckPnt := ckPntNode.Values().([]uint64)[0]
     filDataLstNode , err := item.(*sm.ListNode).Get(3)
-    filDataNode , err := filDataLstNode.(*sm.ListNode).Get(3)
+    filDataNode , err := filDataLstNode.(*sm.ListNode).Get(0)
     filData := filDataNode.Values().([]byte)
+    RECV_MAP[uint(handle)].file.Write(filData)
     dstm.log.Printf("handle : %d | ack : %d | ckPnt : %d | filData : %v\n",handle,ack,ckPnt,filData);
 }
 
 //close request
-func (dstm * DSTMODULE)sebdS13F7(handle uint,readlen uint){
+func (dstm * DSTMODULE)sendS13F7(handle uint){
     rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) );
     msg :=  sm.CreateDataMessage( 13 , 7 , true , rootNode , dstm.deviceID , 0 , "ALL" )
     act := Evt{ cmd : "send" , msg : msg ,ts : time.Now().Unix()}
@@ -344,10 +345,10 @@ func (dstm * DSTMODULE)processMsg(msg *sm.DataMessage)(bool){
             dstm.handleS13F6(msg)
         }
         if(msg.FunctionCode() == 7){
-            dstm.handleS13F6(msg)
+            dstm.handleS13F7(msg)
         }
         if(msg.FunctionCode() == 8){
-            dstm.handleS13F6(msg)
+            dstm.handleS13F8(msg)
         }
 
     }
@@ -355,6 +356,9 @@ func (dstm * DSTMODULE)processMsg(msg *sm.DataMessage)(bool){
 }
 
 func (dstm * DSTMODULE)processEvt(evt Evt){
+    if(evt.msg == nil){
+        return
+    }
     msg := evt.msg.(*sm.DataMessage)
     dstm.processMsg(msg)
 }

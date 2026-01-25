@@ -414,7 +414,12 @@ function bindEvents() {
         cmd = { "stream" : 2 , "function" : 23 , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd))
     });
-
+    document.getElementById("readeq").addEventListener("click", function () {
+        sendHostEvent("readeq" , "a")
+    });
+    document.getElementById("writeeq").addEventListener("click", function () {
+        sendHostEvent("writeeq" , "b")
+    });
 
 }
 

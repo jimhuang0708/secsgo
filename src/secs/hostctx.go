@@ -62,6 +62,24 @@ func NewHostContext(deviceID int, l *slog.Logger) *HostContext {
     return hc
 }
 
+func (hc *HostContext)regProcessModule(){
+    /*clean route path */
+    for s := 0 ; s < 255 ; s++ {
+        for f := 0 ; f < 255 ; f++ {
+            hc.dispatchMap[s][f] = hc.hostModule
+        }
+    }
+    /* stream 13 */
+    hc.dispatchMap[13][1] = hc.dstModule
+    hc.dispatchMap[13][2] = hc.dstModule
+    hc.dispatchMap[13][3] = hc.dstModule
+    hc.dispatchMap[13][4] = hc.dstModule
+    hc.dispatchMap[13][5] = hc.dstModule
+    hc.dispatchMap[13][6] = hc.dstModule
+    hc.dispatchMap[13][7] = hc.dstModule
+    hc.dispatchMap[13][8] = hc.dstModule
+}
+
 func (hc *HostContext)AttachSession(conn net.Conn,mode string){
     ts := NewTransport(conn, hc.log.With("component", "transport", "session_mode", mode))
     hc.hsms_ss = NewHSMS_SS(mode,ts, hc.log.With("component", "hsms_ss", "session_mode", mode))
@@ -102,6 +120,7 @@ func (hc *HostContext)processUIEvt(uievt string){
     }
 }
 
+
 func (hc *HostContext)processEvt(evt Evt){
     if(evt.cmd == "uievent"){
         hc.processUIEvt(evt.msg.(string))
@@ -110,8 +129,18 @@ func (hc *HostContext)processEvt(evt Evt){
         jsonData, _ := json.Marshal(uievt)
         hc.processUIEvt(string(jsonData))
         hc.StateStop()
-    } else {
-        hc.hostModule.iChan <- evt
+    } else if( evt.cmd == "recv" ) {
+        //hc.hostModule.iChan <- evt
+        hc.regProcessModule();
+        if(hc.dispatchHSMSDataMsg(evt)){
+            return
+        }
+        hc.sendUnknownError(evt.msg.(*sm.DataMessage))
+    }  else {
+        if(evt.cmd == "READERROR" || evt.cmd == "T8_TIMEOUT" || evt.cmd == "WRITEERROR"){
+            hc.log.Printf("Error | Event : %s",evt.cmd)
+            return
+        }
     }
 }
 
@@ -173,11 +202,6 @@ func (hc *HostContext)AttachUIEvtChan(uiChan *chan string){
 
 func (hc *HostContext)ReadEq(dsName string) {
     hc.dstModule.sendS13F3(1 , dsName  , 0)
-    time.Sleep(200 * time.Millisecond)
-    hc.dstModule.sebdS13F5(1, 4096)
-    time.Sleep(200 * time.Millisecond)
-    hc.dstModule.sendS13F7(1)
-    time.Sleep(200 * time.Millisecond)
 }
 
 func (hc *HostContext)WriteEq(dsName string) {

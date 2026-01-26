@@ -26,6 +26,7 @@ type DSTRANSFEROBJ struct{
     dsName  string
     ckPnt   uint
     file    *os.File
+    state   string
 }
 
 
@@ -45,8 +46,8 @@ const (
 	ACKC13PendingTransaction ACKC13 = 10
 )
 
-var  RECV_MAP map[uint]DSTRANSFEROBJ
-var  SEND_MAP   map[uint]DSTRANSFEROBJ
+var  RECV_MAP map[uint]*DSTRANSFEROBJ
+var  SEND_MAP   map[uint]*DSTRANSFEROBJ
 
 func NewDSTMODULE(deviceID int, log *logger.Logger) *DSTMODULE {
     o := DSTMODULE{
@@ -58,8 +59,8 @@ func NewDSTMODULE(deviceID int, log *logger.Logger) *DSTMODULE {
                          log: log,
                   }
     o.wg.Add(1)
-    RECV_MAP = make(map[uint]DSTRANSFEROBJ, 100) 
-    SEND_MAP   = make(map[uint]DSTRANSFEROBJ, 100) 
+    RECV_MAP = make(map[uint]*DSTRANSFEROBJ, 100) 
+    SEND_MAP   = make(map[uint]*DSTRANSFEROBJ, 100) 
     go o.stateRun()
     return &o
 }
@@ -168,7 +169,7 @@ func (dstm * DSTMODULE)handleS13F3(msg *sm.DataMessage){
         } else {
             dstm.log.Printf("OpenFile Success\n")
         }
-        dst := DSTRANSFEROBJ{ handle:uint(handle) , buffer : nil , dsName : dsName , ckPnt : uint(ckPnt) , file : file }
+        dst := &DSTRANSFEROBJ{ handle:uint(handle) , buffer : nil , dsName : dsName , ckPnt : uint(ckPnt) , file : file , state : "IDLE" }
         SEND_MAP[uint(handle)] = dst
         dstm.log.Printf("Create Send Handle : %d\n",handle)
     }
@@ -206,14 +207,14 @@ func (dstm * DSTMODULE)handleS13F4(msg *sm.DataMessage){
         return
     } else {
         file, _ := os.OpenFile(dsName, os.O_RDWR|os.O_CREATE|os.O_TRUNC , 0666)
-        dst := DSTRANSFEROBJ{ handle : uint(handle) , buffer : nil , dsName : dsName , ckPnt : 0 , file : file }
+        dst := &DSTRANSFEROBJ{ handle : uint(handle) , buffer : nil , dsName : dsName , ckPnt : 0 , file : file , state : "IDLE"  }
         RECV_MAP[uint(handle)] = dst
         dstm.log.Printf("Create RECV Handle : %d\n",handle)
     }
 }
 
 //read request
-func (dstm * DSTMODULE)sebdS13F5(handle uint,readlen uint){
+func (dstm * DSTMODULE)sendS13F5(handle uint,readlen uint){
     rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) , sm.CreateUintNode( 4 , readlen ) );
     msg :=  sm.CreateDataMessage( 13 , 5 , true , rootNode , dstm.deviceID , 0 , "ALL" )
     act := Evt{ cmd : "send" , msg : msg ,ts : time.Now().Unix()}
@@ -240,6 +241,7 @@ func (dstm * DSTMODULE)handleS13F5(msg *sm.DataMessage){
         n , err := sendds.file.Read(buffer)
         buffer = buffer[:n]
         ckPnt , _ = sendds.file.Seek(0, 1) // current file position
+        sendds.ckPnt = uint(ckPnt);
         if( err != nil && err == io.EOF ){
             ack = ACKC13EndOfData
             dstm.log.Printf("SEND Handle file reach end\n")
@@ -272,8 +274,22 @@ func (dstm * DSTMODULE)handleS13F6(msg *sm.DataMessage){
     filDataLstNode , err := item.(*sm.ListNode).Get(3)
     filDataNode , err := filDataLstNode.(*sm.ListNode).Get(0)
     filData := filDataNode.Values().([]byte)
-    RECV_MAP[uint(handle)].file.Write(filData)
     dstm.log.Printf("handle : %d | ack : %d | ckPnt : %d | filData : %v\n",handle,ack,ckPnt,filData);
+    if entry, ok := RECV_MAP[uint(handle)]; ok {
+        if(ACKC13(ack) == ACKC13OK){
+            entry.file.Write(filData)
+            entry.ckPnt = uint(ckPnt)
+            entry.state = "IDLE"
+        } else if(ACKC13(ack) == ACKC13EndOfData){
+            dstm.log.Printf(" HandleS13F6 handle %d | ack : ACKC13EndOfData",handle);
+            delete(RECV_MAP,uint(handle))
+            dstm.sendS13F7(uint(handle))
+        } else {
+            //TODO : need recovery
+            entry.state = "IDLE"
+            dstm.log.Printf("Err : HandleS13F6 handle %d | ack : %d ",handle,ack);
+        }
+    }
 }
 
 //close request
@@ -362,24 +378,36 @@ func (dstm * DSTMODULE)processEvt(evt Evt){
     msg := evt.msg.(*sm.DataMessage)
     dstm.processMsg(msg)
 }
+func (dstm * DSTMODULE)processRecvDs(){
+    for _,v := range RECV_MAP {
+        if(v.state == "IDLE"){
+            dstm.sendS13F5(v.handle,4096)
+            v.state = "READ_WAIT"
+        } else if(v.state == "READ_WAIT"){
+            dstm.log.Printf("wait read result\n");
+        }
+    }
+}
 
 func (dstm * DSTMODULE)moduleStop(){
     dstm.run = false
     dstm.iChan <- Evt{ cmd : "quit"}
     dstm.wg.Wait()
 }
-
 func (dstm * DSTMODULE)stateRun(){
     defer dstm.wg.Done()
     dstm.run = true
 
     for dstm.run == true {
         select {
-            case evt := <-dstm.iChan:
+            case evt := <-dstm.iChan :
                 if(evt.cmd == "quit"){
                     break
                 }
                 dstm.processEvt(evt)
+            default :
+                dstm.processRecvDs();
+                time.Sleep(500 * time.Millisecond)
         }
     }
     dstm.run = false

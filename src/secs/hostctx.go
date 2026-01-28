@@ -205,4 +205,5 @@ func (hc *HostContext)ReadEq(dsName string) {
 }
 
 func (hc *HostContext)WriteEq(dsName string) {
+    hc.dstModule.sendS13F1( dsName )
 }

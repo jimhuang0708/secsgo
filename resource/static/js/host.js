@@ -415,10 +415,10 @@ function bindEvents() {
         sendHostEvent("sxfy",JSON.stringify(cmd))
     });
     document.getElementById("readeq").addEventListener("click", function () {
-        sendHostEvent("readeq" , "a")
+        sendHostEvent("readeq" , "storage/equipment.ds")
     });
     document.getElementById("writeeq").addEventListener("click", function () {
-        sendHostEvent("writeeq" , "b")
+        sendHostEvent("writeeq" , "storage/host.ds")
     });
 
 }

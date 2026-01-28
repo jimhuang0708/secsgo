@@ -108,6 +108,10 @@ func (dstm * DSTMODULE)handleS13F1(msg *sm.DataMessage){
     replyMsg := sm.CreateDataMessage( 13, 2, false, rootNode , dstm.deviceID , msg.SystemBytes() , msg.SourceHost() )
     act := Evt{ cmd : "send" , msg : replyMsg , ts : time.Now().Unix()  }
     dstm.oChan <- act
+
+    //auto allow now
+    dstm.sendS13F3(1 , dsName  , 0)
+
 }
 
 func (dstm * DSTMODULE)handleS13F2(msg *sm.DataMessage){
@@ -117,11 +121,11 @@ func (dstm * DSTMODULE)handleS13F2(msg *sm.DataMessage){
         dstm.sendS9FX(msg, 7)
         return ;
     }
-    handleNode , err := item.(*sm.ListNode).Get(0)
-    handle := handleNode.Values().([]uint64)[0]
+    dsNameNode , err := item.(*sm.ListNode).Get(0)
+    dsName := dsNameNode.Values().(string)
     ackNode , err :=  item.(*sm.ListNode).Get(1)
     ack := ackNode.Values().([]byte)[0]
-    dstm.log.Printf("handleS13F2 : %d | ack : %d \n",handle,ack);
+    dstm.log.Printf("handleS13F2 : %s | ack : %d \n",dsName,ack);
     if(ACKC13(ack) != ACKC13OK){
         dstm.log.Printf("handleS13F2 error : %d\n",ack);
         return;
@@ -161,7 +165,7 @@ func (dstm * DSTMODULE)handleS13F3(msg *sm.DataMessage){
         dstm.log.Printf("Send Handle Already open\n")
         ack = ACKC13HandleInUse
     } else {
-        file, err := os.OpenFile("storage/equipment/" + dsName, os.O_RDONLY, 0666)
+        file, err := os.OpenFile( dsName, os.O_RDONLY, 0666)
         if(err != nil){
             dstm.log.Printf("OpenFile failed : %v\n",err)
             ack = ACKC13UnknownDataSetName
@@ -206,7 +210,7 @@ func (dstm * DSTMODULE)handleS13F4(msg *sm.DataMessage){
         dstm.log.Printf("RECV Handle Already open\n")
         return
     } else {
-        file, _ := os.OpenFile(dsName, os.O_RDWR|os.O_CREATE|os.O_TRUNC , 0666)
+        file, _ := os.OpenFile( dsName + "-COPY" , os.O_RDWR|os.O_CREATE|os.O_TRUNC , 0666)
         dst := &DSTRANSFEROBJ{ handle : uint(handle) , buffer : nil , dsName : dsName , ckPnt : 0 , file : file , state : "IDLE"  }
         RECV_MAP[uint(handle)] = dst
         dstm.log.Printf("Create RECV Handle : %d\n",handle)

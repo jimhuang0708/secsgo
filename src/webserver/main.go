@@ -103,12 +103,15 @@ func wsEquipment(c *gin.Context) {
     cmdChan := make(chan string,10)
     ec.AttachUIEvtChan(&evtChan)
     ec.AttachUICmdChan(&cmdChan)
+    quit := make(chan struct{})
     go wsConn.readFromServer(&evtChan)
-    go StartEquipmentPassive(ec)
+    go StartEquipmentPassive(ec,quit)
     //go StartEquipmentActive(ec)
     wsConn.readWebSocket(c,ec)
     wsConn.run = false
     ec.StateStop()
+    close(quit)
+    fmt.Printf("wsEquipment Exit\n");
 }
 
 var ErrShortBuffer = errors.New("not enough data in buffer to read full message")
@@ -302,25 +305,31 @@ func StartEquipmentActive(ec *secs.EquipmentContext){
     return
 }
 
-func StartEquipmentPassive(ec *secs.EquipmentContext) {
-    ln, err := net.Listen("tcp", ":5000" )
+func StartEquipmentPassive(ec *secs.EquipmentContext, quit <-chan struct{}) {
+    time.Sleep(1000 * time.Millisecond) //wait previous listen socket close
+    ln, err := net.Listen("tcp", ":5000")
     if err != nil {
-        // handle error
+        fmt.Println("Error net.Listen:", err)
+        return
     }
+    defer ln.Close()
+
+    go func() {
+        <-quit
+        fmt.Printf("StartEquipmentPassive quit\n")
+        ln.Close()
+    }()
 
     for {
         conn, err := ln.Accept()
         if err != nil {
-                // handle error
-            fmt.Printf("Exit StartEquipmentPassive\n");
+            fmt.Printf("Exit StartEquipmentPassive: %v\n", err)
             return
         }
-        ec.AttachSession(conn,"PASSIVE")
+        ec.AttachSession(conn, "PASSIVE")
     }
-    ln.Close();
-    fmt.Printf("Exit StartEquipmentPassive\n");
-
 }
+
 
 func main() {
     h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{

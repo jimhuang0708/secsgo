@@ -4,13 +4,13 @@ GO      := go
 GOPATH  := /var/go
 export PATH := $(PATH):$(GOPATH)/bin
 
-.PHONY: all webserver webhost clean
+.PHONY: all webequipment webhost clean
 
-all: webserver webhost
+all: webequipment webhost
 
-webserver:
-	@echo "==> Building webserver"
-	cd src/webserver && \
+webequipment:
+	@echo "==> Building webequipment"
+	cd src/webequipment && \
 	$(GO) get . && \
 	$(GO) build .
 
@@ -22,5 +22,5 @@ webhost:
 
 clean:
 	@echo "==> Cleaning binaries"
-	rm -f src/webserver/webserver
-	rm -f src/webhost/webhost
+	rm  src/webequipment/main
+	rm  src/webhost/main

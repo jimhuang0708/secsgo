@@ -104,8 +104,6 @@ func wsHost(c *gin.Context) {
         wsConn.ws.Close()
     }()
 
-    go StartHostActive(hc)
-    //go StartHostPassive(hc)
     go wsConn.readFromHost(&evtChan)
     wsConn.readWebSocket(c,&cmdChan,hc)
     hc.StateStop()
@@ -226,50 +224,6 @@ func (conn *WsConn) readWebSocket(ctx context.Context,cmdChan *chan string,hc *s
         hostLog.Printf("%s\n",string(msg));
     }
 }
-
-func StartHostActive(hc *secs.HostContext){
-    //conn, err := net.Dial("tcp", "192.168.51.118:5000")
-    conn, err := net.Dial("tcp", ":5000")
-    if err != nil {
-        hostLog.Println("Error dialing:", err)
-        return
-    }
-
-    hc.AttachSession(conn,"ACTIVE")
-    for hc.GetRun() == true {
-        time.Sleep(1000 * time.Millisecond)
-    }
-    conn.Close()
-    hostLog.Printf("Exit StartHostActive\n");
-    return
-}
-
-func StartHostPassive(hc *secs.HostContext) {
-    ln, err := net.Listen("tcp", ":5000" )
-    if err != nil {
-        // handle error
-    }
-    var conn net.Conn
-    for {
-        conn, err = ln.Accept()
-        if err != nil {
-                // handle error
-            hostLog.Printf("Exit StartEquipmentPassive\n");
-            return
-        }
-        hc.AttachSession(conn,"PASSIVE")
-        break //accept one connection only
-    }
-    ln.Close();
-
-    for hc.GetRun() == true {
-        time.Sleep(1000 * time.Millisecond)
-    }
-    conn.Close()
-    hostLog.Printf("Exit StartHostPassive\n");
-    return
-}
-
 
 func main() {
     h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{ Level: slog.LevelDebug, }) // h is slog.Handler

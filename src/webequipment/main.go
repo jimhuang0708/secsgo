@@ -97,20 +97,18 @@ func wsEquipment(c *gin.Context) {
         eqLog.Printf("WebSocket error: %v\n", err)
         return
     }
+    //browser refresh,1 second delay to wait previous listen socket close
+    time.Sleep(1000 * time.Millisecond)
     ctxLog := eqLog.With("IP", wsConn.addr)
     ec := secs.NewEquipmentContext(0, ctxLog);
     evtChan := make(chan string,10)
     cmdChan := make(chan string,10)
     ec.AttachUIEvtChan(&evtChan)
     ec.AttachUICmdChan(&cmdChan)
-    quit := make(chan struct{})
     go wsConn.readFromServer(&evtChan)
-    go StartEquipmentPassive(ec,quit)
-    //go StartEquipmentActive(ec)
     wsConn.readWebSocket(c,ec)
     wsConn.run = false
     ec.StateStop()
-    close(quit)
     eqLog.Printf("wsEquipment Exit\n");
 }
 
@@ -288,48 +286,6 @@ func (conn *WsConn) readFromServer(evtChan *chan string){
         time.Sleep(100 * time.Millisecond)
     }
 }
-
-func StartEquipmentActive(ec *secs.EquipmentContext){
-    conn, err := net.Dial("tcp", ":5000")
-    if err != nil {
-        eqLog.Printf("Error dialing : %v\n", err)
-        return
-    }
-
-    ec.AttachSession(conn,"ACTIVE")
-    for ec.GetRun() == true {
-        time.Sleep(1000 * time.Millisecond)
-    }
-    conn.Close()
-    eqLog.Printf("Exit StartEquipmentActive\n");
-    return
-}
-
-func StartEquipmentPassive(ec *secs.EquipmentContext, quit <-chan struct{}) {
-    time.Sleep(1000 * time.Millisecond) //wait previous listen socket close
-    ln, err := net.Listen("tcp", ":5000")
-    if err != nil {
-        eqLog.Printf("Error net.Listen: %v\n", err)
-        return
-    }
-    defer ln.Close()
-
-    go func() {
-        <-quit
-        eqLog.Printf("StartEquipmentPassive quit\n")
-        ln.Close()
-    }()
-
-    for {
-        conn, err := ln.Accept()
-        if err != nil {
-            eqLog.Printf("Exit StartEquipmentPassive: %v\n", err)
-            return
-        }
-        ec.AttachSession(conn, "PASSIVE")
-    }
-}
-
 
 func main() {
     h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{ Level: slog.LevelDebug, }) // h is slog.Handler

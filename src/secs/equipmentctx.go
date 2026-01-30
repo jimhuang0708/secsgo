@@ -33,59 +33,7 @@ type Evt struct{
     ts  int64
 }
 
-///////////////// BaseContext
-type BaseContext struct {
-    iChan chan Evt
-    oChan chan Evt
-    run bool
-    dispatchMap [255][255]MSGMODULE
-    deviceID int
-    log *logger.Logger
-}
 
-
-func (bc *BaseContext)buildError(msg *sm.DataMessage,f int){
-    bin := make([]byte, 10)
-    raw := msg.EncodeBytes();
-    for i := 0 ; i < 10; i++ {
-        bin[i] = raw[i+4]
-    }
-    errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , bc.deviceID , 0 , msg.SourceHost() )
-    act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
-    bc.oChan <- act
-    return
-}
-
-func (bc *BaseContext)dispatchHSMSDataMsg(evt Evt)(bool){
-    msg := evt.msg.(*sm.DataMessage)
-    // all sessionId shoule be same as equipment's DEVICE ID
-    if(msg.SessionID() != bc.deviceID){
-        bc.buildError(msg,1)
-        //TODO :  should send separate req
-        bc.log.Printf("Incorrect session id : %d != %d | %s",msg.SessionID(),bc.deviceID,msg.ToSml())
-        return true
-    }
-    s := msg.StreamCode()
-    f := msg.FunctionCode()
-    if(bc.dispatchMap[s][f] != nil){
-        bc.dispatchMap[s][f].PutEvt(evt)
-        return true
-    }
-    return false
-}
-
-func (bc *BaseContext)sendUnknownError(msg *sm.DataMessage){
-    s := msg.StreamCode()
-    for idx := 0 ; idx < 255 ; idx++ {
-        if(bc.dispatchMap[s][idx] != nil){
-            bc.buildError(msg,5)//unknown function
-            return
-        }
-    }
-    bc.buildError(msg,3)//unknown stream
-}
-
-//////////////// EquipmentContext
 
 type EquipmentContext struct {
     BaseContext
@@ -130,6 +78,7 @@ func NewEquipmentContext(deviceID int, eqLog *logger.Logger) *EquipmentContext {
         lmtModule : NewLIMITMONITORMODULE(deviceID, baseLog.With("module", "LIMITMONITORMODULE")),
         dstModule : NewDSTMODULE(deviceID, baseLog.With("module", "DSTMODULE")),
     }
+    ec.BaseContext.attacher = ec
     go ec.stateRun()
     return ec;
 }
@@ -274,6 +223,9 @@ func (ec *EquipmentContext )doEvt(act Evt){
 
 func (ec *EquipmentContext )stateRun(){
     ec.run = true
+    quit := make(chan struct{})
+    go ec.ConnectPassive(quit)
+    //go ec.ConnectActive(quit)
     for ec.run {
         select {
             case act := <-ec.evtModule.oChan:
@@ -300,6 +252,7 @@ func (ec *EquipmentContext )stateRun(){
                 time.Sleep(100 * time.Millisecond)
         }
     }
+    close(quit)
     ec.ctrlState.StateStop()
     ec.evtModule.moduleStop()
     ec.commonModule.moduleStop()

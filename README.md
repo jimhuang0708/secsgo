@@ -27,10 +27,10 @@ sudo cp resource /srv/secs -r
 After a successful build, **two binaries** will be generated:
 
 - **Equipment Server**  
-  src/webserver/main
+  src/webequipment/main
 
 - **Host Server**  
-  src/webHost/main
+  src/webhost/main
 
 ---
 
@@ -38,8 +38,8 @@ After a successful build, **two binaries** will be generated:
 
 Start both servers in separate terminals (or run them in the background):
 
-./src/webserver/main  
-./src/webHost/main  
+./src/webequipment/main  
+./src/webhost/main  
 
 Each binary launches its own HTTP web server:
 

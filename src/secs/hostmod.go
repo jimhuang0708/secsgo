@@ -141,8 +141,14 @@ func (hm *HOSTMODULE)processMsg(msg *sm.DataMessage)(bool){
         if(msg.FunctionCode() == 1){
             var node sm.ElementType
             node = sm.CreateListNode( )
+            //allow attempt online
             act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 2, false,
                                              node , msg.SessionID() , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
+
+            //reject attempt online
+            //act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 0, false,
+            //                                 node , msg.SessionID() , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
+
             hm.log.Printf("HOST do On-Line Identification\n")
             hm.oChan <- act
         }

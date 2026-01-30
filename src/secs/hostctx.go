@@ -56,6 +56,7 @@ func NewHostContext(deviceID int, hostLog *logger.Logger ) *HostContext {
                          UIEvtChan : nil,
                          hsms_ss : nil,
                      }
+    hc.BaseContext.attacher = hc
     data.SetLogger(baseLog.With("module", "DATA"));
     go hc.stateRun()
     return hc
@@ -150,6 +151,10 @@ func (hc *HostContext)StateStop(){
 
 func (hc *HostContext)stateRun(){
     hc.run = true
+    quit := make(chan struct{})
+    //go hc.ConnectPassive(quit)
+    go hc.ConnectActive(quit)
+
     for hc.run {
         var hsms_oChan <-chan Evt
         if hc.hsms_ss != nil {
@@ -182,6 +187,7 @@ func (hc *HostContext)stateRun(){
                 time.Sleep(100 * time.Millisecond)
         }
     }
+    close(quit)
     hc.hostModule.stateStop()
     hc.log.Printf("Exit HostContext")
 }

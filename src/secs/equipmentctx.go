@@ -2,10 +2,9 @@ package secs
 
 import (
     "encoding/json"
-    "log/slog"
+    //"log/slog"
     "net"
     "time"
-
     "secs/data"
     "secs/logger"
     sm "secs/secs_message"
@@ -106,8 +105,8 @@ type EquipmentContext struct {
 }
 
 
-func NewEquipmentContext(deviceID int, l *slog.Logger) *EquipmentContext {
-    baseLog := logger.New(l).With("context", "equipment", "deviceID", deviceID)
+func NewEquipmentContext(deviceID int, eqLog *logger.Logger) *EquipmentContext {
+    baseLog := eqLog.With( "module" , "EquipmentCtx" , "deviceID", deviceID)
     ec := &EquipmentContext{
         BaseContext: BaseContext{
                              oChan : make(chan Evt,10 ) ,
@@ -131,7 +130,6 @@ func NewEquipmentContext(deviceID int, l *slog.Logger) *EquipmentContext {
         lmtModule : NewLIMITMONITORMODULE(deviceID, baseLog.With("module", "LIMITMONITORMODULE")),
         dstModule : NewDSTMODULE(deviceID, baseLog.With("module", "DSTMODULE")),
     }
-    data.SetLogger(baseLog.With("module", "DATA"));
     go ec.stateRun()
     return ec;
 }
@@ -325,7 +323,7 @@ func (ec *EquipmentContext)AttachSession(conn net.Conn,mode string){
     ts := NewTransport(conn, ec.log.With("component", "transport", "session_mode", mode));
     ss := NewHSMS_SS( mode , ts, ec.log.With("component", "hsms_ss", "session_mode", mode));
     /* communicate state will attach to ctrlstate */
-    NewCOMMUNICATESTATE( ec.deviceID , "ENABLED" , ss, ec.ctrlState, ec.log.With("component", "communicate", "session_mode", mode));
+    NewCOMMUNICATESTATE( ec.deviceID , data.G_STATE.DEFAULT_COMSTATE , ss, ec.ctrlState, ec.log.With("component", "communicate", "session_mode", mode));
 }
 
 func (ec *EquipmentContext)Operate_Ctrl(value int){

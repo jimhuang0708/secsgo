@@ -26,8 +26,7 @@ type WsConn struct {
         run        bool
 }
 
-var modlog *slog.Logger
-var log = logger.New(nil)
+var hostLog *logger.Logger = nil
 
 var gWsUpgrader = &websocket.Upgrader{
         CheckOrigin: func(r *http.Request) bool {
@@ -88,10 +87,10 @@ func GetHttpRemoteAddr(r *http.Request) string {
 func wsHost(c *gin.Context) {
     wsConn , err := UpgradeGinWsConn(c)
     if err != nil {
-        log.Printf("WebSocket error: %v\n", err)
+        hostLog.Printf("WebSocket error: %v\n", err)
         return
     }
-    ctxLog := modlog.With("client", wsConn.addr)
+    ctxLog := hostLog.With("IP", wsConn.addr)
     hc := secs.NewHostContext( 0 , ctxLog )
     evtChan := make(chan string,10)
     cmdChan := make(chan string,10)
@@ -167,19 +166,19 @@ func (conn *WsConn) readFromHost(evtChan *chan string){
             case s := <- *evtChan :
                 err := conn.ws.WriteMessage(websocket.TextMessage, []byte(s))
                 if err != nil {
-                    log.Println("ws write error:", err)
+                    hostLog.Println("ws write error:", err)
                 }
             default:
         }
         time.Sleep(100 * time.Millisecond)
     }
-    log.Printf("Exit readFromHost()");
+    hostLog.Printf("Exit readFromHost()");
 }
 
 func (conn *WsConn) readWebSocket(ctx context.Context,cmdChan *chan string,hc *secs.HostContext) {
     defer func() {
         //errCh <- "readWebSocket Exit"
-        log.Printf("readWebSocket exit\n")
+        hostLog.Printf("readWebSocket exit\n")
     }()
 
     conn.ws.SetReadLimit(1024 * 1024)
@@ -187,7 +186,7 @@ func (conn *WsConn) readWebSocket(ctx context.Context,cmdChan *chan string,hc *s
     for {
         // Read next WebSocket frame and append to buffer
         if err := conn.FillBuffer(); err != nil {
-            log.Println("WebSocket read error:", err)
+            hostLog.Println("WebSocket read error:", err)
             time.Sleep(10 * time.Millisecond)
             return
         }
@@ -198,7 +197,7 @@ func (conn *WsConn) readWebSocket(ctx context.Context,cmdChan *chan string,hc *s
             time.Sleep(50 * time.Millisecond)
             continue
         } else if err != nil {
-            log.Println("ReadWS error:", err)
+            hostLog.Println("ReadWS error:", err)
             break
         }
 
@@ -206,10 +205,10 @@ func (conn *WsConn) readWebSocket(ctx context.Context,cmdChan *chan string,hc *s
         var genericData map[string]interface{}
 	err = json.Unmarshal([]byte(msg[4:]), &genericData)
 	if err != nil {
-            log.Println("Error unmarshalling JSON to map:", err)
+            hostLog.Println("Error unmarshalling JSON to map:", err)
 	    return
 	}
-        log.Printf("%v\n",genericData);
+        hostLog.Printf("%v\n",genericData);
         TypeStr := genericData["type"].(string)
         if( TypeStr == "sxfy"){
             data := genericData["data"].(string)
@@ -224,7 +223,7 @@ func (conn *WsConn) readWebSocket(ctx context.Context,cmdChan *chan string,hc *s
             dsName := genericData["data"].(string)
             hc.WriteEq(dsName)
         }
-        log.Printf("%s\n",string(msg));
+        hostLog.Printf("%s\n",string(msg));
     }
 }
 
@@ -232,7 +231,7 @@ func StartHostActive(hc *secs.HostContext){
     //conn, err := net.Dial("tcp", "192.168.51.118:5000")
     conn, err := net.Dial("tcp", ":5000")
     if err != nil {
-        log.Println("Error dialing:", err)
+        hostLog.Println("Error dialing:", err)
         return
     }
 
@@ -241,7 +240,7 @@ func StartHostActive(hc *secs.HostContext){
         time.Sleep(1000 * time.Millisecond)
     }
     conn.Close()
-    log.Printf("Exit StartHostActive\n");
+    hostLog.Printf("Exit StartHostActive\n");
     return
 }
 
@@ -255,7 +254,7 @@ func StartHostPassive(hc *secs.HostContext) {
         conn, err = ln.Accept()
         if err != nil {
                 // handle error
-            log.Printf("Exit StartEquipmentPassive\n");
+            hostLog.Printf("Exit StartEquipmentPassive\n");
             return
         }
         hc.AttachSession(conn,"PASSIVE")
@@ -267,18 +266,15 @@ func StartHostPassive(hc *secs.HostContext) {
         time.Sleep(1000 * time.Millisecond)
     }
     conn.Close()
-    log.Printf("Exit StartHostPassive\n");
+    hostLog.Printf("Exit StartHostPassive\n");
     return
 }
 
 
 func main() {
-    h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-                Level: slog.LevelDebug,
-        })
-    base := slog.New(h)
-    modlog = base.With("module", "HOST")
-    log = logger.New(modlog)
+    h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{ Level: slog.LevelDebug, }) // h is slog.Handler
+    l := slog.New(h).With("module", "HostMain") // *slog.Logger
+    hostLog = logger.New(l)
     router := gin.Default()
     router.Static("/site", "/srv/secs/")
     router.GET("/api/host", wsHost);

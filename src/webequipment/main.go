@@ -30,8 +30,7 @@ type WsConn struct {
     run bool 
 }
 
-var modlog *slog.Logger
-var log = logger.New(nil)
+var eqLog *logger.Logger = nil
 
 var gWsUpgrader = &websocket.Upgrader{
         CheckOrigin: func(r *http.Request) bool {
@@ -95,10 +94,10 @@ func GetHttpRemoteAddr(r *http.Request) string {
 func wsEquipment(c *gin.Context) {
     wsConn , err := UpgradeGinWsConn(c)
     if err != nil {
-        log.Printf("WebSocket error: %v\n", err)
+        eqLog.Printf("WebSocket error: %v\n", err)
         return
     }
-    ctxLog := modlog.With("client", wsConn.addr)
+    ctxLog := eqLog.With("IP", wsConn.addr)
     ec := secs.NewEquipmentContext(0, ctxLog);
     evtChan := make(chan string,10)
     cmdChan := make(chan string,10)
@@ -112,7 +111,7 @@ func wsEquipment(c *gin.Context) {
     wsConn.run = false
     ec.StateStop()
     close(quit)
-    log.Printf("wsEquipment Exit\n");
+    eqLog.Printf("wsEquipment Exit\n");
 }
 
 var ErrShortBuffer = errors.New("not enough data in buffer to read full message")
@@ -166,7 +165,7 @@ func (conn *WsConn) ReadWS() ([]byte, error) {
 func (conn *WsConn) readWebSocket(ctx context.Context, ec *secs.EquipmentContext) {
     defer func() {
         //errCh <- "readWebSocket Exit"
-        log.Printf("readWebSocket exit\n")
+        eqLog.Printf("readWebSocket exit\n")
     }()
 
     conn.ws.SetReadLimit(1024 * 1024)
@@ -174,7 +173,7 @@ func (conn *WsConn) readWebSocket(ctx context.Context, ec *secs.EquipmentContext
     for {
         // Read next WebSocket frame and append to buffer
         if err := conn.FillBuffer(); err != nil {
-            log.Println("WebSocket read error:", err)
+            eqLog.Printf("WebSocket read error : %v\n", err)
             time.Sleep(10 * time.Millisecond)
             return
         }
@@ -185,7 +184,7 @@ func (conn *WsConn) readWebSocket(ctx context.Context, ec *secs.EquipmentContext
             time.Sleep(50 * time.Millisecond)
             continue
         } else if err != nil {
-            log.Println("ReadWS error:", err)
+            eqLog.Printf("ReadWS error: %v\n", err)
             break
         }
 
@@ -193,10 +192,10 @@ func (conn *WsConn) readWebSocket(ctx context.Context, ec *secs.EquipmentContext
         var genericData map[string]interface{}
 	err = json.Unmarshal([]byte(msg[4:]), &genericData)
 	if err != nil {
-		log.Println("Error unmarshalling JSON to map:", err)
+		eqLog.Printf("Error unmarshalling JSON to map: %v\n", err)
 		return
 	}
-        log.Printf("%v\n",genericData);
+        eqLog.Printf("%v\n",genericData);
         TypeStr := genericData["type"].(string)
         if( TypeStr == "mode"){
             data := genericData["data"].(map[string]interface{})["value"].(string)
@@ -282,7 +281,7 @@ func (conn *WsConn) readFromServer(evtChan *chan string){
             case s := <- *evtChan :
                 err := conn.ws.WriteMessage(websocket.TextMessage, []byte(s))
                 if err != nil {
-                    log.Println("ws write error:", err)
+                    eqLog.Printf("ws write error: %v\n", err)
                 }
             default:
         }
@@ -293,7 +292,7 @@ func (conn *WsConn) readFromServer(evtChan *chan string){
 func StartEquipmentActive(ec *secs.EquipmentContext){
     conn, err := net.Dial("tcp", ":5000")
     if err != nil {
-        log.Println("Error dialing:", err)
+        eqLog.Printf("Error dialing : %v\n", err)
         return
     }
 
@@ -302,7 +301,7 @@ func StartEquipmentActive(ec *secs.EquipmentContext){
         time.Sleep(1000 * time.Millisecond)
     }
     conn.Close()
-    log.Printf("Exit StartEquipmentActive\n");
+    eqLog.Printf("Exit StartEquipmentActive\n");
     return
 }
 
@@ -310,21 +309,21 @@ func StartEquipmentPassive(ec *secs.EquipmentContext, quit <-chan struct{}) {
     time.Sleep(1000 * time.Millisecond) //wait previous listen socket close
     ln, err := net.Listen("tcp", ":5000")
     if err != nil {
-        log.Println("Error net.Listen:", err)
+        eqLog.Printf("Error net.Listen: %v\n", err)
         return
     }
     defer ln.Close()
 
     go func() {
         <-quit
-        log.Printf("StartEquipmentPassive quit\n")
+        eqLog.Printf("StartEquipmentPassive quit\n")
         ln.Close()
     }()
 
     for {
         conn, err := ln.Accept()
         if err != nil {
-            log.Printf("Exit StartEquipmentPassive: %v\n", err)
+            eqLog.Printf("Exit StartEquipmentPassive: %v\n", err)
             return
         }
         ec.AttachSession(conn, "PASSIVE")
@@ -333,13 +332,11 @@ func StartEquipmentPassive(ec *secs.EquipmentContext, quit <-chan struct{}) {
 
 
 func main() {
-    h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-                Level: slog.LevelDebug,
-        }) // h is slog.Handler
-    base := slog.New(h) // *slog.Logger
-    modlog = base.With("module", "Equipment") //*slog.Logger
-    log = logger.New(modlog)
+    h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{ Level: slog.LevelDebug, }) // h is slog.Handler
+    l := slog.New(h).With("module", "EquipmentMain") // *slog.Logger
+    eqLog = logger.New(l)
     /* init data module */
+    data.SetLogger(eqLog.With("module", "DATA"));
     data.LoadConfig();
     data.InitSECSData();
     //data.ModuleStop()

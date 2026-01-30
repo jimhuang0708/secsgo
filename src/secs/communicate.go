@@ -3,6 +3,7 @@ package secs
 import (
     "crypto/rand"
     "encoding/binary"
+    "encoding/json"
     "fmt"
     "sync"
     "time"
@@ -60,9 +61,15 @@ func NewCOMMUNICATESTATE(deviceID int,comState string,hsms_ss * HSMS_SS,cs * CTR
     cs.attachSession(&o);
     o.wg.Add(1)
     go o.stateRun()
+    o.TellUI()
     return &o
 }
 
+func (cs * COMMUNICATESTATE)TellUI(){ //notify UI comstate changed
+    uievt := &UIEvt{ EvtType : "CommunicateChange" , Source : "ComState" , Data : cs.comState }
+    jsonData, _ := json.Marshal(uievt)
+    cs.oChan <- Evt{ cmd : "uievent" ,msg : string(jsonData)  }
+}
 
 func (cs *COMMUNICATESTATE)OP_SetComEnabled(enable bool){
     if(enable){
@@ -71,6 +78,7 @@ func (cs *COMMUNICATESTATE)OP_SetComEnabled(enable bool){
             cs.comState = "ENABLED"
             cs.comEnabledSubState = "WAIT_DELAY"
             cs.restartS1F13()
+            cs.TellUI()
         } else {
             cs.log.Printf("CommunicationState already ENABLED \n");
         }
@@ -80,6 +88,7 @@ func (cs *COMMUNICATESTATE)OP_SetComEnabled(enable bool){
             cs.comEnabledSubState = "NOTCOMMUNICATE"
             cs.stop_Wait_Delay()
             cs.log.Printf("CommunicationState change to DISABLED \n");
+            cs.TellUI()
         } else {
             cs.log.Printf("CommunicationState already DISABLED \n");
         }

@@ -1,10 +1,9 @@
 package secs
 import (
     "encoding/json"
-    "log/slog"
+    //"log/slog"
     "net"
     "time"
-
     "secs/data"
     "secs/logger"
     sm "secs/secs_message"
@@ -40,8 +39,8 @@ type UICmd struct {
     DataItem data.NodeValue `json:"dataitem"`
 }
 
-func NewHostContext(deviceID int, l *slog.Logger) *HostContext {
-    baseLog := logger.New(l).With("context", "host", "deviceID", deviceID)
+func NewHostContext(deviceID int, hostLog *logger.Logger ) *HostContext {
+    baseLog := hostLog.With("context", "HostCtx", "deviceID", deviceID)
     hc := &HostContext{
                          BaseContext: BaseContext{
                              oChan : make(chan Evt,10 ) ,

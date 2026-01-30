@@ -190,6 +190,17 @@ function initWebSocket() {
                  }
             }
         }
+        if(obj["evttype"] == "CommunicateChange"){
+            let comstate = obj["data"];
+            if(comstate == "ENABLED"){
+                document.getElementById("commEnable").checked = true
+                document.getElementById("commDisable").checked = false
+            }
+            if(comstate == "DISABLED"){
+                document.getElementById("commEnable").checked = false
+                document.getElementById("commDisable").checked = true
+            }
+        }
         if(obj["evttype"] == "S10F3"){
             document.getElementById("chatbox").innerHTML = obj["data"] + ' <button type="button" id="btnRecognize">Recognize</button>'
             document.getElementById("btnRecognize").addEventListener("click", function () {

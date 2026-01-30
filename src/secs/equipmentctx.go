@@ -38,8 +38,8 @@ type Evt struct{
 type EquipmentContext struct {
     BaseContext
     log *logger.Logger
-    UICmdChan *chan string
-    UIEvtChan *chan string
+    UICmdChan chan string
+    UIEvtChan chan string
     ctrlState * CTRLSTATE;
     evtModule * EVENTMODULE
     commonModule * COMMONMODULE
@@ -53,7 +53,7 @@ type EquipmentContext struct {
 }
 
 
-func NewEquipmentContext(deviceID int, eqLog *logger.Logger) *EquipmentContext {
+func NewEquipmentContext(deviceID int, mode string, addr string  ,eqLog *logger.Logger) *EquipmentContext {
     baseLog := eqLog.With( "module" , "EquipmentCtx" , "deviceID", deviceID)
     ec := &EquipmentContext{
         BaseContext: BaseContext{
@@ -65,9 +65,9 @@ func NewEquipmentContext(deviceID int, eqLog *logger.Logger) *EquipmentContext {
 
         },
         log: baseLog,
-        UICmdChan : nil,
-        UIEvtChan : nil,
-        ctrlState : NewCTRLSTATE(deviceID,data.G_STATE.DEFAULT_CTRLSTATE,data.G_STATE.DEFAULT_CTRLSUBSTATE,data.G_STATE.DEFAULT_REJECT_CTRLSUBSTATE, data.G_STATE.DEFAULT_ACCEPT_CTRLSUBSTATE, baseLog.With("module", "CTRLSTATE")),
+        UICmdChan : make(chan string,10),
+        UIEvtChan : make(chan string,10),
+        ctrlState : NewCTRLSTATE(deviceID, baseLog.With("module", "CTRLSTATE")),
         evtModule : NewEVENTMODULE(deviceID, baseLog.With("module", "EVENTMODULE")),
         commonModule : NewCOMMONMODULE(deviceID, baseLog.With("module", "COMMONMODULE")),
         ecModule : NewEQCONSTMODULE(deviceID, baseLog.With("module", "EQCONSTMODULE")),
@@ -79,7 +79,7 @@ func NewEquipmentContext(deviceID int, eqLog *logger.Logger) *EquipmentContext {
         dstModule : NewDSTMODULE(deviceID, baseLog.With("module", "DSTMODULE")),
     }
     ec.BaseContext.attacher = ec
-    go ec.stateRun()
+    go ec.stateRun(mode , addr )
     return ec;
 }
 
@@ -167,7 +167,7 @@ func (ec *EquipmentContext)regProcessModule(){
 }
 
 func (ec *EquipmentContext)processUIEvt(uievt string){
-    *ec.UIEvtChan <- uievt
+    ec.UIEvtChan <- uievt
 }
 
 
@@ -221,11 +221,10 @@ func (ec *EquipmentContext )doEvt(act Evt){
     ec.log.Printf("doAct %v Failed",act);
 }
 
-func (ec *EquipmentContext )stateRun(){
+func (ec *EquipmentContext )stateRun(mode string,addr string){
     ec.run = true
     quit := make(chan struct{})
-    go ec.ConnectPassive(quit)
-    //go ec.ConnectActive(quit)
+    go ec.Connect(mode,addr,quit)
     for ec.run {
         select {
             case act := <-ec.evtModule.oChan:
@@ -252,6 +251,8 @@ func (ec *EquipmentContext )stateRun(){
                 time.Sleep(100 * time.Millisecond)
         }
     }
+    close(ec.UICmdChan)
+    close(ec.UIEvtChan)
     close(quit)
     ec.ctrlState.StateStop()
     ec.evtModule.moduleStop()
@@ -330,15 +331,6 @@ func (ec *EquipmentContext)SetAlarm(id uint64,v int){
     ec.alarmModule.setAlarm(id,v)
 }
 
-func (ec *EquipmentContext)AttachUICmdChan(cmdChan *chan string){
-    ec.UICmdChan = cmdChan
-}
-
-func (ec *EquipmentContext)AttachUIEvtChan(uiChan *chan string){
-    ec.UIEvtChan = uiChan
-    ec.ctrlState.TellUI()
-}
-
 
 
 func (ec *EquipmentContext)SetEC(s string){
@@ -379,4 +371,18 @@ func (ec *EquipmentContext)SetEC(s string){
     }
     ret := data.SetEC(ecs)
     ec.log.Printf("ret : %v",ret);
+}
+
+func (ec *EquipmentContext)GetUIEvt()(string,bool){
+    select {
+        case s := <- ec.UIEvtChan :
+            return s , true
+        default:
+            return "" , false
+    }
+    return "" , false
+}
+
+func (ec *EquipmentContext)PutUICmd(data string){
+    ec.UICmdChan <- data
 }

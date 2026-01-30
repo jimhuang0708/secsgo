@@ -100,12 +100,8 @@ func wsEquipment(c *gin.Context) {
     //browser refresh,1 second delay to wait previous listen socket close
     time.Sleep(1000 * time.Millisecond)
     ctxLog := eqLog.With("IP", wsConn.addr)
-    ec := secs.NewEquipmentContext(0, ctxLog);
-    evtChan := make(chan string,10)
-    cmdChan := make(chan string,10)
-    ec.AttachUIEvtChan(&evtChan)
-    ec.AttachUICmdChan(&cmdChan)
-    go wsConn.readFromServer(&evtChan)
+    ec := secs.NewEquipmentContext( 0 ,"PASSIVE" , ":5000" ,ctxLog );
+    go wsConn.readEquipment(ec)
     wsConn.readWebSocket(c,ec)
     wsConn.run = false
     ec.StateStop()
@@ -272,20 +268,21 @@ func (conn *WsConn) readWebSocket(ctx context.Context, ec *secs.EquipmentContext
     }
 }
 
-func (conn *WsConn) readFromServer(evtChan *chan string){
+func (conn *WsConn) readEquipment(ec *secs.EquipmentContext){
     conn.run = true
     for conn.run {
-        select {
-            case s := <- *evtChan :
-                err := conn.ws.WriteMessage(websocket.TextMessage, []byte(s))
-                if err != nil {
-                    eqLog.Printf("ws write error: %v\n", err)
-                }
-            default:
+        if s, ok := ec.GetUIEvt(); ok {
+            err := conn.ws.WriteMessage(websocket.TextMessage, []byte(s))
+            if err != nil {
+                eqLog.Printf("ws write error: %v\n", err)
+                return
+            }
+        } else {
+            time.Sleep(100 * time.Millisecond)
         }
-        time.Sleep(100 * time.Millisecond)
     }
 }
+
 
 func main() {
     h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{ Level: slog.LevelDebug, }) // h is slog.Handler

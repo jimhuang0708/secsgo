@@ -16,8 +16,8 @@ type HostContext struct {
     hsms_ss      *  HSMS_SS
     dstModule * DSTMODULE
     hostModule * HOSTMODULE //for host
-    UICmdChan *chan string
-    UIEvtChan *chan string
+    UICmdChan chan string
+    UIEvtChan chan string
 }
 
 type secsObj struct {
@@ -39,7 +39,7 @@ type UICmd struct {
     DataItem data.NodeValue `json:"dataitem"`
 }
 
-func NewHostContext(deviceID int, hostLog *logger.Logger ) *HostContext {
+func NewHostContext(deviceID int,mode string,addr string, hostLog *logger.Logger ) *HostContext {
     baseLog := hostLog.With("context", "HostCtx", "deviceID", deviceID)
     hc := &HostContext{
                          BaseContext: BaseContext{
@@ -52,13 +52,13 @@ func NewHostContext(deviceID int, hostLog *logger.Logger ) *HostContext {
                          log: baseLog,
                          hostModule : NewHOSTMODULE(deviceID, baseLog.With("module", "HOSTMODULE")) ,
                          dstModule : NewDSTMODULE(deviceID, baseLog.With("module", "DSTMODULE")),
-                         UICmdChan : nil,
-                         UIEvtChan : nil,
+                         UICmdChan :  make(chan string,10),
+                         UIEvtChan :  make(chan string,10),
                          hsms_ss : nil,
                      }
     hc.BaseContext.attacher = hc
     data.SetLogger(baseLog.With("module", "DATA"));
-    go hc.stateRun()
+    go hc.stateRun(mode,addr)
     return hc
 }
 
@@ -111,11 +111,11 @@ func (hc *HostContext)doUICommand(s string) {
 func (hc *HostContext)processUIEvt(uievt string){
     if( hc.UIEvtChan != nil ){
         select {
-            case *hc.UIEvtChan <- uievt: // not full
+            case hc.UIEvtChan <- uievt: // not full
             default:
                 // full → pop oldest
-                <-*hc.UIEvtChan
-                *hc.UIEvtChan <- uievt
+                <-hc.UIEvtChan
+                hc.UIEvtChan <- uievt
         }
     }
 }
@@ -149,11 +149,11 @@ func (hc *HostContext)StateStop(){
     return
 }
 
-func (hc *HostContext)stateRun(){
+func (hc *HostContext)stateRun(mode string,addr string){
     hc.run = true
     quit := make(chan struct{})
     //go hc.ConnectPassive(quit)
-    go hc.ConnectActive(quit)
+    go hc.Connect(mode,addr,quit)
 
     for hc.run {
         var hsms_oChan <-chan Evt
@@ -181,12 +181,14 @@ func (hc *HostContext)stateRun(){
                     hc.hsms_ss.iChan <- o
                 }
 
-            case o := <- *hc.UICmdChan:
+            case o := <- hc.UICmdChan:
                 hc.doUICommand(o)
             default:
                 time.Sleep(100 * time.Millisecond)
         }
     }
+    close(hc.UICmdChan)
+    close(hc.UIEvtChan)
     close(quit)
     hc.hostModule.stateStop()
     hc.log.Printf("Exit HostContext")
@@ -197,18 +199,24 @@ func (hc *HostContext)GetRun() bool{
     return hc.run
 }
 
-func (hc *HostContext)AttachUICmdChan(cmdChan *chan string){
-    hc.UICmdChan = cmdChan
-}
-
-func (hc *HostContext)AttachUIEvtChan(uiChan *chan string){
-    hc.UIEvtChan = uiChan
-}
-
 func (hc *HostContext)ReadEq(dsName string) {
     hc.dstModule.sendS13F3(1 , dsName  , 0)
 }
 
 func (hc *HostContext)WriteEq(dsName string) {
     hc.dstModule.sendS13F1( dsName )
+}
+
+func (hc *HostContext)GetUIEvt()(string,bool){
+    select {
+        case s := <- hc.UIEvtChan :
+            return s , true
+        default:
+            return "" , false
+    }
+    return "" , false
+}
+
+func (hc *HostContext)PutUICmd(data string){
+    hc.UICmdChan <- data
 }

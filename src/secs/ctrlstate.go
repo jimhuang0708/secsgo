@@ -24,13 +24,15 @@ type CTRLSTATE struct{
     log *logger.Logger
 }
 
-func NewCTRLSTATE(deviceID int,ctrlState string,ctrlSubState string ,ctrlRejectSubstate string,ctrlAcceptSubstate string, log *logger.Logger) *CTRLSTATE {
+func NewCTRLSTATE(deviceID int, log *logger.Logger) *CTRLSTATE {
+
+
     o := CTRLSTATE {
                  session : make(map[string]*COMMUNICATESTATE,100),
-                 ctrlState : ctrlState,
-                 ctrlSubState : ctrlSubState,
-                 ctrlRejectSubstate : ctrlRejectSubstate,
-                 ctrlAcceptSubstate : ctrlAcceptSubstate,
+                 ctrlState : data.G_STATE.DEFAULT_CTRLSTATE,
+                 ctrlSubState : data.G_STATE.DEFAULT_CTRLSUBSTATE,
+                 ctrlRejectSubstate : data.G_STATE.DEFAULT_REJECT_CTRLSUBSTATE,
+                 ctrlAcceptSubstate : data.G_STATE.DEFAULT_ACCEPT_CTRLSUBSTATE,
                  run : "stop",
                  iChan : make(chan Evt,10),
                  oChan : make(chan Evt,10 ) ,
@@ -40,6 +42,7 @@ func NewCTRLSTATE(deviceID int,ctrlState string,ctrlSubState string ,ctrlRejectS
     }
     o.wg.Add(1)
     go o.stateRun()
+    o.TellUI()
     return &o
 }
 

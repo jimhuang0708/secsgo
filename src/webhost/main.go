@@ -90,22 +90,18 @@ func wsHost(c *gin.Context) {
         hostLog.Printf("WebSocket error: %v\n", err)
         return
     }
+    //browser refresh,1 second delay to wait previous listen socket close
+    time.Sleep(1000 * time.Millisecond)
     ctxLog := hostLog.With("IP", wsConn.addr)
-    hc := secs.NewHostContext( 0 , ctxLog )
-    evtChan := make(chan string,10)
-    cmdChan := make(chan string,10)
-    hc.AttachUIEvtChan(&evtChan)
-    hc.AttachUICmdChan(&cmdChan)
+    hc := secs.NewHostContext( 0 , "ACTIVE" , ":5000" ,ctxLog )
 
     defer func(){
-        close(evtChan)
-        close(cmdChan)
         wsConn.run = false
         wsConn.ws.Close()
     }()
 
-    go wsConn.readFromHost(&evtChan)
-    wsConn.readWebSocket(c,&cmdChan,hc)
+    go wsConn.readHost(hc)
+    wsConn.readWebSocket(c,hc)
     hc.StateStop()
 }
 
@@ -157,23 +153,25 @@ func (conn *WsConn) ReadWS() ([]byte, error) {
     return msg, nil
 }
 
-func (conn *WsConn) readFromHost(evtChan *chan string){
+
+func (conn *WsConn) readHost(hc *secs.HostContext){
     conn.run = true
     for conn.run {
-        select {
-            case s := <- *evtChan :
-                err := conn.ws.WriteMessage(websocket.TextMessage, []byte(s))
-                if err != nil {
-                    hostLog.Println("ws write error:", err)
-                }
-            default:
+        if s, ok := hc.GetUIEvt(); ok {
+            err := conn.ws.WriteMessage(websocket.TextMessage, []byte(s))
+            if err != nil {
+                hostLog.Printf("ws write error: %v\n", err)
+                return
+            }
+        } else {
+            time.Sleep(100 * time.Millisecond)
         }
-        time.Sleep(100 * time.Millisecond)
     }
-    hostLog.Printf("Exit readFromHost()");
 }
 
-func (conn *WsConn) readWebSocket(ctx context.Context,cmdChan *chan string,hc *secs.HostContext) {
+
+
+func (conn *WsConn) readWebSocket(ctx context.Context,hc *secs.HostContext) {
     defer func() {
         //errCh <- "readWebSocket Exit"
         hostLog.Printf("readWebSocket exit\n")
@@ -210,7 +208,7 @@ func (conn *WsConn) readWebSocket(ctx context.Context,cmdChan *chan string,hc *s
         TypeStr := genericData["type"].(string)
         if( TypeStr == "sxfy"){
             data := genericData["data"].(string)
-            *cmdChan <- string(data)
+            hc.PutUICmd(string(data))
         }
         if( TypeStr == "readeq"){
             dsName := genericData["data"].(string)

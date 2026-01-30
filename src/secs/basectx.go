@@ -65,8 +65,8 @@ func (bc *BaseContext)sendUnknownError(msg *sm.DataMessage){
 }
 
 
-func (bc *BaseContext)ConnectActive(quit <-chan struct{}){
-    conn, err := net.Dial("tcp", ":5000")
+func (bc *BaseContext)ConnectActive(addr string,quit <-chan struct{}){
+    conn, err := net.Dial("tcp", addr)
     if err != nil {
         bc.log.Printf("Error dialing : %v\n", err)
         return
@@ -78,9 +78,8 @@ func (bc *BaseContext)ConnectActive(quit <-chan struct{}){
     return
 }
 
-func (bc *BaseContext)ConnectPassive(quit <-chan struct{}) {
-    //time.Sleep(1000 * time.Millisecond)
-    ln, err := net.Listen("tcp", ":5000")
+func (bc *BaseContext)ConnectPassive(addr string,quit <-chan struct{}) {
+    ln, err := net.Listen("tcp", addr)
     if err != nil {
         bc.log.Printf("Error net.Listen: %v\n", err)
         return
@@ -102,4 +101,14 @@ func (bc *BaseContext)ConnectPassive(quit <-chan struct{}) {
         }
         bc.attacher.AttachSession(conn, "PASSIVE")
     }
+}
+
+func (bc *BaseContext)Connect(mode string,addr string,quit <-chan struct{}) {
+    if(mode == "ACTIVE"){
+        bc.ConnectActive(addr,quit)
+    }
+    if(mode == "PASSIVE"){
+        bc.ConnectPassive(addr,quit)
+    }
+    bc.log.Printf("Error : mode %s not support\n",mode);
 }

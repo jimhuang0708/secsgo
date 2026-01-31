@@ -7,6 +7,7 @@ import (
     "time"
     "secs/data"
     "secs/logger"
+    "sync"
     sm "secs/secs_message"
 )
 
@@ -38,8 +39,6 @@ type Evt struct{
 type EquipmentContext struct {
     BaseContext
     log *logger.Logger
-    UICmdChan chan string
-    UIEvtChan chan string
     ctrlState * CTRLSTATE;
     evtModule * EVENTMODULE
     commonModule * COMMONMODULE
@@ -59,14 +58,15 @@ func NewEquipmentContext(deviceID int, mode string, addr string  ,eqLog *logger.
         BaseContext: BaseContext{
                              oChan : make(chan Evt,10 ) ,
                              iChan : make(chan Evt,10),
+                             UICmdChan : make(chan string,10),
+                             UIEvtChan : make(chan string,10),
                              run : false,
                              deviceID : deviceID,
                              log: baseLog,
+                             wg : new(sync.WaitGroup),
 
         },
         log: baseLog,
-        UICmdChan : make(chan string,10),
-        UIEvtChan : make(chan string,10),
         ctrlState : NewCTRLSTATE(deviceID, baseLog.With("module", "CTRLSTATE")),
         evtModule : NewEVENTMODULE(deviceID, baseLog.With("module", "EVENTMODULE")),
         commonModule : NewCOMMONMODULE(deviceID, baseLog.With("module", "COMMONMODULE")),
@@ -167,8 +167,17 @@ func (ec *EquipmentContext)regProcessModule(){
 }
 
 func (ec *EquipmentContext)processUIEvt(uievt string){
-    ec.UIEvtChan <- uievt
+    if( ec.UIEvtChan != nil ){
+        select {
+            case ec.UIEvtChan <- uievt: // not full
+            default:
+                // full → pop oldest
+                <-ec.UIEvtChan
+                ec.UIEvtChan <- uievt
+        }
+    }
 }
+
 
 
 func (ec *EquipmentContext)stateTrig(evt Evt){
@@ -224,6 +233,7 @@ func (ec *EquipmentContext )doEvt(act Evt){
 func (ec *EquipmentContext )stateRun(mode string,addr string){
     ec.run = true
     quit := make(chan struct{})
+    ec.wg.Add(1)
     go ec.Connect(mode,addr,quit)
     for ec.run {
         select {
@@ -251,9 +261,8 @@ func (ec *EquipmentContext )stateRun(mode string,addr string){
                 time.Sleep(100 * time.Millisecond)
         }
     }
-    close(ec.UICmdChan)
-    close(ec.UIEvtChan)
     close(quit)
+    ec.wg.Wait()
     ec.ctrlState.StateStop()
     ec.evtModule.moduleStop()
     ec.commonModule.moduleStop()
@@ -264,6 +273,8 @@ func (ec *EquipmentContext )stateRun(mode string,addr string){
     ec.rcModule.moduleStop()
     ec.lmtModule.moduleStop()
     ec.dstModule.moduleStop()
+    close(ec.UICmdChan)
+    close(ec.UIEvtChan)
     ec.log.Printf("Exit EquipmentContext")
 }
 

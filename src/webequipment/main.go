@@ -92,6 +92,7 @@ func GetHttpRemoteAddr(r *http.Request) string {
 
 
 func wsEquipment(c *gin.Context) {
+    mode := c.DefaultQuery("mode", "PASSIVE") //PASSIVE or ACTIVE
     wsConn , err := UpgradeGinWsConn(c)
     if err != nil {
         eqLog.Printf("WebSocket error: %v\n", err)
@@ -100,7 +101,7 @@ func wsEquipment(c *gin.Context) {
     //browser refresh,1 second delay to wait previous listen socket close
     time.Sleep(1000 * time.Millisecond)
     ctxLog := eqLog.With("IP", wsConn.addr)
-    ec := secs.NewEquipmentContext( 0 ,"PASSIVE" , ":5000" ,ctxLog );
+    ec := secs.NewEquipmentContext( 0 ,mode , ":5000" ,ctxLog );
     go wsConn.readEquipment(ec)
     wsConn.readWebSocket(c,ec)
     wsConn.run = false

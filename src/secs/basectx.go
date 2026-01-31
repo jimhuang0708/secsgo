@@ -5,6 +5,8 @@ import (
     "time"
 //    "secs/data"
     "secs/logger"
+    "encoding/json"
+    "sync"
     sm "secs/secs_message"
 )
 
@@ -16,10 +18,13 @@ type BaseContext struct {
     attacher  SessionAttacher
     iChan chan Evt
     oChan chan Evt
+    UICmdChan chan string
+    UIEvtChan chan string
     run bool
     dispatchMap [255][255]MSGMODULE
     deviceID int
     log *logger.Logger
+    wg       *sync.WaitGroup
 }
 
 
@@ -110,5 +115,13 @@ func (bc *BaseContext)Connect(mode string,addr string,quit <-chan struct{}) {
     if(mode == "PASSIVE"){
         bc.ConnectPassive(addr,quit)
     }
-    bc.log.Printf("Error : mode %s not support\n",mode);
+    bc.log.Printf("Error : mode %s exit\n",mode);
+    bc.TellUI()
+    bc.wg.Done()
+}
+
+func (bc *BaseContext)TellUI(){
+    uievt := &UIEvt{ EvtType : "Disconnect" , Source : "BaseContext" , Data : "" }
+    jsonData, _ := json.Marshal(uievt)
+    bc.UIEvtChan <- string(jsonData) // prevent bc.UIEvtChan close cause panic
 }

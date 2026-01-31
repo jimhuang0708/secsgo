@@ -6,6 +6,7 @@ import (
     "time"
     "secs/data"
     "secs/logger"
+    "sync"
     sm "secs/secs_message"
 )
 
@@ -16,8 +17,6 @@ type HostContext struct {
     hsms_ss      *  HSMS_SS
     dstModule * DSTMODULE
     hostModule * HOSTMODULE //for host
-    UICmdChan chan string
-    UIEvtChan chan string
 }
 
 type secsObj struct {
@@ -45,15 +44,16 @@ func NewHostContext(deviceID int,mode string,addr string, hostLog *logger.Logger
                          BaseContext: BaseContext{
                              oChan : make(chan Evt,10 ) ,
                              iChan : make(chan Evt,10),
+                             UICmdChan :  make(chan string,10),
+                             UIEvtChan :  make(chan string,10),
                              run : false,
                              deviceID : deviceID,
                              log: baseLog,
+                             wg : new(sync.WaitGroup),
                          },
                          log: baseLog,
                          hostModule : NewHOSTMODULE(deviceID, baseLog.With("module", "HOSTMODULE")) ,
                          dstModule : NewDSTMODULE(deviceID, baseLog.With("module", "DSTMODULE")),
-                         UICmdChan :  make(chan string,10),
-                         UIEvtChan :  make(chan string,10),
                          hsms_ss : nil,
                      }
     hc.BaseContext.attacher = hc
@@ -152,7 +152,7 @@ func (hc *HostContext)StateStop(){
 func (hc *HostContext)stateRun(mode string,addr string){
     hc.run = true
     quit := make(chan struct{})
-    //go hc.ConnectPassive(quit)
+    hc.wg.Add(1)
     go hc.Connect(mode,addr,quit)
 
     for hc.run {
@@ -187,10 +187,11 @@ func (hc *HostContext)stateRun(mode string,addr string){
                 time.Sleep(100 * time.Millisecond)
         }
     }
+    close(quit)
+    hc.wg.Wait()
+    hc.hostModule.stateStop()
     close(hc.UICmdChan)
     close(hc.UIEvtChan)
-    close(quit)
-    hc.hostModule.stateStop()
     hc.log.Printf("Exit HostContext")
 }
 

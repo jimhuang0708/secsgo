@@ -7,6 +7,30 @@ const params = {
 };
 let ws = null;
 
+function isValidIPPort(s) {
+  const parts = s.split(":");
+  if (parts.length !== 2) return false;
+
+  const [ip, portStr] = parts;
+
+  // IPv4 check
+  const ipParts = ip.split(".");
+  if (ipParts.length !== 4) return false;
+
+  for (const p of ipParts) {
+    if (!/^\d+$/.test(p)) return false;
+    const n = Number(p);
+    if (n < 0 || n > 255) return false;
+  }
+
+  // Port check
+  if (!/^\d+$/.test(portStr)) return false;
+  const port = Number(portStr);
+  if (port < 1 || port > 65535) return false;
+
+  return true;
+}
+
 function updateStatus(text) {
     document.getElementById('wsState').textContent = text;
 }
@@ -134,8 +158,13 @@ function setLimitUI(p){
 }
 
 function initWebSocket() {
-   const mode = document.querySelector('input[name="mode"]:checked').value;
-    ws = new WebSocket("ws://" + location.hostname  + ":" + location.port + "/api/equipment?mode=" + mode);
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+    const remoteip = document.getElementById("remoteip").value
+    if( !isValidIPPort(remoteip)){
+        alert("invalid ip");
+        return
+    }
+    ws = new WebSocket("ws://" + location.hostname  + ":" + location.port + "/api/equipment?mode=" + mode + "&remoteip=" + remoteip);
     ws.onopen = function () {
         console.log("WebSocket connected");
         updateStatus("Connected");
@@ -412,6 +441,7 @@ document.querySelectorAll("input[data-input]").forEach(inp => {
 
 window.addEventListener("load", function () {
         updateStatus("Connecting…");
+        document.getElementById("remoteip").value = window.location.hostname + ":5000" ;
         initWebSocket();
         bindEvents();
         // INIT

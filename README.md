@@ -52,12 +52,13 @@ Each binary launches its own HTTP web server:
 
 Open a web browser and navigate to:
 
-- **Equipment Web UI, It is default passive mode so start it first **
+- **Equipment Web UI, It is default passive mode so start it first**  
   http://yourip:8080/site/equipment.html
+![Equipment](docs/eq.png)  
 
-- **Host Web UI**
+- **Host Web UI**  
   http://yourip:8090/site/host.html
-
+![Host](docs/host.png)  
 Note: port is different  
 
 --

@@ -169,6 +169,7 @@ function initWebSocket() {
         console.log("WebSocket connected");
         updateStatus("Connected");
         document.getElementById("btnConnect").innerText= "Disconnect"
+        sendLimitToEquipment()
     };
 
     ws.onclose = function () {
@@ -439,6 +440,15 @@ document.querySelectorAll("input[data-input]").forEach(inp => {
     });
 });
 
+function sendLimitToEquipment(){
+    sendControlEvent("temperature_limit" , { upperdb : Number(params["temperature"]["l1Upper"]) , lowerdb : Number(params["temperature"]["l1Lower"]) , limitid : 0 });
+    sendControlEvent("temperature_limit" , { upperdb : Number(params["temperature"]["l2Upper"]) , lowerdb : Number(params["temperature"]["l2Lower"]) , limitid : 1  });
+    sendControlEvent("rpm_limit" , { upperdb : Number(params["rpm"]["l1Upper"]) , lowerdb : Number(params["rpm"]["l1Lower"]) , limitid : 2 });
+    sendControlEvent("rpm_limit" , { upperdb : Number(params["rpm"]["l2Upper"]) , lowerdb : Number(params["rpm"]["l2Lower"]) , limitid : 3 });
+    sendControlEvent("psi_limit" , { upperdb : Number(params["psi"]["l1Upper"]) , lowerdb : Number(params["psi"]["l1Lower"]) , limitid : 4 });
+    sendControlEvent("psi_limit" , { upperdb : Number(params["psi"]["l2Upper"]) , lowerdb : Number(params["psi"]["l2Lower"]) , limitid : 5 });
+}
+
 window.addEventListener("load", function () {
         updateStatus("Connecting…");
         document.getElementById("remoteip").value = window.location.hostname + ":5000" ;
@@ -448,13 +458,5 @@ window.addEventListener("load", function () {
         syncUI("temperature");
         syncUI("rpm");
         syncUI("psi");
-    setTimeout( function(){
-        sendControlEvent("temperature_limit" , { upperdb : Number(params["temperature"]["l1Upper"]) , lowerdb : Number(params["temperature"]["l1Lower"]) , limitid : 0 });
-        sendControlEvent("temperature_limit" , { upperdb : Number(params["temperature"]["l2Upper"]) , lowerdb : Number(params["temperature"]["l2Lower"]) , limitid : 1  });
-        sendControlEvent("rpm_limit" , { upperdb : Number(params["rpm"]["l1Upper"]) , lowerdb : Number(params["rpm"]["l1Lower"]) , limitid : 2 });
-        sendControlEvent("rpm_limit" , { upperdb : Number(params["rpm"]["l2Upper"]) , lowerdb : Number(params["rpm"]["l2Lower"]) , limitid : 3 });
-        sendControlEvent("psi_limit" , { upperdb : Number(params["psi"]["l1Upper"]) , lowerdb : Number(params["psi"]["l1Lower"]) , limitid : 4 });
-        sendControlEvent("psi_limit" , { upperdb : Number(params["psi"]["l2Upper"]) , lowerdb : Number(params["psi"]["l2Lower"]) , limitid : 5 });
-        },2000);
 });
 

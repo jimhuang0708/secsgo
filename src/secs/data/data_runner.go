@@ -284,7 +284,7 @@ func (sd *SECS_DATA) moduleLoadData() {
         idx := "sysalarm." + strconv.Itoa(i)
         id := viper.GetUint32(idx + ".id")
         name := viper.GetString(idx + ".name")
-        enable := viper.GetBool(idx + "enable")
+        enable := viper.GetBool(idx + ".enable")
         text := viper.GetString(idx + ".text")
         evt := viper.GetUint32(idx + ".evt")
         temp_alarm := &SECSALARM{id: id, name: name, enable: enable, set: false, text: text, evt: evt}
@@ -296,7 +296,7 @@ func (sd *SECS_DATA) moduleLoadData() {
         idx := "customalarm." + strconv.Itoa(i)
         id := viper.GetUint32(idx + ".id")
         name := viper.GetString(idx + ".name")
-        enable := viper.GetBool(idx + "enable")
+        enable := viper.GetBool(idx + ".enable")
         text := viper.GetString(idx + ".text")
         evt := viper.GetUint32(idx + ".evt")
         temp_alarm := &SECSALARM{id: id, name: name, enable: enable, set: false, text: text, evt: evt}

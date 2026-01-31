@@ -47,20 +47,24 @@ function sendHostEvent(type , payload) {
 
 
 function initWebSocket() {
-    ws = new WebSocket("ws://" + location.hostname  + ":" + location.port + "/api/host");
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+    ws = new WebSocket("ws://" + location.hostname  + ":" + location.port + "/api/host?mode=" + mode);
     ws.onopen = function () {
         console.log("WebSocket connected");
         updateStatus("Connected");
+        document.getElementById("btnConnect").innerText= "Disconnect"
     };
 
     ws.onclose = function () {
         console.log("WebSocket closed");
         updateStatus("Closed");
+        document.getElementById("btnConnect").innerText= "Connect"
     };
 
     ws.onerror = function (err) {
         console.error("WebSocket error:", err);
         updateStatus("Error");
+        document.getElementById("btnConnect").innerText= "Disconnect"
     };
 
     ws.onmessage = function (event) {
@@ -78,6 +82,11 @@ function initWebSocket() {
 
         if(obj["evttype"] == "S10F1"){
             document.getElementById("chatbox").innerText = obj["data"]
+        }
+
+        if(obj["evttype"] == "Disconnect"){
+            ws.close()
+            alert("Remote equipment not exist(active) or local listen socket create failed(passive)!");
         }
 
 
@@ -419,6 +428,15 @@ function bindEvents() {
     });
     document.getElementById("writeeq").addEventListener("click", function () {
         sendHostEvent("writeeq" , "storage/host.ds")
+    });
+
+    document.getElementById("btnConnect").addEventListener("click", function () {
+        if(this.innerText == "Connect"){
+            initWebSocket()
+        }
+        if(this.innerText == "Disconnect"){
+            ws.close()
+        }
     });
 
 }

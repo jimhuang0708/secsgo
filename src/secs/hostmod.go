@@ -10,25 +10,23 @@ import (
 )
 
 type HOSTMODULE struct{
-    iChan chan Evt
-    oChan chan Evt
-    run      string
+    BaseComponent
     timer_S1F13 *time.Timer
-    wg *sync.WaitGroup
     deviceID int
     comState string
-    log *logger.Logger
 }
 
 func NewHOSTMODULE(deviceID int, log *logger.Logger) *HOSTMODULE {
     o := HOSTMODULE{
-                             run : "stop",
-                             iChan : make(chan Evt,10),
-                             oChan : make(chan Evt,10 ) ,
+                             BaseComponent : BaseComponent{
+                                iChan : make(chan Evt,10),
+                                oChan : make(chan Evt,10 ) ,
+                                wg : new(sync.WaitGroup),
+                                run : false,
+                                log: log,
+                             },
                              timer_S1F13 : nil,
-                             wg : new(sync.WaitGroup),
                              deviceID : deviceID,
-                             log: log,
                          }
     o.wg.Add(1)
     go o.stateRun()
@@ -219,7 +217,7 @@ func (hm *HOSTMODULE)stopS1F13() {
 
 
 func (hm *HOSTMODULE )stateStop(){
-     hm.run = "stop"
+     hm.run = false
      hm.iChan <- Evt{ cmd : "quit"}
      hm.wg.Wait()
 }
@@ -227,11 +225,11 @@ func (hm *HOSTMODULE )stateStop(){
 
 func (hm *HOSTMODULE)stateRun(){
     defer hm.wg.Done()
-    hm.run = "run"
+    hm.run = true
     hm.timer_S1F13 = time.NewTimer(S1F13_Duration * time.Millisecond)
     hm.stopS1F13()
 
-    for hm.run == "run" {
+    for hm.run == true {
         select {
             case evt := <-hm.iChan:
                 if(evt.cmd == "quit"){
@@ -246,7 +244,7 @@ func (hm *HOSTMODULE)stateRun(){
                 hm.sendS1F13()
         }
     }
-    hm.run = "stop"
+    hm.run = false
     hm.log.Printf("Exit HOSTMODULE \n");
     return
 }

@@ -59,7 +59,8 @@ Open a web browser and navigate to:
 - **Host Web UI**  
   http://yourip:8090/site/host.html
 ![Host](docs/host.png)  
-Note: port is different  
+Note: port is different   
+By default, the equipment listens on port 5000, and the host automatically connects to the equipment.  
 
 --
 ## Dev note

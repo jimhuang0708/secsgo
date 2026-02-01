@@ -10,6 +10,10 @@ import (
     sm "secs/secs_message"
 )
 
+type MSGMODULE interface {
+    PutEvt(e Evt)
+}
+
 type SessionAttacher  interface {
     AttachSession(conn net.Conn, mode string)
 }

@@ -10,22 +10,20 @@ import (
 )
 
 type ALARMMODULE struct{
-    iChan chan Evt
-    oChan chan Evt
-    run      string
-    wg *sync.WaitGroup
+    BaseComponent
     deviceID int
-    log *logger.Logger
 }
 
 func NewALARMMODULE(deviceID int, log *logger.Logger) *ALARMMODULE {
     o := ALARMMODULE{
-                         run : "stop",
-                         iChan : make(chan Evt,10),
-                         oChan : make(chan Evt,10 ) ,
-                         wg : new(sync.WaitGroup),
+                         BaseComponent : BaseComponent{
+                             iChan : make(chan Evt,10),
+                             oChan : make(chan Evt,10 ) ,
+                             wg : new(sync.WaitGroup),
+                             run : false,
+                             log: log,
+                         },
                          deviceID : deviceID,
-                         log: log,
                  }
     o.wg.Add(1)
     go o.stateRun()
@@ -35,7 +33,6 @@ func NewALARMMODULE(deviceID int, log *logger.Logger) *ALARMMODULE {
 func (am * ALARMMODULE) PutEvt(e Evt) {
     am.iChan <- e
 }
-
 
 func (am * ALARMMODULE)sendS9FX(msg *sm.DataMessage,f int){
     bin := make([]byte, 10)
@@ -48,6 +45,8 @@ func (am * ALARMMODULE)sendS9FX(msg *sm.DataMessage,f int){
     am.oChan <- act
     return
 }
+
+
 
 func (am * ALARMMODULE)sendS5F1(id uint64){
     alids := make([]uint64,1)
@@ -155,16 +154,16 @@ func (am * ALARMMODULE)processEvt(evt Evt){
 }
 
 func (am * ALARMMODULE)moduleStop(){
-    am.run = "stop"
+    am.run = false
     am.iChan <- Evt{ cmd : "quit"}
     am.wg.Wait()
 }
 
 func (am * ALARMMODULE)stateRun(){
     defer am.wg.Done()
-    am.run = "run"
+    am.run = true
 
-    for am.run == "run" {
+    for am.run == true {
         select {
             case evt := <-am.iChan:
                 if(evt.cmd == "quit"){
@@ -173,7 +172,7 @@ func (am * ALARMMODULE)stateRun(){
                 am.processEvt(evt)
         }
     }
-    am.run = "stop"
+    am.run = false
     am.log.Printf("Exit ALARMMODULE \n");
     return
 }

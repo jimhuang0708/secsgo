@@ -16,22 +16,20 @@ const RPT_GEM_CTRL_STATE = 400
 const SV_GEM_CTRL_STATE = 3
 
 type EVENTMODULE struct{
-    iChan    chan Evt
-    oChan    chan Evt
-    run      string
-    wg  *sync.WaitGroup
+    BaseComponent
     deviceID int
-    log *logger.Logger
 }
 
 func NewEVENTMODULE(deviceID int, log *logger.Logger) *EVENTMODULE {
     o := EVENTMODULE{
-                         run : "stop",
-                         iChan : make(chan Evt,10),
-                         oChan : make(chan Evt,10 ) ,
-                         wg : new(sync.WaitGroup),
+                         BaseComponent : BaseComponent{
+                            iChan : make(chan Evt,10),
+                            oChan : make(chan Evt,10 ) ,
+                            wg : new(sync.WaitGroup),
+                            run : false,
+                            log: log,
+                         },
                          deviceID : deviceID,
-                         log: log,
                     }
     o.wg.Add(1)
     go o.moduleRun()
@@ -502,7 +500,7 @@ func (em * EVENTMODULE)processEvt(evt Evt){
 }
 
 func (em * EVENTMODULE)moduleStop(){
-    em.run = "stop"
+    em.run = false
     em.iChan <- Evt{ cmd : "quit"}
     em.wg.Wait()
 }
@@ -510,8 +508,8 @@ func (em * EVENTMODULE)moduleStop(){
 
 func (em *EVENTMODULE)moduleRun(){
     defer em.wg.Done()
-    em.run = "run"
-    for em.run == "run" {
+    em.run = true
+    for em.run == true {
         select {
             case evt := <-em.iChan:
                 if(evt.cmd == "quit"){
@@ -520,7 +518,7 @@ func (em *EVENTMODULE)moduleRun(){
                 em.processEvt(evt)
         }
     }
-    em.run = "stop"
+    em.run = false
     em.log.Printf("Exit EVENTMODULE \n");
     return
 }

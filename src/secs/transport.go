@@ -13,12 +13,9 @@ import (
 )
 
 type Transport struct {
+    BaseComponent
     Conn      net.Conn
-    iChan chan Evt
-    oChan chan Evt
     CloseChan chan struct{}
-    wg    *sync.WaitGroup
-    log *logger.Logger
 }
 
 
@@ -91,19 +88,21 @@ func (t *Transport)SendAct( msg sm.HSMSMessage)(string){
         jsonData, _ := json.Marshal(uievt)
         t.oChan <- Evt{ cmd : "uievent" ,msg : string(jsonData)  }
     }
-
-
     return "ACTOK"
 }
 
 func NewTransport(Conn net.Conn, log *logger.Logger)(*Transport){
     transport := &Transport{
+        BaseComponent : BaseComponent{
+             iChan : make(chan Evt,10),
+             oChan : make(chan Evt,10 ) ,
+             wg : new(sync.WaitGroup),
+             run : false,
+             log: log,
+        },
+
         Conn:      Conn,
-        iChan:  make(chan Evt, 64),
-        oChan:  make(chan Evt, 64),
         CloseChan: make(chan struct{}),
-        wg    : new(sync.WaitGroup),
-        log: log,
     }
     transport.wg.Add(1)
     go transport.handleRead()
@@ -135,7 +134,8 @@ func (t *Transport)handleSend() {
         t.wg.Done()
         t.oChan <- Evt{ cmd : "disconnect" ,msg : nil  }
     }()
-    for {
+    t.run = true
+    for t.run == true {
         select {
             case act := <-t.iChan:
                 if(act.cmd == "send" || act.cmd == "sendforce"){
@@ -150,9 +150,11 @@ func (t *Transport)handleSend() {
                 return
         }
     }
+    t.run = false
 }
 
 func (t *Transport)StateStop() {
+    t.run = false
     t.Conn.Close()
     t.wg.Wait()
     t.log.Printf("Transport Exit\n");

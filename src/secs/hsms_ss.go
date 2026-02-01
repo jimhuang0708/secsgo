@@ -17,29 +17,27 @@ type WaitItem struct {
 
 
 type HSMS_SS struct{
+    BaseComponent
     ts * Transport
-    iChan chan Evt
-    oChan chan Evt
     connectState string
-    run        string
-    wg         *sync.WaitGroup
     sysByte    uint32
     waitQueue map[uint32]WaitItem
     timer_T7 *time.Timer
-    log *logger.Logger
 }
 
 func NewHSMS_SS(mode string,ts * Transport, log *logger.Logger) *HSMS_SS {
     o := HSMS_SS{
+                         BaseComponent : BaseComponent{
+                             iChan : make(chan Evt,10),
+                             oChan : make(chan Evt,10 ) ,
+                             wg : new(sync.WaitGroup),
+                             run : false,
+                             log: log,
+                         },
                          connectState : "NOTSELECTED",
-                         run : "stop",
-                         iChan : make(chan Evt,10),
-                         oChan : make(chan Evt,10 ) ,
-                         wg    : new(sync.WaitGroup),
                          sysByte    : 0,
                          waitQueue : make(map[uint32]WaitItem),
                          ts : ts,
-                         log: log,
                      }
     o.wg.Add(1)
     go o.stateRun(mode)
@@ -171,7 +169,7 @@ func (ss *HSMS_SS)processMsg(msg sm.HSMSMessage){
 }
 
 func (ss *HSMS_SS )StateStop(){
-     ss.run = "stop"
+     ss.run = false
      ss.wg.Wait()
 }
 
@@ -217,7 +215,7 @@ func (ss *HSMS_SS )handleInput( evt Evt ){
 func (ss *HSMS_SS )detachTransport(){
     ss.ts.StateStop();
     ss.oChan <-Evt{ cmd : "disconnect" , msg : nil , ts : time.Now().Unix() }
-    ss.run = "stop"
+    ss.run = false
     ss.ts = nil
     ss.log.Printf("Get separate.req\n");
 }
@@ -232,8 +230,8 @@ func (ss *HSMS_SS )stateRun(mode string){
     }
     lnktest_ticker := time.NewTicker(60*time.Second)
     waitAct_ticker := time.NewTicker(1*time.Second)
-    ss.run = "run"
-    for ss.run == "run" {
+    ss.run = true
+    for ss.run == true {
         select {
             case evt := <-ss.ts.oChan:
                 ss.processEvt(evt)
@@ -246,7 +244,7 @@ func (ss *HSMS_SS )stateRun(mode string){
                 if(ss.connectState != "SELECTED"){
                     ss.log.Printf("NOT Selected Error T7_TIMEOUT -> EXIT\n")
                     ss.oChan <-Evt{ cmd : "disconnect" , msg : nil }
-                    ss.run = "stop"
+                    ss.run = false
                     return
                 } else {
                     ss.log.Printf("yes , selected \n")
@@ -260,7 +258,7 @@ func (ss *HSMS_SS )stateRun(mode string){
                 }
         }
     }
-    ss.run = "stop"
+    ss.run = false
     if(ss.ts != nil){
         ss.ts.StateStop()
     }

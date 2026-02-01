@@ -12,12 +12,8 @@ import (
 )
 
 type DSTMODULE struct{
-    iChan chan Evt
-    oChan chan Evt
-    run   bool
-    wg *sync.WaitGroup
+    BaseComponent
     deviceID int
-    log *logger.Logger
 }
 
 type DSTRANSFEROBJ struct{
@@ -51,12 +47,14 @@ var  SEND_MAP   map[uint]*DSTRANSFEROBJ
 
 func NewDSTMODULE(deviceID int, log *logger.Logger) *DSTMODULE {
     o := DSTMODULE{
-                         run : false,
-                         iChan : make(chan Evt,10),
-                         oChan : make(chan Evt,10 ) ,
-                         wg : new(sync.WaitGroup),
+                         BaseComponent : BaseComponent{
+                             iChan : make(chan Evt,10),
+                             oChan : make(chan Evt,10 ) ,
+                             wg : new(sync.WaitGroup),
+                             run : false,
+                             log: log,
+                         },
                          deviceID : deviceID,
-                         log: log,
                   }
     o.wg.Add(1)
     RECV_MAP = make(map[uint]*DSTRANSFEROBJ, 100) 

@@ -21,18 +21,13 @@ import (
 */
 const S1F13_Duration = 1000
 type COMMUNICATESTATE struct{
+    BaseComponent
     hsms_ss * HSMS_SS
-    iChan chan Evt
-    oChan chan Evt
     comState string
     comEnabledSubState string
-    run      string
     timer_Wait_Delay *time.Timer
-    wg *sync.WaitGroup
     deviceID int
     sessionID string
-    log *logger.Logger
-
 }
 
 func RandUint64String() string {
@@ -46,17 +41,19 @@ func RandUint64String() string {
 
 func NewCOMMUNICATESTATE(deviceID int,comState string,hsms_ss * HSMS_SS,cs * CTRLSTATE, log *logger.Logger) *COMMUNICATESTATE {
     o := COMMUNICATESTATE{
+                             BaseComponent : BaseComponent{
+                                 iChan : make(chan Evt,10),
+                                 oChan : make(chan Evt,10 ) ,
+                                 wg : new(sync.WaitGroup),
+                                 run : false,
+                                 log: log,
+                             },
                              comState : comState,
                              comEnabledSubState : "NOTCOMMUNICATE",
-                             run : "stop",
-                             iChan : make(chan Evt,10),
-                             oChan : make(chan Evt,10 ) ,
                              timer_Wait_Delay : nil,
-                             wg : new(sync.WaitGroup),
                              deviceID : deviceID,
                              hsms_ss : hsms_ss,
                              sessionID : RandUint64String(),
-                             log: log,
                          }
     cs.attachSession(&o);
     o.wg.Add(1)
@@ -211,7 +208,7 @@ func (cs *COMMUNICATESTATE)processEvt(evt Evt){
     if(evt.cmd == "disconnect"){
         cs.log.Printf("COMMUNICATESTATE get disconnect notify from lower layer\n");
         cs.oChan <- evt
-        cs.run = "stop"
+        cs.run = false
         return
     }
 
@@ -248,7 +245,7 @@ func (cs *COMMUNICATESTATE)getState()(string){
 }
 
 func (cs *COMMUNICATESTATE )StateStop(){
-     cs.run = "stop"
+     cs.run = false
      cs.wg.Wait()
 }
 
@@ -263,10 +260,10 @@ func (cs *COMMUNICATESTATE )handleInput(evt Evt){
 
 func (cs *COMMUNICATESTATE)stateRun(){
     defer cs.wg.Done()
-    cs.run = "run"
+    cs.run = true
     cs.timer_Wait_Delay = time.NewTimer(S1F13_Duration * time.Millisecond)
     cs.stop_Wait_Delay()
-    for cs.run == "run" {
+    for cs.run == true {
         select {
             case evt := <-cs.hsms_ss.oChan:
                 cs.processEvt(evt)
@@ -282,7 +279,7 @@ func (cs *COMMUNICATESTATE)stateRun(){
                 time.Sleep(100 * time.Millisecond)
         }
     }
-    cs.run = "stop"
+    cs.run = false
     cs.hsms_ss.StateStop()
     cs.log.Printf("Exit COMMUNICATESTATE \n");
     return

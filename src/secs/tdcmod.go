@@ -26,24 +26,22 @@ type TDCJOB struct{
 }
 
 type TDCMODULE struct{
-    iChan chan Evt
-    oChan chan Evt
-    run      string
-    wg *sync.WaitGroup
+    BaseComponent
     jobs  map[uint32]*TDCJOB
     deviceID int
-    log *logger.Logger
 }
 
 func NewTDCMODULE(deviceID int, log *logger.Logger) *TDCMODULE {
     o := TDCMODULE{
-                         run : "stop",
-                         iChan : make(chan Evt,10),
-                         oChan : make(chan Evt,10 ) ,
-                         wg : new(sync.WaitGroup),
+                         BaseComponent : BaseComponent{
+                             iChan : make(chan Evt,10),
+                             oChan : make(chan Evt,10 ) ,
+                             wg : new(sync.WaitGroup),
+                             run : false,
+                             log: log,
+                         },
                          jobs : make(map[uint32]*TDCJOB),
                          deviceID : deviceID,
-                         log: log,
                   }
     o.wg.Add(1)
     go o.stateRun()
@@ -252,16 +250,16 @@ func (tm * TDCMODULE)doJobs(){
 }
 
 func (tm * TDCMODULE)moduleStop(){
-    tm.run = "stop"
+    tm.run = false
     tm.iChan <- Evt{ cmd : "quit"}
     tm.wg.Wait()
 }
 
 func (tm * TDCMODULE)stateRun(){
     defer tm.wg.Done()
-    tm.run = "run"
+    tm.run = true
     jobs_ticker := time.NewTicker(1*time.Second)
-    for tm.run == "run" {
+    for tm.run == true {
         select {
             case evt := <-tm.iChan:
                 if(evt.cmd == "quit"){
@@ -272,7 +270,7 @@ func (tm * TDCMODULE)stateRun(){
                 tm.doJobs()
         }
     }
-    tm.run = "stop"
+    tm.run = false
     tm.log.Printf("Exit TDCMODULE \n");
     return
 }

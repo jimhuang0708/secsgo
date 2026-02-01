@@ -15,12 +15,8 @@ import (
 )
 
 type COMMONMODULE struct{
-    iChan chan Evt
-    oChan chan Evt
-    run      string
-    wg *sync.WaitGroup
+    BaseComponent
     deviceID int
-    log *logger.Logger
 }
 
 // SyncTime parses input time string then syncs to Linux system time.
@@ -162,12 +158,14 @@ func FormatTime(mode int, t time.Time) (string, error) {
 
 func NewCOMMONMODULE(deviceID int, log *logger.Logger) *COMMONMODULE {
     o := COMMONMODULE{
-                         run : "stop",
-                         iChan : make(chan Evt,10),
-                         oChan : make(chan Evt,10 ) ,
-                         wg : new(sync.WaitGroup),
+                         BaseComponent : BaseComponent{
+                             iChan : make(chan Evt,10),
+                             oChan : make(chan Evt,10 ) ,
+                             wg : new(sync.WaitGroup),
+                             run : false,
+                             log: log,
+                         },
                          deviceID : deviceID,
-                         log: log,
                   }
     o.wg.Add(1)
     go o.stateRun()
@@ -312,16 +310,16 @@ func (cm * COMMONMODULE)processEvt(evt Evt){
 }
 
 func (cm * COMMONMODULE)moduleStop(){
-    cm.run = "stop"
+    cm.run = false
     cm.iChan <- Evt{ cmd : "quit"}
     cm.wg.Wait()
 }
 
 func (cm * COMMONMODULE)stateRun(){
     defer cm.wg.Done()
-    cm.run = "run"
+    cm.run = true
 
-    for cm.run == "run" {
+    for cm.run == true {
         select {
             case evt := <-cm.iChan:
                 if(evt.cmd == "quit"){
@@ -330,7 +328,7 @@ func (cm * COMMONMODULE)stateRun(){
                 cm.processEvt(evt)
         }
     }
-    cm.run = "stop"
+    cm.run = false
     cm.log.Printf("Exit COMMONMODULE \n");
     return
 }

@@ -23,24 +23,22 @@ type LIMITTARGE struct{
 }
 
 type LIMITMONITORMODULE struct{
-    iChan chan Evt
-    oChan chan Evt
-    run      string
-    wg *sync.WaitGroup
+    BaseComponent
     lmtWatch     map[uint32] *LIMITTARGE;
     deviceID int
-    log *logger.Logger
 }
 
 func NewLIMITMONITORMODULE(deviceID int, log *logger.Logger) *LIMITMONITORMODULE {
     o := LIMITMONITORMODULE{
-                         run : "stop",
-                         iChan : make(chan Evt,10),
-                         oChan : make(chan Evt,10 ) ,
-                         wg : new(sync.WaitGroup),
+                         BaseComponent : BaseComponent{
+                             iChan : make(chan Evt,10),
+                             oChan : make(chan Evt,10 ) ,
+                             wg : new(sync.WaitGroup),
+                             run : false,
+                             log: log,
+                         },
                          lmtWatch : make( map[uint32]*LIMITTARGE),
                          deviceID : deviceID,
-                         log: log,
                   }
     o.wg.Add(1)
     go o.stateRun()
@@ -423,16 +421,16 @@ func (lm * LIMITMONITORMODULE)processEvt(evt Evt){
 }
 
 func (lm * LIMITMONITORMODULE)moduleStop(){
-    lm.run = "stop"
+    lm.run = false
     lm.iChan <- Evt{ cmd : "quit"}
     lm.wg.Wait()
 }
 
 func (lm * LIMITMONITORMODULE)stateRun(){
     defer lm.wg.Done()
-    lm.run = "run"
+    lm.run = true
     monitor_ticker := time.NewTicker(1*time.Second)
-    for lm.run == "run" {
+    for lm.run == true {
         select {
             case evt := <-lm.iChan:
                 if(evt.cmd == "quit"){
@@ -443,7 +441,7 @@ func (lm * LIMITMONITORMODULE)stateRun(){
                 lm.doMonitor()
         }
     }
-    lm.run = "stop"
+    lm.run = false
     lm.log.Printf("Exit LIMITMONITORMODULE \n");
     return
 }

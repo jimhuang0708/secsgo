@@ -11,22 +11,20 @@ import (
 )
 
 type TERMINALMODULE struct{
-    iChan chan Evt
-    oChan chan Evt
-    run      string
-    wg *sync.WaitGroup
+    BaseComponent
     deviceID int
-    log *logger.Logger
 }
 
 func NewTERMINALMODULE(deviceID int, log *logger.Logger) *TERMINALMODULE {
     o := TERMINALMODULE{
-                         run : "stop",
-                         iChan : make(chan Evt,10),
-                         oChan : make(chan Evt,10 ) ,
-                         wg : new(sync.WaitGroup),
+                         BaseComponent : BaseComponent{
+                             iChan : make(chan Evt,10),
+                             oChan : make(chan Evt,10 ) ,
+                             wg : new(sync.WaitGroup),
+                             run : false,
+                             log: log,
+                         },
                          deviceID : deviceID,
-                         log: log,
                   }
     o.wg.Add(1)
     go o.stateRun()
@@ -145,16 +143,16 @@ func (tm * TERMINALMODULE)processEvt(evt Evt){
 }
 
 func (tm * TERMINALMODULE)moduleStop(){
-    tm.run = "stop"
+    tm.run = false
     tm.iChan <- Evt{ cmd : "quit"}
     tm.wg.Wait()
 }
 
 func (tm * TERMINALMODULE)stateRun(){
     defer tm.wg.Done()
-    tm.run = "run"
+    tm.run = true
 
-    for tm.run == "run" {
+    for tm.run == true {
         select {
             case evt := <-tm.iChan:
                 if(evt.cmd == "quit"){
@@ -163,7 +161,7 @@ func (tm * TERMINALMODULE)stateRun(){
                 tm.processEvt(evt)
         }
     }
-    tm.run = "stop"
+    tm.run = false
     tm.log.Printf("Exit TERMINALMODULE \n");
     return
 }

@@ -10,22 +10,20 @@ import (
 )
 
 type EQCONSTMODULE struct{
-    iChan chan Evt
-    oChan chan Evt
-    run      string
-    wg *sync.WaitGroup
+    BaseComponent
     deviceID int
-    log *logger.Logger
 }
 
 func NewEQCONSTMODULE(deviceID int, log *logger.Logger) *EQCONSTMODULE {
     o := EQCONSTMODULE{
-                         run : "stop",
-                         iChan : make(chan Evt,10),
-                         oChan : make(chan Evt,10 ) ,
-                         wg : new(sync.WaitGroup),
+                         BaseComponent : BaseComponent{
+                            iChan : make(chan Evt,10),
+                            oChan : make(chan Evt,10 ) ,
+                            wg : new(sync.WaitGroup),
+                            run : false,
+                            log: log,
+                         },
                          deviceID : deviceID,
-                         log: log,
                   }
     o.wg.Add(1)
     go o.stateRun()
@@ -167,16 +165,16 @@ func (em * EQCONSTMODULE)processEvt(evt Evt){
 }
 
 func (em * EQCONSTMODULE)moduleStop(){
-    em.run = "stop"
+    em.run = false
     em.iChan <- Evt{ cmd : "quit"}
     em.wg.Wait()
 }
 
 func (em * EQCONSTMODULE)stateRun(){
     defer em.wg.Done()
-    em.run = "run"
+    em.run = true
 
-    for em.run == "run" {
+    for em.run == true {
         select {
             case evt := <-em.iChan:
                 if(evt.cmd == "quit"){
@@ -185,7 +183,7 @@ func (em * EQCONSTMODULE)stateRun(){
                 em.processEvt(evt)
         }
     }
-    em.run = "stop"
+    em.run = false
     em.log.Printf("Exit EQCONSTMODULE \n");
     return
 }

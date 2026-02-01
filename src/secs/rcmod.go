@@ -14,22 +14,20 @@ remote commnad module
 */
 
 type RCMODULE struct{
-    iChan chan Evt
-    oChan chan Evt
-    run      string
-    wg *sync.WaitGroup
+    BaseComponent
     deviceID int
-    log *logger.Logger
 }
 
 func NewRCMODULE(deviceID int, log *logger.Logger) *RCMODULE {
     o := RCMODULE{
-                         run : "stop",
-                         iChan : make(chan Evt,10),
-                         oChan : make(chan Evt,10 ) ,
-                         wg : new(sync.WaitGroup),
+                         BaseComponent : BaseComponent{
+                             iChan : make(chan Evt,10),
+                             oChan : make(chan Evt,10 ) ,
+                             wg : new(sync.WaitGroup),
+                             run : false,
+                             log: log,
+                         },
                          deviceID : deviceID,
-                         log: log,
                   }
     o.wg.Add(1)
     go o.stateRun()
@@ -167,16 +165,16 @@ func (rcm * RCMODULE)processEvt(evt Evt){
 }
 
 func (rcm * RCMODULE)moduleStop(){
-    rcm.run = "stop"
+    rcm.run = false
     rcm.iChan <- Evt{ cmd : "quit"}
     rcm.wg.Wait()
 }
 
 func (rcm * RCMODULE)stateRun(){
     defer rcm.wg.Done()
-    rcm.run = "run"
+    rcm.run = true
 
-    for rcm.run == "run" {
+    for rcm.run == true {
         select {
             case evt := <-rcm.iChan:
                 if(evt.cmd == "quit"){
@@ -185,7 +183,7 @@ func (rcm * RCMODULE)stateRun(){
                 rcm.processEvt(evt)
         }
     }
-    rcm.run = "stop"
+    rcm.run = false
     rcm.log.Printf("Exit RCMODULE \n");
     return
 }

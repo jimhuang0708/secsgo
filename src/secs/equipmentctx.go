@@ -23,18 +23,12 @@ const RTY = 3 //Retry
 const LNKTEST_DUR = 60000//linktest.req timing
 const EstablishCommunicationsTimeout = 10000 //send S1F13 and wait S1F14
 
-type MSGMODULE interface {
-    PutEvt(e Evt)
-}
-
 type Evt struct{
     cmd string
     msg any //msg type depend on cmd
     waitAlarm any //use any. prevent compile error
     ts  int64
 }
-
-
 
 type EquipmentContext struct {
     BaseContext
@@ -273,8 +267,6 @@ func (ec *EquipmentContext )stateRun(mode string,addr string){
     ec.rcModule.moduleStop()
     ec.lmtModule.moduleStop()
     ec.dstModule.moduleStop()
-    close(ec.UICmdChan)
-    close(ec.UIEvtChan)
     ec.log.Printf("Exit EquipmentContext")
 }
 

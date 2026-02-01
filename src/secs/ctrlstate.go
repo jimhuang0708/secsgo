@@ -10,34 +10,32 @@ import (
 )
 
 type CTRLSTATE struct{
+    BaseComponent
     session map[string]*COMMUNICATESTATE
-    iChan chan Evt
-    oChan chan Evt
     ctrlState string
     ctrlSubState string
     ctrlRejectSubstate string
     ctrlAcceptSubstate string
-    run      string
-    wg       *sync.WaitGroup
     deviceID int
-    log *logger.Logger
 }
 
 func NewCTRLSTATE(deviceID int, log *logger.Logger) *CTRLSTATE {
 
 
     o := CTRLSTATE {
+                 BaseComponent : BaseComponent{
+                     iChan : make(chan Evt,10),
+                     oChan : make(chan Evt,10 ) ,
+                     wg : new(sync.WaitGroup),
+                     run : false,
+                     log: log,
+                 },
                  session : make(map[string]*COMMUNICATESTATE,100),
                  ctrlState : data.G_STATE.DEFAULT_CTRLSTATE,
                  ctrlSubState : data.G_STATE.DEFAULT_CTRLSUBSTATE,
                  ctrlRejectSubstate : data.G_STATE.DEFAULT_REJECT_CTRLSUBSTATE,
                  ctrlAcceptSubstate : data.G_STATE.DEFAULT_ACCEPT_CTRLSUBSTATE,
-                 run : "stop",
-                 iChan : make(chan Evt,10),
-                 oChan : make(chan Evt,10 ) ,
-                 wg : new(sync.WaitGroup),
                  deviceID : deviceID,
-                 log: log,
     }
     o.wg.Add(1)
     go o.stateRun()
@@ -362,7 +360,7 @@ func (cs *CTRLSTATE)processEvt(evt Evt ,sessionID string){
 }
 
 func (cs *CTRLSTATE)StateStop(){
-    cs.run = "stop"
+    cs.run = false
     cs.wg.Wait()
 }
 
@@ -395,8 +393,8 @@ func (cs *CTRLSTATE)SetCommunicate(v bool) {
 
 func (cs *CTRLSTATE)stateRun(){
     defer cs.wg.Done()
-    cs.run = "run"
-    for cs.run == "run" {
+    cs.run = true
+    for cs.run == true {
         select {
             case evt := <-cs.iChan:
                 /*
@@ -424,7 +422,7 @@ func (cs *CTRLSTATE)stateRun(){
             cs.processEvt(evt,sessionID)
         }
     }
-    cs.run = "stop"
+    cs.run = false
     for _ , v := range cs.session {
         v.StateStop()
     }

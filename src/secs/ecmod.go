@@ -1,30 +1,18 @@
 package secs
 
 import (
-    "sync"
     "time"
-
     "secs/data"
     "secs/logger"
     sm "secs/secs_message"
 )
 
 type EQCONSTMODULE struct{
-    BaseComponent
-    deviceID int
+    BaseModule
 }
 
-func NewEQCONSTMODULE(deviceID int, log *logger.Logger) *EQCONSTMODULE {
-    o := EQCONSTMODULE{
-                         BaseComponent : BaseComponent{
-                            iChan : make(chan Evt,10),
-                            oChan : make(chan Evt,10 ) ,
-                            wg : new(sync.WaitGroup),
-                            run : false,
-                            log: log,
-                         },
-                         deviceID : deviceID,
-                  }
+func CreateEQCONSTMODULE( log *logger.Logger) *EQCONSTMODULE {
+    o := EQCONSTMODULE{ BaseModule : CreateBaseModule(log) }
     o.wg.Add(1)
     go o.stateRun()
     return &o
@@ -32,18 +20,6 @@ func NewEQCONSTMODULE(deviceID int, log *logger.Logger) *EQCONSTMODULE {
 
 func (em * EQCONSTMODULE) PutEvt(e Evt) {
     em.iChan <- e
-}
-
-func (em * EQCONSTMODULE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]byte, 10)
-    raw := msg.EncodeBytes();
-    for i := 0 ; i < 10; i++ {
-        bin[i] = raw[i+4]
-    }
-    errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , em.deviceID , 0 , msg.SourceHost() )
-    act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
-    em.oChan <- act
-    return
 }
 
 func (em * EQCONSTMODULE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
@@ -80,7 +56,7 @@ func (em * EQCONSTMODULE)handleS2F13(msg *sm.DataMessage){
     rootNode := data.GetEC(ecLst)
     em.log.Printf("rootNode : %v \n",rootNode);
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 14, false,  rootNode  ,
-                  em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                  -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     em.oChan <- act
 
 }
@@ -114,7 +90,7 @@ func (em * EQCONSTMODULE)handleS2F15(msg *sm.DataMessage){
     ret := data.SetEC(ecs)
     em.log.Printf("ret : %v \n",ret);
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 16, false,  sm.CreateBinaryNode( byte( ret) )  ,
-                  em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                  -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     em.oChan <- act
 
 }
@@ -139,7 +115,7 @@ func (em * EQCONSTMODULE)handleS2F29(msg *sm.DataMessage){
     rootNode := data.GetECName(ecLst)
     em.log.Printf("rootNode : %v \n",rootNode);
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2, 30, false, rootNode  ,
-                  em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                  -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     em.oChan <- act
 
 }

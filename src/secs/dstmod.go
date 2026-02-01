@@ -2,7 +2,6 @@
 package secs
 
 import (
-    "sync"
     "time"
 //    "secs/data"
     "secs/logger"
@@ -12,8 +11,7 @@ import (
 )
 
 type DSTMODULE struct{
-    BaseComponent
-    deviceID int
+    BaseModule
 }
 
 type DSTRANSFEROBJ struct{
@@ -45,17 +43,8 @@ const (
 var  RECV_MAP map[uint]*DSTRANSFEROBJ
 var  SEND_MAP   map[uint]*DSTRANSFEROBJ
 
-func NewDSTMODULE(deviceID int, log *logger.Logger) *DSTMODULE {
-    o := DSTMODULE{
-                         BaseComponent : BaseComponent{
-                             iChan : make(chan Evt,10),
-                             oChan : make(chan Evt,10 ) ,
-                             wg : new(sync.WaitGroup),
-                             run : false,
-                             log: log,
-                         },
-                         deviceID : deviceID,
-                  }
+func CreateDSTMODULE( log *logger.Logger) *DSTMODULE {
+    o := DSTMODULE{ BaseModule : CreateBaseModule(log) }
     o.wg.Add(1)
     RECV_MAP = make(map[uint]*DSTRANSFEROBJ, 100) 
     SEND_MAP   = make(map[uint]*DSTRANSFEROBJ, 100) 
@@ -67,20 +56,8 @@ func (dstm * DSTMODULE) PutEvt(e Evt) {
     dstm.iChan <- e
 }
 
-func (dstm * DSTMODULE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]byte, 10)
-    raw := msg.EncodeBytes();
-    for i := 0 ; i < 10; i++ {
-        bin[i] = raw[i+4]
-    }
-    errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , dstm.deviceID , 0 , msg.SourceHost() )
-    act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
-    dstm.oChan <- act
-    return
-}
-
 func (dstm * DSTMODULE)sendS13F1(dsName string){
-    msg :=  sm.CreateDataMessage( 13 , 1 , true , sm.CreateASCIINode(dsName) , dstm.deviceID , 0 , "ALL" )
+    msg :=  sm.CreateDataMessage( 13 , 1 , true , sm.CreateASCIINode(dsName) , -1 , 0 , "ALL" )
     act := Evt{ cmd : "send" , msg : msg ,ts : time.Now().Unix()}
     dstm.oChan <- act
 }
@@ -103,7 +80,7 @@ func (dstm * DSTMODULE)handleS13F1(msg *sm.DataMessage){
     // }
 
     rootNode := sm.CreateListNode( sm.CreateASCIINode(dsName),sm.CreateBinaryNode( byte(ack) ) );
-    replyMsg := sm.CreateDataMessage( 13, 2, false, rootNode , dstm.deviceID , msg.SystemBytes() , msg.SourceHost() )
+    replyMsg := sm.CreateDataMessage( 13, 2, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost() )
     act := Evt{ cmd : "send" , msg : replyMsg , ts : time.Now().Unix()  }
     dstm.oChan <- act
 
@@ -136,7 +113,7 @@ func (dstm * DSTMODULE)handleS13F2(msg *sm.DataMessage){
 /* receiving sysytem */
 func (dstm * DSTMODULE)sendS13F3(handle uint , dsName string , ckpnt uint){
     rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) , sm.CreateASCIINode(dsName),sm.CreateUintNode( 4 , ckpnt ) );
-    msg :=  sm.CreateDataMessage( 13 , 3 , true , rootNode , dstm.deviceID , 0 , "ALL" )
+    msg :=  sm.CreateDataMessage( 13 , 3 , true , rootNode , -1 , 0 , "ALL" )
     act := Evt{ cmd : "send" , msg : msg ,ts : time.Now().Unix()}
     dstm.oChan <- act
 }
@@ -176,7 +153,7 @@ func (dstm * DSTMODULE)handleS13F3(msg *sm.DataMessage){
         dstm.log.Printf("Create Send Handle : %d\n",handle)
     }
     rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) , sm.CreateASCIINode(dsName),sm.CreateBinaryNode( byte(ack) ) , sm.CreateUintNode(1,RTYPE) , sm.CreateUintNode(4,RECLEN) );
-    replyMsg := sm.CreateDataMessage( 13, 4, false, rootNode , dstm.deviceID , msg.SystemBytes() , msg.SourceHost() )
+    replyMsg := sm.CreateDataMessage( 13, 4, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost() )
     act := Evt{ cmd : "send" , msg : replyMsg , ts : time.Now().Unix()  }
     dstm.oChan <- act
 }
@@ -218,7 +195,7 @@ func (dstm * DSTMODULE)handleS13F4(msg *sm.DataMessage){
 //read request
 func (dstm * DSTMODULE)sendS13F5(handle uint,readlen uint){
     rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) , sm.CreateUintNode( 4 , readlen ) );
-    msg :=  sm.CreateDataMessage( 13 , 5 , true , rootNode , dstm.deviceID , 0 , "ALL" )
+    msg :=  sm.CreateDataMessage( 13 , 5 , true , rootNode , -1 , 0 , "ALL" )
     act := Evt{ cmd : "send" , msg : msg ,ts : time.Now().Unix()}
     dstm.oChan <- act
 }
@@ -255,7 +232,7 @@ func (dstm * DSTMODULE)handleS13F5(msg *sm.DataMessage){
     }
     filDataLstNode := sm.CreateListNode(sm.CreateBinaryNode(buffer...))
     rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) , sm.CreateBinaryNode( byte(ack) ) , sm.CreateUintNode(4,ckPnt) , filDataLstNode );
-    replyMsg := sm.CreateDataMessage( 13, 6, false, rootNode , dstm.deviceID , msg.SystemBytes() , msg.SourceHost() )
+    replyMsg := sm.CreateDataMessage( 13, 6, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost() )
     act := Evt{ cmd : "send" , msg : replyMsg , ts : time.Now().Unix()  }
     dstm.oChan <- act
 }
@@ -297,7 +274,7 @@ func (dstm * DSTMODULE)handleS13F6(msg *sm.DataMessage){
 //close request
 func (dstm * DSTMODULE)sendS13F7(handle uint){
     rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) );
-    msg :=  sm.CreateDataMessage( 13 , 7 , true , rootNode , dstm.deviceID , 0 , "ALL" )
+    msg :=  sm.CreateDataMessage( 13 , 7 , true , rootNode , -1 , 0 , "ALL" )
     act := Evt{ cmd : "send" , msg : msg ,ts : time.Now().Unix()}
     dstm.oChan <- act
 }
@@ -321,7 +298,7 @@ func (dstm * DSTMODULE)handleS13F7(msg *sm.DataMessage){
         ack = ACKC13NoOpenDataSet
     }
     rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) , sm.CreateBinaryNode( byte(ack) ) );
-    replyMsg := sm.CreateDataMessage( 13, 8, false, rootNode , dstm.deviceID , msg.SystemBytes() , msg.SourceHost() )
+    replyMsg := sm.CreateDataMessage( 13, 8, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost() )
     act := Evt{ cmd : "send" , msg : replyMsg , ts : time.Now().Unix()  }
     dstm.oChan <- act
 }

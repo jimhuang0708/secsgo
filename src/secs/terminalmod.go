@@ -2,30 +2,18 @@ package secs
 
 import (
     "encoding/json"
-    "sync"
     "time"
-
     "secs/data"
     "secs/logger"
     sm "secs/secs_message"
 )
 
 type TERMINALMODULE struct{
-    BaseComponent
-    deviceID int
+    BaseModule
 }
 
-func NewTERMINALMODULE(deviceID int, log *logger.Logger) *TERMINALMODULE {
-    o := TERMINALMODULE{
-                         BaseComponent : BaseComponent{
-                             iChan : make(chan Evt,10),
-                             oChan : make(chan Evt,10 ) ,
-                             wg : new(sync.WaitGroup),
-                             run : false,
-                             log: log,
-                         },
-                         deviceID : deviceID,
-                  }
+func CreateTERMINALMODULE( log *logger.Logger) *TERMINALMODULE {
+    o := TERMINALMODULE{ BaseModule : CreateBaseModule(log) }
     o.wg.Add(1)
     go o.stateRun()
     return &o
@@ -43,26 +31,13 @@ func (tm * TERMINALMODULE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
     return
 }
 
-
-func (tm * TERMINALMODULE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]byte, 10)
-    raw := msg.EncodeBytes();
-    for i := 0 ; i < 10; i++ {
-        bin[i] = raw[i+4]
-    }
-    errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , tm.deviceID ,0,msg.SourceHost() )
-    act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
-    tm.oChan <- act
-    return
-}
-
 func (tm * TERMINALMODULE)sendS10F1(text string){
     tidNode := sm.CreateBinaryNode( byte(0) ) 
     txtNode := sm.CreateASCIINode(text)
     rootNode :=  sm.CreateListNode(tidNode,txtNode)
     msg := sm.CreateDataMessage(10, 1, true,
                                   rootNode,
-                                  tm.deviceID,0 , "ALL")
+                                  -1,0 , "ALL")
     act := Evt{ cmd : "send" , msg : msg,ts : time.Now().Unix() }
     tm.oChan <- act
     return
@@ -106,7 +81,7 @@ func (tm * TERMINALMODULE)handleS10F3(msg *sm.DataMessage){
 
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 10,4, false,
                                      sm.CreateBinaryNode( byte(0) )   ,
-                                     tm.deviceID , msg.SystemBytes() ,msg.SourceHost()),ts : time.Now().Unix()}
+                                     -1 , msg.SystemBytes() ,msg.SourceHost()),ts : time.Now().Unix()}
     tm.oChan <- act
 }
 

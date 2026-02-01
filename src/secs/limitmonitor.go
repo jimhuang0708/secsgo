@@ -3,9 +3,7 @@ package secs
 import (
     "encoding/json"
     "fmt"
-    "sync"
     "time"
-
     "secs/data"
     "secs/logger"
     sm "secs/secs_message"
@@ -23,23 +21,13 @@ type LIMITTARGE struct{
 }
 
 type LIMITMONITORMODULE struct{
-    BaseComponent
+    BaseModule
     lmtWatch     map[uint32] *LIMITTARGE;
-    deviceID int
 }
 
-func NewLIMITMONITORMODULE(deviceID int, log *logger.Logger) *LIMITMONITORMODULE {
-    o := LIMITMONITORMODULE{
-                         BaseComponent : BaseComponent{
-                             iChan : make(chan Evt,10),
-                             oChan : make(chan Evt,10 ) ,
-                             wg : new(sync.WaitGroup),
-                             run : false,
-                             log: log,
-                         },
-                         lmtWatch : make( map[uint32]*LIMITTARGE),
-                         deviceID : deviceID,
-                  }
+func CreateLIMITMONITORMODULE(log *logger.Logger) *LIMITMONITORMODULE {
+    o := LIMITMONITORMODULE{   BaseModule : CreateBaseModule(log),
+                               lmtWatch : make( map[uint32]*LIMITTARGE)  }
     o.wg.Add(1)
     go o.stateRun()
     return &o
@@ -124,18 +112,6 @@ func (lm * LIMITMONITORMODULE)setLimits(vid uint32,lmtid uint32,upper interface{
     return true
 }
 
-func (lm * LIMITMONITORMODULE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]byte, 10)
-    raw := msg.EncodeBytes();
-    for i := 0 ; i < 10; i++ {
-        bin[i] = raw[i+4]
-    }
-    errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , lm.deviceID , 0 , msg.SourceHost() )
-    act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix()  }
-    lm.oChan <- act
-    return
-}
-
 func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "L" || err != nil){
@@ -162,7 +138,7 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
         lm.lmtWatch = make( map[uint32]*LIMITTARGE )
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 46, false,
                                      sm.CreateListNode( sm.CreateBinaryNode( byte(0)  ) , sm.CreateListNode() ) ,
-                                     lm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix() }
+                                     -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix() }
         lm.oChan <- act
         return
     }
@@ -293,7 +269,7 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
     lm.log.Printf("%v \n",vlaackNODE);
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 46, false,
                                      sm.CreateListNode(rptNodes...) ,
-                                     lm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                                     -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     lm.oChan <- act
 
 }
@@ -346,7 +322,7 @@ func (lm * LIMITMONITORMODULE)handleS2F47(msg *sm.DataMessage){
 
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 48, false,
                                      sm.CreateListNode(limitNodes...) ,
-                                     lm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                                     -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     lm.oChan <- act
 
 

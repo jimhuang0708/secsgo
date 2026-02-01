@@ -5,9 +5,7 @@ import (
     "encoding/json"
     "io"
     "net"
-    "sync"
     "time"
-
     "secs/logger"
     sm "secs/secs_message"
 )
@@ -91,19 +89,10 @@ func (t *Transport)SendAct( msg sm.HSMSMessage)(string){
     return "ACTOK"
 }
 
-func NewTransport(Conn net.Conn, log *logger.Logger)(*Transport){
-    transport := &Transport{
-        BaseComponent : BaseComponent{
-             iChan : make(chan Evt,10),
-             oChan : make(chan Evt,10 ) ,
-             wg : new(sync.WaitGroup),
-             run : false,
-             log: log,
-        },
-
-        Conn:      Conn,
-        CloseChan: make(chan struct{}),
-    }
+func CreateTransport(Conn net.Conn, log *logger.Logger)(*Transport){
+    transport := &Transport{ BaseComponent : CreateBaseComponent(log),
+                             Conn:      Conn,
+                             CloseChan: make(chan struct{}) }
     transport.wg.Add(1)
     go transport.handleRead()
     transport.wg.Add(1)

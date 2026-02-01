@@ -1,7 +1,6 @@
 package secs
 
 import (
-    "sync"
     "time"
     "fmt"
     "secs/data"
@@ -15,8 +14,7 @@ import (
 )
 
 type COMMONMODULE struct{
-    BaseComponent
-    deviceID int
+    BaseModule
 }
 
 // SyncTime parses input time string then syncs to Linux system time.
@@ -156,17 +154,8 @@ func FormatTime(mode int, t time.Time) (string, error) {
 	}
 }
 
-func NewCOMMONMODULE(deviceID int, log *logger.Logger) *COMMONMODULE {
-    o := COMMONMODULE{
-                         BaseComponent : BaseComponent{
-                             iChan : make(chan Evt,10),
-                             oChan : make(chan Evt,10 ) ,
-                             wg : new(sync.WaitGroup),
-                             run : false,
-                             log: log,
-                         },
-                         deviceID : deviceID,
-                  }
+func CreateCOMMONMODULE( log *logger.Logger ) *COMMONMODULE {
+    o := COMMONMODULE{ BaseModule : CreateBaseModule(log) }
     o.wg.Add(1)
     go o.stateRun()
     return &o
@@ -174,18 +163,6 @@ func NewCOMMONMODULE(deviceID int, log *logger.Logger) *COMMONMODULE {
 
 func (cm * COMMONMODULE) PutEvt(e Evt) {
     cm.iChan <- e
-}
-
-func (cm * COMMONMODULE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]byte, 10)
-    raw := msg.EncodeBytes();
-    for i := 0 ; i < 10; i++ {
-        bin[i] = raw[i+4]
-    }
-    errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , cm.deviceID , 0 , msg.SourceHost() )
-    act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
-    cm.oChan <- act
-    return
 }
 
 func (cm * COMMONMODULE)handleS1F3(msg *sm.DataMessage){
@@ -209,7 +186,7 @@ func (cm * COMMONMODULE)handleS1F3(msg *sm.DataMessage){
     rootNode := data.GetSVElementTypeLst(svidLst)
     cm.log.Printf("svLst : %v\n",rootNode);
 
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 4, false, rootNode , cm.deviceID , msg.SystemBytes() , msg.SourceHost() ) , ts : time.Now().Unix()  }
+    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 4, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost() ) , ts : time.Now().Unix()  }
     cm.oChan <- act
 }
 
@@ -234,7 +211,7 @@ func (cm * COMMONMODULE)handleS1F11(msg *sm.DataMessage){
     rootNode := data.GetSVNameLst(svidLst)
     cm.log.Printf("svLst : %v\n",rootNode);
 
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(1, 12, false, rootNode , cm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix() }
+    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(1, 12, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix() }
     cm.oChan <- act
 }
 
@@ -244,7 +221,7 @@ func (cm * COMMONMODULE)handleS2F17(msg *sm.DataMessage){
     timestr , _ := FormatTime( 1 , t )
     timeNode := sm.CreateASCIINode(timestr)
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2,18, false,
-                                     timeNode , cm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                                     timeNode , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     cm.oChan <- act
 }
 
@@ -262,7 +239,7 @@ func (cm * COMMONMODULE)handleS2F31(msg *sm.DataMessage){
     }
     ack := sm.CreateBinaryNode( byte(errCode) )
 
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2,32, false, ack , cm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2,32, false, ack , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     cm.oChan <- act
 
 }
@@ -280,7 +257,7 @@ func (cm * COMMONMODULE)processMsg(msg *sm.DataMessage)(bool){
 
             var node sm.ElementType
             node = sm.CreateListNode( sm.CreateASCIINode("HMITaker") ,sm.CreateASCIINode("1.0") )
-            act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 2, false, node , cm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+            act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 2, false, node , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
             cm.log.Printf("do On-Line Identification\n")
             cm.oChan <- act
         }

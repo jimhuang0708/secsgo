@@ -46,7 +46,7 @@ type EquipmentContext struct {
 }
 
 
-func NewEquipmentContext(deviceID int, mode string, addr string  ,eqLog *logger.Logger) *EquipmentContext {
+func CreateEquipmentContext(deviceID int, mode string, addr string  ,eqLog *logger.Logger) *EquipmentContext {
     baseLog := eqLog.With( "module" , "EquipmentCtx" , "deviceID", deviceID)
     ec := &EquipmentContext{
         BaseContext: BaseContext{
@@ -61,16 +61,16 @@ func NewEquipmentContext(deviceID int, mode string, addr string  ,eqLog *logger.
 
         },
         log: baseLog,
-        ctrlState : NewCTRLSTATE(deviceID, baseLog.With("module", "CTRLSTATE")),
-        evtModule : NewEVENTMODULE(deviceID, baseLog.With("module", "EVENTMODULE")),
-        commonModule : NewCOMMONMODULE(deviceID, baseLog.With("module", "COMMONMODULE")),
-        ecModule : NewEQCONSTMODULE(deviceID, baseLog.With("module", "EQCONSTMODULE")),
-        tdcModule : NewTDCMODULE(deviceID, baseLog.With("module", "TDCMODULE")),
-        alarmModule : NewALARMMODULE(deviceID, baseLog.With("module", "ALARMMODULE")),
-        terminalModule : NewTERMINALMODULE(deviceID, baseLog.With("module", "TERMINALMODULE")),
-        rcModule : NewRCMODULE(deviceID, baseLog.With("module", "RCMODULE")),
-        lmtModule : NewLIMITMONITORMODULE(deviceID, baseLog.With("module", "LIMITMONITORMODULE")),
-        dstModule : NewDSTMODULE(deviceID, baseLog.With("module", "DSTMODULE")),
+        ctrlState : CreateCTRLSTATE( baseLog.With("module", "CTRLSTATE")),
+        evtModule : CreateEVENTMODULE( baseLog.With("module", "EVENTMODULE")),
+        commonModule : CreateCOMMONMODULE( baseLog.With("module", "COMMONMODULE")),
+        ecModule : CreateEQCONSTMODULE( baseLog.With("module", "EQCONSTMODULE")),
+        tdcModule : CreateTDCMODULE( baseLog.With("module", "TDCMODULE")),
+        alarmModule : CreateALARMMODULE( baseLog.With("module", "ALARMMODULE")),
+        terminalModule : CreateTERMINALMODULE( baseLog.With("module", "TERMINALMODULE")),
+        rcModule : CreateRCMODULE( baseLog.With("module", "RCMODULE")),
+        lmtModule : CreateLIMITMONITORMODULE( baseLog.With("module", "LIMITMONITORMODULE")),
+        dstModule : CreateDSTMODULE( baseLog.With("module", "DSTMODULE")),
     }
     ec.BaseContext.attacher = ec
     go ec.stateRun(mode , addr )
@@ -277,10 +277,10 @@ func (ec *EquipmentContext )StateStop(){
 ////////////
 
 func (ec *EquipmentContext)AttachSession(conn net.Conn,mode string){
-    ts := NewTransport(conn, ec.log.With("component", "transport", "session_mode", mode));
-    ss := NewHSMS_SS( mode , ts, ec.log.With("component", "hsms_ss", "session_mode", mode));
+    ts := CreateTransport(conn, ec.log.With("component", "transport", "session_mode", mode));
+    ss := CreateHSMS_SS( mode , ts, ec.deviceID ,ec.log.With("component", "hsms_ss", "session_mode", mode));
     /* communicate state will attach to ctrlstate */
-    NewCOMMUNICATESTATE( ec.deviceID , data.G_STATE.DEFAULT_COMSTATE , ss, ec.ctrlState, ec.log.With("component", "communicate", "session_mode", mode));
+    CreateCOMMUNICATESTATE( data.G_STATE.DEFAULT_COMSTATE , ss, ec.ctrlState, ec.log.With("component", "communicate", "session_mode", mode));
 }
 
 func (ec *EquipmentContext)Operate_Ctrl(value int){

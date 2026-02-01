@@ -5,9 +5,7 @@ import (
     "encoding/binary"
     "encoding/json"
     "fmt"
-    "sync"
     "time"
-
     "secs/logger"
     sm "secs/secs_message"
 )
@@ -21,12 +19,11 @@ import (
 */
 const S1F13_Duration = 1000
 type COMMUNICATESTATE struct{
-    BaseComponent
+    BaseModule
     hsms_ss * HSMS_SS
     comState string
     comEnabledSubState string
     timer_Wait_Delay *time.Timer
-    deviceID int
     sessionID string
 }
 
@@ -39,22 +36,13 @@ func RandUint64String() string {
     return fmt.Sprintf("%d", n)
 }
 
-func NewCOMMUNICATESTATE(deviceID int,comState string,hsms_ss * HSMS_SS,cs * CTRLSTATE, log *logger.Logger) *COMMUNICATESTATE {
-    o := COMMUNICATESTATE{
-                             BaseComponent : BaseComponent{
-                                 iChan : make(chan Evt,10),
-                                 oChan : make(chan Evt,10 ) ,
-                                 wg : new(sync.WaitGroup),
-                                 run : false,
-                                 log: log,
-                             },
+func CreateCOMMUNICATESTATE(comState string,hsms_ss * HSMS_SS,cs * CTRLSTATE, log *logger.Logger) *COMMUNICATESTATE {
+    o := COMMUNICATESTATE{   BaseModule : CreateBaseModule(log),
                              comState : comState,
                              comEnabledSubState : "NOTCOMMUNICATE",
                              timer_Wait_Delay : nil,
-                             deviceID : deviceID,
                              hsms_ss : hsms_ss,
-                             sessionID : RandUint64String(),
-                         }
+                             sessionID : RandUint64String() }
     cs.attachSession(&o);
     o.wg.Add(1)
     go o.stateRun()
@@ -152,7 +140,7 @@ func (cs *COMMUNICATESTATE)communicateTimeout(){
 }
 
 func (cs *COMMUNICATESTATE)sendS1F13(){
-    msg := sm.CreateDataMessage( 1, 13, true,sm.CreateListNode( sm.CreateASCIINode("HMITaker") , sm.CreateASCIINode("1.0")),cs.deviceID,0, "ALL")
+    msg := sm.CreateDataMessage( 1, 13, true,sm.CreateListNode( sm.CreateASCIINode("HMITaker") , sm.CreateASCIINode("1.0")),-1,0, "ALL")
 
     alarmEvt := Evt{ cmd : "WAITS1F14_TIMEOUT" , msg : msg ,ts : time.Now().Unix() }
     wi := WaitItem {  evt : alarmEvt ,ts : time.Now().Unix() + (EstablishCommunicationsTimeout/1000) , evtChan : cs.iChan }
@@ -164,11 +152,10 @@ func (cs *COMMUNICATESTATE)sendS1F13(){
 func (cs *COMMUNICATESTATE)sendS1F14(msg *sm.DataMessage){
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(1, 14, false,
                                sm.CreateListNode ( sm.CreateBinaryNode( byte(0) ) ,  sm.CreateListNode( sm.CreateASCIINode("HMITaker") , sm.CreateASCIINode("1.0"))),
-                               cs.deviceID , msg.SystemBytes(), msg.SourceHost() ),ts : time.Now().Unix()}
+                               -1 , msg.SystemBytes(), msg.SourceHost() ),ts : time.Now().Unix()}
     cs.hsms_ss.iChan <- act
     return
 }
-
 
 func (cs *COMMUNICATESTATE)sendS9FX(msg *sm.DataMessage,f int){
     bin := make([]byte, 10)
@@ -176,12 +163,11 @@ func (cs *COMMUNICATESTATE)sendS9FX(msg *sm.DataMessage,f int){
     for i := 0 ; i < 10; i++ {
         bin[i] = raw[i+4]
     }
-    errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , cs.deviceID , 0 , msg.SourceHost() )
+    errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , -1 , 0 , msg.SourceHost() )
     act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
     cs.hsms_ss.iChan <- act
     return
 }
-
 
 func (cs *COMMUNICATESTATE)processMsg(msg *sm.DataMessage)(bool){
     if(msg.StreamCode() == 1 ){

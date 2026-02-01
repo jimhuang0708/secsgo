@@ -2,7 +2,6 @@ package secs
 
 import (
     "encoding/json"
-    "sync"
     "time"
     "strconv"
     "secs/logger"
@@ -14,21 +13,11 @@ remote commnad module
 */
 
 type RCMODULE struct{
-    BaseComponent
-    deviceID int
+    BaseModule
 }
 
-func NewRCMODULE(deviceID int, log *logger.Logger) *RCMODULE {
-    o := RCMODULE{
-                         BaseComponent : BaseComponent{
-                             iChan : make(chan Evt,10),
-                             oChan : make(chan Evt,10 ) ,
-                             wg : new(sync.WaitGroup),
-                             run : false,
-                             log: log,
-                         },
-                         deviceID : deviceID,
-                  }
+func CreateRCMODULE( log *logger.Logger) *RCMODULE {
+    o := RCMODULE{ BaseModule : CreateBaseModule(log) }
     o.wg.Add(1)
     go o.stateRun()
     return &o
@@ -42,19 +31,6 @@ func (rcm * RCMODULE)TellUI(text string){
     uievt := &UIEvt{ EvtType : "S2F41" , Source : "RCMODULE" , Data : text }
     jsonData, _ := json.Marshal(uievt)
     rcm.oChan <- Evt{ cmd : "uievent" ,msg : string(jsonData)  }
-}
-
-
-func (rcm * RCMODULE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]byte, 10)
-    raw := msg.EncodeBytes();
-    for i := 0 ; i < 10; i++ {
-        bin[i] = raw[i+4]
-    }
-    errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , rcm.deviceID ,0,msg.SourceHost() )
-    act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
-    rcm.oChan <- act
-    return
 }
 
 func (rcm * RCMODULE)handleS2F41(msg *sm.DataMessage){
@@ -136,7 +112,7 @@ func (rcm * RCMODULE)handleS2F41(msg *sm.DataMessage){
 
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2,42, false,
                                      sm.CreateListNode(sm.CreateBinaryNode( byte(0) )  , sm.CreateListNode()) ,
-                                     rcm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                                     -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     rcm.oChan <- act
 }
 

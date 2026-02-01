@@ -1,30 +1,19 @@
 package secs
 
 import (
-    "sync"
+    //"sync"
     "time"
-
     "secs/data"
     "secs/logger"
     sm "secs/secs_message"
 )
 
 type ALARMMODULE struct{
-    BaseComponent
-    deviceID int
+    BaseModule
 }
 
-func NewALARMMODULE(deviceID int, log *logger.Logger) *ALARMMODULE {
-    o := ALARMMODULE{
-                         BaseComponent : BaseComponent{
-                             iChan : make(chan Evt,10),
-                             oChan : make(chan Evt,10 ) ,
-                             wg : new(sync.WaitGroup),
-                             run : false,
-                             log: log,
-                         },
-                         deviceID : deviceID,
-                 }
+func CreateALARMMODULE( log *logger.Logger) *ALARMMODULE {
+    o := ALARMMODULE{ BaseModule : CreateBaseModule(log) }
     o.wg.Add(1)
     go o.stateRun()
     return &o
@@ -34,26 +23,12 @@ func (am * ALARMMODULE) PutEvt(e Evt) {
     am.iChan <- e
 }
 
-func (am * ALARMMODULE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]byte, 10)
-    raw := msg.EncodeBytes();
-    for i := 0 ; i < 10; i++ {
-        bin[i] = raw[i+4]
-    }
-    errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , am.deviceID ,0 , msg.SourceHost() )
-    act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
-    am.oChan <- act
-    return
-}
-
-
-
 func (am * ALARMMODULE)sendS5F1(id uint64){
     alids := make([]uint64,1)
     alids[0] = id
     rootNode := data.GetAlarmsLst(alids)
     node , _ := rootNode.(*sm.ListNode).Get(0)
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 5, 1, true,  node ,am.deviceID , 0 , "ALL"),
+    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 5, 1, true,  node , -1 , 0 , "ALL"),
                 ts : time.Now().Unix() }
     am.log.Printf("send report\n")
     am.oChan <- act
@@ -111,7 +86,7 @@ func (am * ALARMMODULE)handleS5F3(msg *sm.DataMessage){
     ret := data.SetAlarmEnable(alid,aled)
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 5, 4, false, 
                                      sm.CreateBinaryNode( byte(ret) ) ,
-                                     am.deviceID , msg.SystemBytes() , msg.SourceHost() ),ts : time.Now().Unix()}
+                                     -1 , msg.SystemBytes() , msg.SourceHost() ),ts : time.Now().Unix()}
     am.oChan <- act
 }
 
@@ -126,7 +101,7 @@ func (am * ALARMMODULE)handleS5F5(msg *sm.DataMessage){
     rootNode := data.GetAlarmsLst(alids)
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 5, 6, false, 
                                      rootNode ,
-                                     am.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                                     -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     am.oChan <- act
 }
 

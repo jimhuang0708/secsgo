@@ -1,9 +1,7 @@
 package secs
 
 import (
-    "sync"
     "time"
-
     "secs/data"
     "secs/logger"
     sm "secs/secs_message"
@@ -16,21 +14,11 @@ const RPT_GEM_CTRL_STATE = 400
 const SV_GEM_CTRL_STATE = 3
 
 type EVENTMODULE struct{
-    BaseComponent
-    deviceID int
+    BaseModule
 }
 
-func NewEVENTMODULE(deviceID int, log *logger.Logger) *EVENTMODULE {
-    o := EVENTMODULE{
-                         BaseComponent : BaseComponent{
-                            iChan : make(chan Evt,10),
-                            oChan : make(chan Evt,10 ) ,
-                            wg : new(sync.WaitGroup),
-                            run : false,
-                            log: log,
-                         },
-                         deviceID : deviceID,
-                    }
+func CreateEVENTMODULE( log *logger.Logger) *EVENTMODULE {
+    o := EVENTMODULE{ BaseModule : CreateBaseModule(log) }
     o.wg.Add(1)
     go o.moduleRun()
     return &o
@@ -40,25 +28,12 @@ func (em * EVENTMODULE) PutEvt(e Evt) {
     em.iChan <- e
 }
 
-
-func (em EVENTMODULE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]byte, 10)
-    raw := msg.EncodeBytes();
-    for i := 0 ; i < 10; i++ {
-        bin[i] = raw[i+4]
-    }
-    errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , em.deviceID , 0 , msg.SourceHost() )
-    act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
-    em.oChan <- act
-    return
-}
-
 /* send by Equipment only */
 func (em * EVENTMODULE)sendS1F24(msg *sm.DataMessage,evtLst []uint32){
 
     node := data.GetEventNameList(evtLst)
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 24, false,
-                node , em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                node , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     em.oChan <- act
 }
 
@@ -66,19 +41,19 @@ func (em * EVENTMODULE)sendS1F24(msg *sm.DataMessage,evtLst []uint32){
 func (em * EVENTMODULE)sendS2F34(msg *sm.DataMessage,result string){
     if(result == "ok"){
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 34, false,
-                    sm.CreateBinaryNode( byte(0) ) , em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(0) ) , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
     if(result == "duprpt"){
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 34, false,
-                    sm.CreateBinaryNode( byte(3) ) , em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(3) ) , -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
     if(result == "novid"){
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 34, false,
-                    sm.CreateBinaryNode( byte(4) ), em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(4) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
@@ -89,25 +64,25 @@ func (em * EVENTMODULE)sendS2F34(msg *sm.DataMessage,result string){
 func (em * EVENTMODULE)sendS2F36(msg *sm.DataMessage,result string){
     if(result == "ok"){
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2, 36, false,
-                    sm.CreateBinaryNode( byte(0) ), em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(0) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
     if(result == "dupevt"){//duplicate evt
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 36, false,
-                    sm.CreateBinaryNode( byte(3) ), em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(3) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
     if(result == "noevt"){//invalid evnt id
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 36, false,
-                    sm.CreateBinaryNode( byte(4) ), em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(4) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
     if(result == "norpt"){//invalid rpt id
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2, 36, false,
-                    sm.CreateBinaryNode( byte(5) ), em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(5) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
@@ -118,12 +93,12 @@ func (em * EVENTMODULE)sendS2F36(msg *sm.DataMessage,result string){
 func (em * EVENTMODULE)sendS2F38(msg *sm.DataMessage,result string){
     if(result == "accept"){
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 38, false,
-                    sm.CreateBinaryNode( byte(0) ), em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(0) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
     if(result == "reject"){
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2, 38, false,
-                    sm.CreateBinaryNode( byte(1) ), em.deviceID , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(1) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
     return
@@ -134,7 +109,7 @@ func (em * EVENTMODULE)sendS6F11(node sm.ElementType,force bool){
     if(force){
         cmd = "sendforce"
     }
-    act := Evt{ cmd : cmd , msg : sm.CreateDataMessage( 6, 11, true, node ,em.deviceID , 0 , "ALL"),
+    act := Evt{ cmd : cmd , msg : sm.CreateDataMessage( 6, 11, true, node ,-1 , 0 , "ALL"),
                 ts : time.Now().Unix()   }
     em.log.Printf("send report\n")
     em.oChan <- act
@@ -396,11 +371,11 @@ func (em * EVENTMODULE)handleS6F15(msg *sm.DataMessage){
     var act Evt
     if(rootNode != nil){
         act = Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 16, false,
-                rootNode , em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                rootNode , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     } else {
         em.log.Printf("evtID %d not found\n",evtID);
         act = Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 16, false,
-                sm.CreateListNode() , em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                sm.CreateListNode() , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     }
     em.oChan <- act
 }
@@ -419,11 +394,11 @@ func (em * EVENTMODULE)handleS6F19(msg *sm.DataMessage){
     var act Evt
     if(rootNode != nil){
         act = Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 20, false,
-                rootNode , em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                rootNode , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     } else {
         em.log.Printf("rptID %d not found\n",rptID);
         act = Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 20, false,
-                sm.CreateListNode() , em.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                sm.CreateListNode() , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     }
     em.oChan <- act
 }

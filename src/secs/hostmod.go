@@ -2,32 +2,20 @@ package secs
 
 import (
     "encoding/json"
-    "sync"
     "time"
-
     "secs/logger"
     sm "secs/secs_message"
 )
 
 type HOSTMODULE struct{
-    BaseComponent
+    BaseModule
     timer_S1F13 *time.Timer
-    deviceID int
     comState string
 }
 
-func NewHOSTMODULE(deviceID int, log *logger.Logger) *HOSTMODULE {
-    o := HOSTMODULE{
-                             BaseComponent : BaseComponent{
-                                iChan : make(chan Evt,10),
-                                oChan : make(chan Evt,10 ) ,
-                                wg : new(sync.WaitGroup),
-                                run : false,
-                                log: log,
-                             },
-                             timer_S1F13 : nil,
-                             deviceID : deviceID,
-                         }
+func CreateHOSTMODULE( log *logger.Logger) *HOSTMODULE {
+    o := HOSTMODULE{ BaseModule : CreateBaseModule(log),
+                     timer_S1F13 : nil }
     o.wg.Add(1)
     go o.stateRun()
     return &o
@@ -92,7 +80,7 @@ func (hm * HOSTMODULE)handleS10F1(msg *sm.DataMessage){
 
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 10,2, false,
                                      sm.CreateBinaryNode( byte(0) )   ,
-                                     hm.deviceID , msg.SystemBytes() ,msg.SourceHost()),ts : time.Now().Unix()}
+                                     -1 , msg.SystemBytes() ,msg.SourceHost()),ts : time.Now().Unix()}
     hm.oChan <- act
 }
 
@@ -105,7 +93,7 @@ func (hm *HOSTMODULE)sendS1F13_Timeout(){
 }
 
 func (hm *HOSTMODULE)sendS1F13(){
-    msg := sm.CreateDataMessage( 1, 13, true, sm.CreateListNode(), hm.deviceID, 0 , "ALL" )
+    msg := sm.CreateDataMessage( 1, 13, true, sm.CreateListNode(), -1, 0 , "ALL" )
     act := Evt{ cmd : "send" , msg : msg,ts : time.Now().Unix()}
     hm.log.Printf("HOST sendS1F13()\n")
     hm.oChan <- act
@@ -116,23 +104,10 @@ func (hm *HOSTMODULE)sendS1F13(){
 func (hm *HOSTMODULE)sendS1F14(msg *sm.DataMessage){
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 14, false,
                                    sm.CreateListNode ( sm.CreateBinaryNode( byte(0) ) ,  sm.CreateListNode() ),
-                                   hm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                                   -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     hm.oChan <- act
     return
 }
-
-func (hm *HOSTMODULE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]byte, 10)
-    raw := msg.EncodeBytes();
-    for i := 0 ; i < 10; i++ {
-        bin[i] = raw[i+4]
-    }
-    errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , hm.deviceID ,0,msg.SourceHost() )
-    act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
-    hm.oChan <- act
-    return
-}
-
 
 func (hm *HOSTMODULE)processMsg(msg *sm.DataMessage)(bool){
     if(msg.StreamCode() == 1 ){

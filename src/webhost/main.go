@@ -95,7 +95,7 @@ func wsHost(c *gin.Context) {
     //browser refresh,1 second delay to wait previous listen socket close
     time.Sleep(1000 * time.Millisecond)
     ctxLog := hostLog.With("IP", wsConn.addr)
-    hc := secs.NewHostContext( 0 , mode , remoteip ,ctxLog )
+    hc := secs.CreateHostContext( 0 , mode , remoteip ,ctxLog )
 
     defer func(){
         wsConn.run = false

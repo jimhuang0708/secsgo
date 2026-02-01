@@ -96,6 +96,20 @@ func (node *DataMessage) SetSystemBytes( systemBytes uint32) *DataMessage {
     return message
 }
 
+func (node *DataMessage) SetSessionID( sessionID int) *DataMessage {
+    message := &DataMessage{
+        stream:      node.stream,
+        function:    node.function,
+        waitBit:     node.waitBit,
+        dataItem:    node.dataItem,
+        sessionID:   sessionID,
+        systemBytes: node.systemBytes,
+        sourceHost : node.sourceHost,
+    }
+    return message
+}
+
+
 func (node *DataMessage) Header() string {
     header := fmt.Sprintf("S%dF%d", node.stream, node.function)
     if (node.waitBit){

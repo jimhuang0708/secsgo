@@ -38,7 +38,7 @@ type UICmd struct {
     DataItem data.NodeValue `json:"dataitem"`
 }
 
-func NewHostContext(deviceID int,mode string,addr string, hostLog *logger.Logger ) *HostContext {
+func CreateHostContext(deviceID int,mode string,addr string, hostLog *logger.Logger ) *HostContext {
     baseLog := hostLog.With("context", "HostCtx", "deviceID", deviceID)
     hc := &HostContext{
                          BaseContext: BaseContext{
@@ -52,8 +52,8 @@ func NewHostContext(deviceID int,mode string,addr string, hostLog *logger.Logger
                              wg : new(sync.WaitGroup),
                          },
                          log: baseLog,
-                         hostModule : NewHOSTMODULE(deviceID, baseLog.With("module", "HOSTMODULE")) ,
-                         dstModule : NewDSTMODULE(deviceID, baseLog.With("module", "DSTMODULE")),
+                         hostModule : CreateHOSTMODULE( baseLog.With("module", "HOSTMODULE")) ,
+                         dstModule : CreateDSTMODULE( baseLog.With("module", "DSTMODULE")),
                          hsms_ss : nil,
                      }
     hc.BaseContext.attacher = hc
@@ -81,8 +81,8 @@ func (hc *HostContext)regProcessModule(){
 }
 
 func (hc *HostContext)AttachSession(conn net.Conn,mode string){
-    ts := NewTransport(conn, hc.log.With("component", "transport", "session_mode", mode))
-    hc.hsms_ss = NewHSMS_SS(mode,ts, hc.log.With("component", "hsms_ss", "session_mode", mode))
+    ts := CreateTransport(conn, hc.log.With("component", "transport", "session_mode", mode))
+    hc.hsms_ss = CreateHSMS_SS(mode,ts,hc.deviceID, hc.log.With("component", "hsms_ss", "session_mode", mode))
 }
 
 

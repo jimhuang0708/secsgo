@@ -2,9 +2,7 @@
 package secs
 
 import (
-    "sync"
     "time"
-
     "secs/logger"
     sm "secs/secs_message"
 )
@@ -21,24 +19,18 @@ type HSMS_SS struct{
     ts * Transport
     connectState string
     sysByte    uint32
+    deviceID int
     waitQueue map[uint32]WaitItem
     timer_T7 *time.Timer
 }
 
-func NewHSMS_SS(mode string,ts * Transport, log *logger.Logger) *HSMS_SS {
-    o := HSMS_SS{
-                         BaseComponent : BaseComponent{
-                             iChan : make(chan Evt,10),
-                             oChan : make(chan Evt,10 ) ,
-                             wg : new(sync.WaitGroup),
-                             run : false,
-                             log: log,
-                         },
-                         connectState : "NOTSELECTED",
-                         sysByte    : 0,
-                         waitQueue : make(map[uint32]WaitItem),
-                         ts : ts,
-                     }
+func CreateHSMS_SS(mode string,ts * Transport, deviceID int, log *logger.Logger) *HSMS_SS {
+    o := HSMS_SS{ BaseComponent : CreateBaseComponent(log),
+                  connectState : "NOTSELECTED",
+                  sysByte    : 0,
+                  waitQueue : make(map[uint32]WaitItem),
+                  deviceID : deviceID,
+                  ts : ts }
     o.wg.Add(1)
     go o.stateRun(mode)
     return &o
@@ -200,7 +192,7 @@ func (ss *HSMS_SS )handleInput( evt Evt ){
 
     if(evt.msg.(*sm.DataMessage).WaitBit()){
         evt.ts = time.Now().Unix()
-        evt.msg = evt.msg.(*sm.DataMessage).SetSystemBytes( ss.sysByte )
+        evt.msg = evt.msg.(*sm.DataMessage).SetSystemBytes( ss.sysByte ).SetSessionID(ss.deviceID)
         if(evt.waitAlarm == nil){
             alarmEvt := Evt{ cmd : "T3_TIMEOUT" , msg : evt.msg ,ts : time.Now().Unix() }
             ss.waitQueue[ss.sysByte] = WaitItem {  evt : alarmEvt, ts : evt.ts + (T3/1000) , evtChan : ss.iChan }
@@ -208,6 +200,8 @@ func (ss *HSMS_SS )handleInput( evt Evt ){
             ss.waitQueue[ss.sysByte] = evt.waitAlarm.(WaitItem)
         }
         ss.incSysByte()
+    } else {
+        evt.msg = evt.msg.(*sm.DataMessage).SetSessionID(ss.deviceID)
     }
     ss.ts.iChan <- evt
 }

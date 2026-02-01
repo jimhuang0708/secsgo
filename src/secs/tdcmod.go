@@ -2,9 +2,7 @@ package secs
 
 import (
     "strconv"
-    "sync"
     "time"
-
     "secs/data"
     "secs/logger"
     sm "secs/secs_message"
@@ -26,23 +24,13 @@ type TDCJOB struct{
 }
 
 type TDCMODULE struct{
-    BaseComponent
+    BaseModule
     jobs  map[uint32]*TDCJOB
-    deviceID int
 }
 
-func NewTDCMODULE(deviceID int, log *logger.Logger) *TDCMODULE {
-    o := TDCMODULE{
-                         BaseComponent : BaseComponent{
-                             iChan : make(chan Evt,10),
-                             oChan : make(chan Evt,10 ) ,
-                             wg : new(sync.WaitGroup),
-                             run : false,
-                             log: log,
-                         },
-                         jobs : make(map[uint32]*TDCJOB),
-                         deviceID : deviceID,
-                  }
+func CreateTDCMODULE( log *logger.Logger) *TDCMODULE {
+    o := TDCMODULE{ BaseModule : CreateBaseModule(log),
+                    jobs : make(map[uint32]*TDCJOB)  }
     o.wg.Add(1)
     go o.stateRun()
     return &o
@@ -51,19 +39,6 @@ func NewTDCMODULE(deviceID int, log *logger.Logger) *TDCMODULE {
 func (tm * TDCMODULE) PutEvt(e Evt) {
     tm.iChan <- e
 }
-
-func (tm * TDCMODULE)sendS9FX(msg *sm.DataMessage,f int){
-    bin := make([]byte, 10)
-    raw := msg.EncodeBytes();
-    for i := 0 ; i < 10; i++ {
-        bin[i] = raw[i+4]
-    }
-    errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , tm.deviceID ,0 , msg.SourceHost() )
-    act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
-    tm.oChan <- act
-    return
-}
-
 
 func (tm * TDCMODULE)sendS6F1(samples []interface{},job * TDCJOB ){
     tridNode := sm.CreateUintNode(4,job.trid)
@@ -74,7 +49,7 @@ func (tm * TDCMODULE)sendS6F1(samples []interface{},job * TDCJOB ){
     rootNode := sm.CreateListNode(tridNode,lenNode,timeNode,sampleNode)
     msg := sm.CreateDataMessage( 6, 1, true,
                                   rootNode,
-                                  tm.deviceID,0, "ALL")
+                                  -1,0, "ALL")
     act := Evt{ cmd : "send" , msg : msg,ts : time.Now().Unix() }
     tm.oChan <- act
     return
@@ -142,7 +117,7 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
         tm.removeTrace(trid)
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 24, false,
                                      sm.CreateBinaryNode( byte(0) ) ,
-                                     tm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                                     -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
         tm.oChan <- act
         return
     }
@@ -162,7 +137,7 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
         } else {
             act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 24, false,
                                          sm.CreateBinaryNode( byte(4) ) , //unknown vid return 4
-                                         tm.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix() }
+                                         -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix() }
             tm.oChan <- act
             return
         }
@@ -182,7 +157,7 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
     tm.log.Printf("%v %v %v %v %v %d\n",trid,dsper,totsmp,repgsz,svidLst,second_cnt)
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 24, false,
                                      sm.CreateBinaryNode( byte(0) ) ,
-                                     tm.deviceID , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
+                                     -1 , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
     tm.oChan <- act
 }
 

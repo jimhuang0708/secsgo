@@ -102,7 +102,7 @@ func wsEquipment(c *gin.Context) {
     //browser refresh,1 second delay to wait previous listen socket close
     time.Sleep(1000 * time.Millisecond)
     ctxLog := eqLog.With("IP", wsConn.addr)
-    ec := secs.NewEquipmentContext( 0 ,mode , remoteip ,ctxLog );
+    ec := secs.CreateEquipmentContext( 0 ,mode , remoteip ,ctxLog );
     go wsConn.readEquipment(ec)
     wsConn.readWebSocket(c,ec)
     wsConn.run = false

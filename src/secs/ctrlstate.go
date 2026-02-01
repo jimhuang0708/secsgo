@@ -2,7 +2,6 @@ package secs
 import (
     "encoding/json"
     "reflect"
-    "sync"
     "time"
     "secs/data"
     "secs/logger"
@@ -10,33 +9,21 @@ import (
 )
 
 type CTRLSTATE struct{
-    BaseComponent
+    BaseModule
     session map[string]*COMMUNICATESTATE
     ctrlState string
     ctrlSubState string
     ctrlRejectSubstate string
     ctrlAcceptSubstate string
-    deviceID int
 }
 
-func NewCTRLSTATE(deviceID int, log *logger.Logger) *CTRLSTATE {
-
-
-    o := CTRLSTATE {
-                 BaseComponent : BaseComponent{
-                     iChan : make(chan Evt,10),
-                     oChan : make(chan Evt,10 ) ,
-                     wg : new(sync.WaitGroup),
-                     run : false,
-                     log: log,
-                 },
-                 session : make(map[string]*COMMUNICATESTATE,100),
-                 ctrlState : data.G_STATE.DEFAULT_CTRLSTATE,
-                 ctrlSubState : data.G_STATE.DEFAULT_CTRLSUBSTATE,
-                 ctrlRejectSubstate : data.G_STATE.DEFAULT_REJECT_CTRLSUBSTATE,
-                 ctrlAcceptSubstate : data.G_STATE.DEFAULT_ACCEPT_CTRLSUBSTATE,
-                 deviceID : deviceID,
-    }
+func CreateCTRLSTATE( log *logger.Logger) *CTRLSTATE {
+    o := CTRLSTATE { BaseModule : CreateBaseModule(log),
+                     session : make(map[string]*COMMUNICATESTATE,100),
+                     ctrlState : data.G_STATE.DEFAULT_CTRLSTATE,
+                     ctrlSubState : data.G_STATE.DEFAULT_CTRLSUBSTATE,
+                     ctrlRejectSubstate : data.G_STATE.DEFAULT_REJECT_CTRLSUBSTATE,
+                     ctrlAcceptSubstate : data.G_STATE.DEFAULT_ACCEPT_CTRLSUBSTATE }
     o.wg.Add(1)
     go o.stateRun()
     o.TellUI()
@@ -139,7 +126,7 @@ func (cs *CTRLSTATE)sendS9FX(msg *sm.DataMessage,f int){
     for i := 0 ; i < 10; i++ {
         bin[i] = raw[i+4]
     }
-    errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , cs.deviceID ,0,msg.SourceHost() )
+    errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , -1 ,0,msg.SourceHost() )
     act := Evt{ cmd : "send" , msg : errmsg, ts : time.Now().Unix() }
     cs.session[msg.SourceHost()].iChan <- act
     return
@@ -147,7 +134,7 @@ func (cs *CTRLSTATE)sendS9FX(msg *sm.DataMessage,f int){
 
 /*send by host & equipment */
 func (cs * CTRLSTATE)sendS1F1(){
-    evt := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 1, true, sm.CreateEmptyElementType(),cs.deviceID , 0 , "ALL" ),
+    evt := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 1, true, sm.CreateEmptyElementType(), -1 , 0 , "ALL" ),
                 ts : time.Now().Unix() }
     cs.log.Printf("ask Host online Permission\n")
 
@@ -209,7 +196,7 @@ func (cs * CTRLSTATE)handleS1F17(msg *sm.DataMessage){
 /* send by Equipment only */
 func (cs * CTRLSTATE)sendS1F16(result byte,msg *sm.DataMessage){
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 16, false,
-                sm.CreateBinaryNode( byte(result) ) , cs.deviceID , msg.SystemBytes() , msg.SourceHost() ),ts : time.Now().Unix()}
+                sm.CreateBinaryNode( byte(result) ) , -1 , msg.SystemBytes() , msg.SourceHost() ),ts : time.Now().Unix()}
     cs.session[msg.SourceHost()].iChan <- act
     cs.log.Printf("do request offline\n")
     return
@@ -218,7 +205,7 @@ func (cs * CTRLSTATE)sendS1F16(result byte,msg *sm.DataMessage){
 /* send by Equipment only */
 func (cs * CTRLSTATE)sendS1F18(result byte,msg *sm.DataMessage){
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 18, false,
-                sm.CreateBinaryNode( byte(result) ) , cs.deviceID , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                sm.CreateBinaryNode( byte(result) ) , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     cs.session[msg.SourceHost()].iChan <- act
     cs.log.Printf("do request online\n")
 }
@@ -226,7 +213,7 @@ func (cs * CTRLSTATE)sendS1F18(result byte,msg *sm.DataMessage){
 
 func (cs * CTRLSTATE)sendStopTransaction(msg *sm.DataMessage) {
     errmsg := sm.CreateDataMessage( msg.StreamCode() ,
-                                     0 ,false, sm.CreateEmptyElementType() , cs.deviceID , msg.SystemBytes() , msg.SourceHost() )
+                                     0 ,false, sm.CreateEmptyElementType() , -1 , msg.SystemBytes() , msg.SourceHost() )
     act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
     cs.session[ msg.SourceHost()].iChan <- act
 }

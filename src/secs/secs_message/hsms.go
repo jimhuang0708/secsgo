@@ -30,6 +30,7 @@ type HSMSMessage interface {
     MsgType() int32
     ToSml() string
     SystemBytes() uint32
+    SessionID() int
 }
 
 type ControlMessage struct {
@@ -137,4 +138,8 @@ func (msg *ControlMessage) EncodeBytes() []byte {
 
 func (msg *ControlMessage) SystemBytes() uint32 {
     return binary.BigEndian.Uint32(msg.header[6:10])
+}
+
+func (msg *ControlMessage) SessionID() int {
+    return int(binary.BigEndian.Uint16(msg.header[0:2]))
 }

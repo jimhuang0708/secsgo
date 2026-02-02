@@ -105,6 +105,20 @@ func (ss *HSMS_SS)processEvt(evt Evt){
 
 }
 
+func (ss *HSMS_SS)sendS9FX(msg *sm.DataMessage,f int){
+    bin := make([]byte, 10)
+    raw := msg.EncodeBytes();
+    for i := 0 ; i < 10; i++ {
+        bin[i] = raw[i+4]
+    }
+    errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , ss.deviceID , ss.sysByte , msg.SourceHost() )
+    act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
+    ss.incSysByte()
+    ss.iChan <- act
+    return
+}
+
+
 func (ss *HSMS_SS)processMsg(msg sm.HSMSMessage){
     _ , ok := ss.waitQueue[ msg.SystemBytes() ]
     if ok {
@@ -141,7 +155,6 @@ func (ss *HSMS_SS)processMsg(msg sm.HSMSMessage){
         }
         return
     } else {
-
         if(msg.MsgType() == sm.TypeLinktestReq){
             ss.sendLinkTestRsp(msg)
             return
@@ -153,6 +166,12 @@ func (ss *HSMS_SS)processMsg(msg sm.HSMSMessage){
         if(msg.MsgType() == sm.TypeSelectReq || msg.MsgType() == sm.TypeSelectRsp){
              ss.log.Printf("Aready selected ignore : %v\n",msg);
              return
+        }
+
+        if(msg.SessionID() != ss.deviceID){
+            ss.log.Printf(" Handle  sssionID remote : %d | local : %d mismatch | send S9F1 back\n",msg.SessionID(),ss.deviceID)
+            ss.sendS9FX(msg.(*sm.DataMessage),1)
+            return
         }
 
         ss.oChan <- Evt{ cmd : "recv", msg : msg,ts : time.Now().Unix() }

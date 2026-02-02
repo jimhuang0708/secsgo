@@ -18,17 +18,21 @@ type SessionAttacher  interface {
     AttachSession(conn net.Conn, mode string)
 }
 
+type MsgSender interface {
+    SendMsg(e Evt)
+}
+
+
 type BaseContext struct {
     attacher  SessionAttacher
-    iChan chan Evt
-    oChan chan Evt
+    msgsender MsgSender
     UICmdChan chan string
     UIEvtChan chan string
     run bool
     dispatchMap [255][255]MSGMODULE
     deviceID int
     log *logger.Logger
-    wg       *sync.WaitGroup
+    wg  *sync.WaitGroup
 }
 
 
@@ -40,16 +44,25 @@ func (bc *BaseContext)buildError(msg *sm.DataMessage,f int){
     }
     errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , bc.deviceID , 0 , msg.SourceHost() )
     act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
-    bc.oChan <- act
+    bc.msgsender.SendMsg(act)
     return
 }
+
+/*
+func (bc *BaseContext)buildStopTransaction(msg *sm.DataMessage){
+    errmsg := sm.CreateDataMessage( msg.StreamCode() , 0 ,false, sm.CreateEmptyElementType() , bc.deviceID , msg.SystemBytes() , msg.SourceHost()  )
+    act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
+    bc.msgsender.SendMsg(act)
+    return
+}
+*/
 
 func (bc *BaseContext)dispatchHSMSDataMsg(evt Evt)(bool){
     msg := evt.msg.(*sm.DataMessage)
     // all sessionId shoule be same as equipment's DEVICE ID
     if(msg.SessionID() != bc.deviceID){
+        // this situation should be block in hsms_ss
         bc.buildError(msg,1)
-        //TODO :  should send separate req
         bc.log.Printf("Incorrect session id : %d != %d | %s",msg.SessionID(),bc.deviceID,msg.ToSml())
         return true
     }

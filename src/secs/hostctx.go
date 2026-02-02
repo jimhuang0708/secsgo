@@ -42,8 +42,6 @@ func CreateHostContext(deviceID int,mode string,addr string, hostLog *logger.Log
     baseLog := hostLog.With("context", "HostCtx", "deviceID", deviceID)
     hc := &HostContext{
                          BaseContext: BaseContext{
-                             oChan : make(chan Evt,10 ) ,
-                             iChan : make(chan Evt,10),
                              UICmdChan :  make(chan string,10),
                              UIEvtChan :  make(chan string,10),
                              run : false,
@@ -57,6 +55,7 @@ func CreateHostContext(deviceID int,mode string,addr string, hostLog *logger.Log
                          hsms_ss : nil,
                      }
     hc.BaseContext.attacher = hc
+    hc.BaseContext.msgsender = hc
     data.SetLogger(baseLog.With("module", "DATA"));
     go hc.stateRun(mode,addr)
     return hc
@@ -83,6 +82,14 @@ func (hc *HostContext)regProcessModule(){
 func (hc *HostContext)AttachSession(conn net.Conn,mode string){
     ts := CreateTransport(conn, hc.log.With("component", "transport", "session_mode", mode))
     hc.hsms_ss = CreateHSMS_SS(mode,ts,hc.deviceID, hc.log.With("component", "hsms_ss", "session_mode", mode))
+}
+
+func (hc *HostContext)SendMsg(e Evt){
+    if(hc.hsms_ss != nil){
+        hc.hsms_ss.iChan <- e
+    } else {
+        hc.log.Printf("Error : SendMsg but hsms_ss not exitst\n");
+    }
 }
 
 
@@ -190,8 +197,6 @@ func (hc *HostContext)stateRun(mode string,addr string){
     close(quit)
     hc.wg.Wait()
     hc.hostModule.stateStop()
-    close(hc.UICmdChan)
-    close(hc.UIEvtChan)
     hc.log.Printf("Exit HostContext")
 }
 

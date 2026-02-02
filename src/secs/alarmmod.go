@@ -112,7 +112,6 @@ func (am * ALARMMODULE)processMsg(msg *sm.DataMessage)(bool){
         if(msg.FunctionCode() == 2){
             am.handleS5F2(msg)
         }
-
         if(msg.FunctionCode() == 3){
             am.handleS5F3(msg)
         }

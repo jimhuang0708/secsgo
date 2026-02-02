@@ -197,7 +197,7 @@ func (ss *HSMS_SS)stopT7() {
 func (ss *HSMS_SS )handleInput( evt Evt ){
 
     if(evt.cmd == "T3_TIMEOUT"){
-        ss.log.Printf("T3 timeout just log\n");
+        ss.log.Printf("T3 timeout just log,TODO : sendback S9F9\n");
         return
     }
     if(evt.cmd == "T6_TIMEOUT"){

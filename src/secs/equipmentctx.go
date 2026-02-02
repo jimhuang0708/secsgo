@@ -50,8 +50,6 @@ func CreateEquipmentContext(deviceID int, mode string, addr string  ,eqLog *logg
     baseLog := eqLog.With( "module" , "EquipmentCtx" , "deviceID", deviceID)
     ec := &EquipmentContext{
         BaseContext: BaseContext{
-                             oChan : make(chan Evt,10 ) ,
-                             iChan : make(chan Evt,10),
                              UICmdChan : make(chan string,10),
                              UIEvtChan : make(chan string,10),
                              run : false,
@@ -73,33 +71,19 @@ func CreateEquipmentContext(deviceID int, mode string, addr string  ,eqLog *logg
         dstModule : CreateDSTMODULE( baseLog.With("module", "DSTMODULE")),
     }
     ec.BaseContext.attacher = ec
+    ec.BaseContext.msgsender = ec
     go ec.stateRun(mode , addr )
     return ec;
-}
-
-func (ec *EquipmentContext)GetCtrlInput()(chan Evt){
-     return ec.ctrlState.iChan;
 }
 
 func (ec *EquipmentContext)trigEvent(e Evt){
     ec.evtModule.PutEvt(e)
 }
 
-func (ec *EquipmentContext)buildStopTransaction(msg *sm.DataMessage){
-    errmsg := sm.CreateDataMessage( msg.StreamCode() , 0 ,false, sm.CreateEmptyElementType() , ec.deviceID , msg.SystemBytes() , msg.SourceHost()  )
-    act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
-    ec.oChan <- act
-    return
+func (ec *EquipmentContext)SendMsg(e Evt){
+    ec.ctrlState.iChan <-e
 }
 
-func (ec *EquipmentContext)buildSXF0(msg *sm.DataMessage){
-    //unrecognize FUNCTION
-    if(msg.MsgType() == sm.TypeDataMessage){
-        if(msg.WaitBit()){
-            ec.buildStopTransaction(msg) //this could prevent remote T3 timeout
-        }
-    }
-}
 
 func (ec *EquipmentContext)regProcessModule(){
     /*clean route path */

@@ -99,7 +99,8 @@ func CreateTransport(Conn net.Conn, log *logger.Logger)(*Transport){
 
 func (t *Transport)handleRead() {
     defer func() {
-        t.ctrlChan <- "quit"
+        t.log.Printf("Exit Transport Read\n");
+        t.oChan <- Evt{ cmd : "SOCKET_CLOSE" ,msg : nil  }
         t.wg.Done()
     }()
 
@@ -118,8 +119,8 @@ func (t *Transport)handleRead() {
 
 func (t *Transport)handleSend() {
     defer func() {
-        t.log.Printf("Transport Exit\n");
-        t.oChan <- Evt{ cmd : "TRANSPORT_EXIT" ,msg : nil  }
+        t.log.Printf("Exit Transport Send\n");
+        t.oChan <- Evt{ cmd : "SOCKET_CLOSE" ,msg : nil  }
         t.wg.Done()
     }()
     for {
@@ -132,9 +133,6 @@ func (t *Transport)handleSend() {
                         t.log.Println("send error:", ret)
                         return
                     }
-                }
-                if(act.cmd == "TRANSPORT_EXIT") {
-                    return
                 }
             case cmd := <-t.ctrlChan:
                 if(cmd == "quit"){

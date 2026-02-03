@@ -324,8 +324,9 @@ func (cs *CTRLSTATE)processEvt(evt Evt ,sessionID string){
         cs.oChan <- evt
         return
     }
-    if(evt.cmd == "disconnect"){
-        cs.log.Printf("CTRLSTATE get disconnect notify => delete session %s\n",sessionID);
+    if(evt.cmd == "COMMUNICATESTATE_EXIT"){
+        cs.log.Printf("CTRLSTATE Get COMMUNICATESTATE_EXIT notify => delete session %s\n",sessionID);
+        cs.session[sessionID].Stop()
         delete (cs.session,sessionID)
         if( len(cs.session) == 0 ){
             cs.log.Printf("All host leave!\n");

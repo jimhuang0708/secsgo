@@ -192,8 +192,8 @@ func (cs *COMMUNICATESTATE)processEvt(evt Evt){
     }
 
     if(evt.cmd == "HSMS_SS_EXIT"){
-        cs.log.Printf("COMMUNICATESTATE get disconnect notify from lower layer\n");
-        cs.oChan <- evt
+        cs.log.Printf("COMMUNICATESTATE Get HSMS_SS_EXIT\n");
+        cs.oChan <- Evt{ cmd : "COMMUNICATESTATE_EXIT" , msg : nil , ts : time.Now().Unix() }
         return
     }
 

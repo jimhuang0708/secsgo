@@ -370,7 +370,7 @@ func (dstm * DSTMODULE)processRecvDs(){
 }
 
 func (dstm * DSTMODULE)stateRun(){
-    ticker := time.NewTicker(10 * time.Millisecond)
+    ticker := time.NewTicker( 20 * time.Millisecond)
     defer func(){
         dstm.log.Printf("Exit DSTMODULE \n");
         ticker.Stop()

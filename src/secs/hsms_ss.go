@@ -92,8 +92,7 @@ func (ss *HSMS_SS)processEvt(evt Evt){
         return
     }
 
-    if(evt.cmd == "TRANSPORT_EXIT"){
-        ss.log.Printf("TRANSPORT_EXIT detachTransport()\n");
+    if(evt.cmd == "SOCKET_CLOSE"){
         ss.detachTransport();
         return
     }
@@ -127,7 +126,6 @@ func (ss *HSMS_SS)processMsg(msg sm.HSMSMessage){
 
     if(msg.MsgType() == sm.TypeSeparateReq){
         ss.detachTransport();
-        ss.log.Printf("Get separate.req\n");
         return
     }
 
@@ -197,7 +195,7 @@ func (ss *HSMS_SS )handleInput( evt Evt ){
         return
     }
     if(evt.cmd == "T6_TIMEOUT"){
-        ss.log.Printf("T6 timeout  detachTransport()\n");
+        ss.log.Printf("T6 timeout!\n");
         ss.detachTransport();
         return
     }
@@ -222,9 +220,8 @@ func (ss *HSMS_SS )handleInput( evt Evt ){
 }
 
 func (ss *HSMS_SS )detachTransport(){
-    ss.ts.Stop();
+    ss.log.Printf("Notify Event HSMS_SS_EXIT\n");
     ss.oChan <-Evt{ cmd : "HSMS_SS_EXIT" , msg : nil , ts : time.Now().Unix() }
-    ss.log.Printf("Get separate.req\n");
 }
 
 func (ss *HSMS_SS )stateRun(mode string){

@@ -241,7 +241,7 @@ func (ec *EquipmentContext )stateRun(mode string,addr string){
     }
     close(quit)
     ec.wg.Wait()
-    ec.ctrlState.StateStop()
+    ec.ctrlState.Stop()
     ec.evtModule.moduleStop()
     ec.commonModule.moduleStop()
     ec.ecModule.moduleStop()

@@ -346,10 +346,6 @@ func (cs *CTRLSTATE)processEvt(evt Evt ,sessionID string){
     }
 }
 
-func (cs *CTRLSTATE)StateStop(){
-    cs.run = false
-    cs.wg.Wait()
-}
 
 func waitAny(sessions map[string]*COMMUNICATESTATE) (Evt, string, bool) {
     cases := make([]reflect.SelectCase, 0, len(sessions))
@@ -379,9 +375,18 @@ func (cs *CTRLSTATE)SetCommunicate(v bool) {
 
 
 func (cs *CTRLSTATE)stateRun(){
-    defer cs.wg.Done()
-    cs.run = true
-    for cs.run == true {
+    ticker := time.NewTicker(10 * time.Millisecond)
+    defer func(){
+        for _ , v := range cs.session {
+            v.Stop()
+        }
+        cs.session = make(map[string]*COMMUNICATESTATE)
+        ticker.Stop()
+        cs.log.Printf("Exit CTRLSTATE\n");
+        cs.wg.Done()
+    }()
+
+    for  {
         select {
             case evt := <-cs.iChan:
                 /*
@@ -401,19 +406,17 @@ func (cs *CTRLSTATE)stateRun(){
                 } else {
                     cs.session[sourceHost].iChan <- evt
                 }
-            default:
-                time.Sleep(100 * time.Millisecond)
-        }
-        evt, sessionID, ok := waitAny(cs.session)
-        if ok {
-            cs.processEvt(evt,sessionID)
+            case <-ticker.C:
+                evt, sessionID, ok := waitAny(cs.session)
+                if ok {
+                    cs.processEvt(evt,sessionID)
+                }
+            case cmd :=<-cs.ctrlChan:
+                if(cmd == "quit"){
+                    return
+                }
+
         }
     }
-    cs.run = false
-    for _ , v := range cs.session {
-        v.StateStop()
-    }
-    cs.session = make(map[string]*COMMUNICATESTATE)
-    cs.log.Printf("Exit CTRLSTATE\n");
     return
 }

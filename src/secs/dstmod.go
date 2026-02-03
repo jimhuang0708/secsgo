@@ -357,6 +357,7 @@ func (dstm * DSTMODULE)processEvt(evt Evt){
     msg := evt.msg.(*sm.DataMessage)
     dstm.processMsg(msg)
 }
+
 func (dstm * DSTMODULE)processRecvDs(){
     for _,v := range RECV_MAP {
         if(v.state == "IDLE"){
@@ -368,28 +369,26 @@ func (dstm * DSTMODULE)processRecvDs(){
     }
 }
 
-func (dstm * DSTMODULE)moduleStop(){
-    dstm.run = false
-    dstm.iChan <- Evt{ cmd : "quit"}
-    dstm.wg.Wait()
-}
 func (dstm * DSTMODULE)stateRun(){
-    defer dstm.wg.Done()
-    dstm.run = true
+    ticker := time.NewTicker(10 * time.Millisecond)
+    defer func(){
+        dstm.log.Printf("Exit DSTMODULE \n");
+        ticker.Stop()
+        dstm.wg.Done()
+    }()
 
-    for dstm.run == true {
+    for {
         select {
             case evt := <-dstm.iChan :
-                if(evt.cmd == "quit"){
-                    break
-                }
                 dstm.processEvt(evt)
-            default :
+            case <-ticker.C:
                 dstm.processRecvDs();
-                time.Sleep(500 * time.Millisecond)
+            case cmd :=<-dstm.ctrlChan:
+                if(cmd == "quit"){
+                    return
+                }
+
         }
     }
-    dstm.run = false
-    dstm.log.Printf("Exit DSTMODULE \n");
     return
 }

@@ -13,7 +13,6 @@ import (
 type Transport struct {
     BaseComponent
     Conn      net.Conn
-    CloseChan chan struct{}
 }
 
 
@@ -90,9 +89,7 @@ func (t *Transport)SendAct( msg sm.HSMSMessage)(string){
 }
 
 func CreateTransport(Conn net.Conn, log *logger.Logger)(*Transport){
-    transport := &Transport{ BaseComponent : CreateBaseComponent(log),
-                             Conn:      Conn,
-                             CloseChan: make(chan struct{}) }
+    transport := &Transport{ BaseComponent : CreateBaseComponent(log), Conn :  Conn }
     transport.wg.Add(1)
     go transport.handleRead()
     transport.wg.Add(1)
@@ -102,6 +99,7 @@ func CreateTransport(Conn net.Conn, log *logger.Logger)(*Transport){
 
 func (t *Transport)handleRead() {
     defer func() {
+        t.ctrlChan <- "quit"
         t.wg.Done()
     }()
 
@@ -112,7 +110,7 @@ func (t *Transport)handleRead() {
                 t.oChan <- Evt{ cmd : "recv" ,msg : msg}
             }
         } else {
-            close(t.CloseChan)
+            t.log.Printf("Error : Read not ok\n");
             return
         }
     }
@@ -120,11 +118,11 @@ func (t *Transport)handleRead() {
 
 func (t *Transport)handleSend() {
     defer func() {
+        t.log.Printf("Transport Exit\n");
+        t.oChan <- Evt{ cmd : "TRANSPORT_EXIT" ,msg : nil  }
         t.wg.Done()
-        t.oChan <- Evt{ cmd : "disconnect" ,msg : nil  }
     }()
-    t.run = true
-    for t.run == true {
+    for {
         select {
             case act := <-t.iChan:
                 if(act.cmd == "send" || act.cmd == "sendforce"){
@@ -135,16 +133,23 @@ func (t *Transport)handleSend() {
                         return
                     }
                 }
-            case <-t.CloseChan:
-                return
+                if(act.cmd == "TRANSPORT_EXIT") {
+                    return
+                }
+            case cmd := <-t.ctrlChan:
+                if(cmd == "quit"){
+                    return
+                }
+
+
         }
     }
-    t.run = false
 }
 
-func (t *Transport)StateStop() {
-    t.run = false
+func (t *Transport)Stop() {
     t.Conn.Close()
+    if(len(t.ctrlChan) == 0){
+        t.ctrlChan <- "quit"
+    }
     t.wg.Wait()
-    t.log.Printf("Transport Exit\n");
 }

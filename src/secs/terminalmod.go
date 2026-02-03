@@ -117,26 +117,22 @@ func (tm * TERMINALMODULE)processEvt(evt Evt){
     tm.processMsg(msg)
 }
 
-func (tm * TERMINALMODULE)moduleStop(){
-    tm.run = false
-    tm.iChan <- Evt{ cmd : "quit"}
-    tm.wg.Wait()
-}
-
 func (tm * TERMINALMODULE)stateRun(){
-    defer tm.wg.Done()
-    tm.run = true
-
-    for tm.run == true {
+    defer func(){
+        tm.log.Printf("Exit TERMINALMODULE \n");
+        tm.wg.Done()
+    }()
+    for {
         select {
             case evt := <-tm.iChan:
-                if(evt.cmd == "quit"){
-                    break
-                }
                 tm.processEvt(evt)
+            case cmd := <-tm.ctrlChan:
+                if(cmd == "quit"){
+                    return
+                }
+
+
         }
     }
-    tm.run = false
-    tm.log.Printf("Exit TERMINALMODULE \n");
     return
 }

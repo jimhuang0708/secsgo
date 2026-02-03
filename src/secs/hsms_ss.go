@@ -92,8 +92,8 @@ func (ss *HSMS_SS)processEvt(evt Evt){
         return
     }
 
-    if(evt.cmd == "disconnect"){
-        ss.log.Printf("Disconnect detachTransport()\n");
+    if(evt.cmd == "TRANSPORT_EXIT"){
+        ss.log.Printf("TRANSPORT_EXIT detachTransport()\n");
         ss.detachTransport();
         return
     }
@@ -179,10 +179,6 @@ func (ss *HSMS_SS)processMsg(msg sm.HSMSMessage){
     }
 }
 
-func (ss *HSMS_SS )StateStop(){
-     ss.run = false
-     ss.wg.Wait()
-}
 
 func (ss *HSMS_SS)stopT7() {
     ss.log.Print("STOP T7\n");
@@ -226,15 +222,19 @@ func (ss *HSMS_SS )handleInput( evt Evt ){
 }
 
 func (ss *HSMS_SS )detachTransport(){
-    ss.ts.StateStop();
-    ss.oChan <-Evt{ cmd : "disconnect" , msg : nil , ts : time.Now().Unix() }
-    ss.run = false
-    ss.ts = nil
+    ss.ts.Stop();
+    ss.oChan <-Evt{ cmd : "HSMS_SS_EXIT" , msg : nil , ts : time.Now().Unix() }
     ss.log.Printf("Get separate.req\n");
 }
 
 func (ss *HSMS_SS )stateRun(mode string){
-    defer ss.wg.Done()
+    defer func(){
+        if(ss.ts != nil){
+            ss.ts.Stop()
+        }
+        ss.log.Printf("Exit HSMS_SS \n");
+        ss.wg.Done()
+    }()
     //passive check if recv select.req
     ss.timer_T7 = time.NewTimer(T7 * time.Millisecond)
     if( mode == "ACTIVE"){
@@ -243,8 +243,7 @@ func (ss *HSMS_SS )stateRun(mode string){
     }
     lnktest_ticker := time.NewTicker(60*time.Second)
     waitAct_ticker := time.NewTicker(1*time.Second)
-    ss.run = true
-    for ss.run == true {
+    for {
         select {
             case evt := <-ss.ts.oChan:
                 ss.processEvt(evt)
@@ -257,7 +256,7 @@ func (ss *HSMS_SS )stateRun(mode string){
                 if(ss.connectState != "SELECTED"){
                     ss.log.Printf("NOT Selected Error T7_TIMEOUT -> EXIT\n")
                     ss.oChan <-Evt{ cmd : "disconnect" , msg : nil }
-                    ss.run = false
+                    ss.ctrlChan <- "quit"
                     return
                 } else {
                     ss.log.Printf("yes , selected \n")
@@ -269,12 +268,12 @@ func (ss *HSMS_SS )stateRun(mode string){
                         delete(ss.waitQueue,k)
                     }
                 }
+            case cmd :=<-ss.ctrlChan:
+                if(cmd == "quit"){
+                    return
+                }
+
         }
     }
-    ss.run = false
-    if(ss.ts != nil){
-        ss.ts.StateStop()
-    }
-    ss.log.Printf("Exit HSMS_SS \n");
     return
 }

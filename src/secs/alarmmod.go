@@ -127,26 +127,21 @@ func (am * ALARMMODULE)processEvt(evt Evt){
     am.processMsg(evt.msg.(*sm.DataMessage))
 }
 
-func (am * ALARMMODULE)moduleStop(){
-    am.run = false
-    am.iChan <- Evt{ cmd : "quit"}
-    am.wg.Wait()
-}
 
 func (am * ALARMMODULE)stateRun(){
-    defer am.wg.Done()
-    am.run = true
-
-    for am.run == true {
+    defer func() {
+        am.wg.Done()
+        am.log.Printf("Exit ALARMMODULE \n");
+    }()
+    for {
         select {
             case evt := <-am.iChan:
-                if(evt.cmd == "quit"){
-                    break
-                }
                 am.processEvt(evt)
+            case cmd :=<-am.ctrlChan:
+                if(cmd == "quit"){
+                    return
+                }
         }
     }
-    am.run = false
-    am.log.Printf("Exit ALARMMODULE \n");
     return
 }

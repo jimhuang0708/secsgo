@@ -131,7 +131,7 @@ func (hc *HostContext)processUIEvt(uievt string){
 func (hc *HostContext)processEvt(evt Evt){
     if(evt.cmd == "uievent"){
         hc.processUIEvt(evt.msg.(string))
-    } else if(evt.cmd == "disconnect"){
+    } else if(evt.cmd == "HSMS_SS_EXIT"){
         uievt := &UIEvt{ EvtType : "disconnect" , Source : "Transport" , Data : nil }
         jsonData, _ := json.Marshal(uievt)
         hc.processUIEvt(string(jsonData))
@@ -196,7 +196,11 @@ func (hc *HostContext)stateRun(mode string,addr string){
     }
     close(quit)
     hc.wg.Wait()
-    hc.hostModule.stateStop()
+    if(hc.hsms_ss != nil){
+        hc.hsms_ss.Stop()
+    }
+    hc.dstModule.moduleStop()
+    hc.hostModule.moduleStop()
     hc.log.Printf("Exit HostContext")
 }
 

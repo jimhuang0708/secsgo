@@ -396,28 +396,23 @@ func (lm * LIMITMONITORMODULE)processEvt(evt Evt){
     lm.processMsg(msg)
 }
 
-func (lm * LIMITMONITORMODULE)moduleStop(){
-    lm.run = false
-    lm.iChan <- Evt{ cmd : "quit"}
-    lm.wg.Wait()
-}
-
 func (lm * LIMITMONITORMODULE)stateRun(){
-    defer lm.wg.Done()
-    lm.run = true
+    defer func() {
+        lm.log.Printf("Exit LIMITMONITORMODULE \n");
+        lm.wg.Done()
+    }()
     monitor_ticker := time.NewTicker(1*time.Second)
-    for lm.run == true {
+    for {
         select {
             case evt := <-lm.iChan:
-                if(evt.cmd == "quit"){
-                    break
-                }
                 lm.processEvt(evt)
             case <-monitor_ticker.C:
                 lm.doMonitor()
+            case cmd := <-lm.ctrlChan:
+                if(cmd == "quit"){
+                    return
+                }
         }
     }
-    lm.run = false
-    lm.log.Printf("Exit LIMITMONITORMODULE \n");
     return
 }

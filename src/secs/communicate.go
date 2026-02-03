@@ -191,10 +191,9 @@ func (cs *COMMUNICATESTATE)processEvt(evt Evt){
         return
     }
 
-    if(evt.cmd == "disconnect"){
+    if(evt.cmd == "HSMS_SS_EXIT"){
         cs.log.Printf("COMMUNICATESTATE get disconnect notify from lower layer\n");
         cs.oChan <- evt
-        cs.run = false
         return
     }
 
@@ -230,10 +229,6 @@ func (cs *COMMUNICATESTATE)getState()(string){
     return cs.comState
 }
 
-func (cs *COMMUNICATESTATE )StateStop(){
-     cs.run = false
-     cs.wg.Wait()
-}
 
 func (cs *COMMUNICATESTATE )handleInput(evt Evt){
     if(evt.cmd == "WAITS1F14_TIMEOUT"){
@@ -245,28 +240,29 @@ func (cs *COMMUNICATESTATE )handleInput(evt Evt){
 }
 
 func (cs *COMMUNICATESTATE)stateRun(){
-    defer cs.wg.Done()
-    cs.run = true
+    defer func(){
+        cs.hsms_ss.Stop()
+        cs.log.Printf("Exit COMMUNICATESTATE \n");
+        cs.wg.Done()
+    }()
     cs.timer_Wait_Delay = time.NewTimer(S1F13_Duration * time.Millisecond)
     cs.stop_Wait_Delay()
-    for cs.run == true {
+    for  {
         select {
             case evt := <-cs.hsms_ss.oChan:
                 cs.processEvt(evt)
-
             case evt := <-cs.iChan:
                 cs.handleInput(evt)
-
             case <-cs.timer_Wait_Delay.C:
                 cs.log.Printf("S1F13 timer fired\n")
                 cs.comEnabledSubState = "WAIT_CRA"
                 cs.sendS1F13()
-            default:
-                time.Sleep(100 * time.Millisecond)
+            case cmd :=<-cs.ctrlChan:
+                if(cmd == "quit"){
+                    return
+                }
+
         }
     }
-    cs.run = false
-    cs.hsms_ss.StateStop()
-    cs.log.Printf("Exit COMMUNICATESTATE \n");
     return
 }

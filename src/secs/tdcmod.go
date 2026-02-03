@@ -224,28 +224,25 @@ func (tm * TDCMODULE)doJobs(){
     tm.jobs = newJobs
 }
 
-func (tm * TDCMODULE)moduleStop(){
-    tm.run = false
-    tm.iChan <- Evt{ cmd : "quit"}
-    tm.wg.Wait()
-}
-
 func (tm * TDCMODULE)stateRun(){
-    defer tm.wg.Done()
-    tm.run = true
+    defer func(){
+        tm.log.Printf("Exit TDCMODULE \n");
+        tm.wg.Done()
+    }()
     jobs_ticker := time.NewTicker(1*time.Second)
-    for tm.run == true {
+    for {
         select {
             case evt := <-tm.iChan:
-                if(evt.cmd == "quit"){
-                    break
-                }
                 tm.processEvt(evt)
             case <-jobs_ticker.C:
                 tm.doJobs()
+            case cmd := <-tm.ctrlChan:
+                if(cmd == "quit"){
+                    return
+                }
+
+
         }
     }
-    tm.run = false
-    tm.log.Printf("Exit TDCMODULE \n");
     return
 }

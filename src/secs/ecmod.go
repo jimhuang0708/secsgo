@@ -140,26 +140,23 @@ func (em * EQCONSTMODULE)processEvt(evt Evt){
     em.processMsg(msg)
 }
 
-func (em * EQCONSTMODULE)moduleStop(){
-    em.run = false
-    em.iChan <- Evt{ cmd : "quit"}
-    em.wg.Wait()
-}
 
 func (em * EQCONSTMODULE)stateRun(){
-    defer em.wg.Done()
-    em.run = true
+    defer func(){
+        em.log.Printf("Exit EQCONSTMODULE \n");
+        em.wg.Done()
+    }()
 
-    for em.run == true {
+    for {
         select {
             case evt := <-em.iChan:
-                if(evt.cmd == "quit"){
-                    break
-                }
                 em.processEvt(evt)
+            case cmd :=<-em.ctrlChan:
+                if(cmd == "quit"){
+                    return
+                }
+
         }
     }
-    em.run = false
-    em.log.Printf("Exit EQCONSTMODULE \n");
     return
 }

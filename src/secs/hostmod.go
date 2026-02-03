@@ -189,27 +189,17 @@ func (hm *HOSTMODULE)stopS1F13() {
     }
 }
 
-
-
-func (hm *HOSTMODULE )stateStop(){
-     hm.run = false
-     hm.iChan <- Evt{ cmd : "quit"}
-     hm.wg.Wait()
-}
-
-
 func (hm *HOSTMODULE)stateRun(){
-    defer hm.wg.Done()
-    hm.run = true
+    defer func() {
+        hm.log.Printf("Exit HOSTMODULE \n");
+        hm.wg.Done()
+    }()
     hm.timer_S1F13 = time.NewTimer(S1F13_Duration * time.Millisecond)
     hm.stopS1F13()
 
-    for hm.run == true {
+    for {
         select {
             case evt := <-hm.iChan:
-                if(evt.cmd == "quit"){
-                    break
-                }
                 if(evt.msg != nil){
                     hm.log.Printf("Host Get : %s\n",evt.msg.(sm.HSMSMessage).ToSml());
                 }
@@ -217,9 +207,12 @@ func (hm *HOSTMODULE)stateRun(){
             case <-hm.timer_S1F13.C:
                 hm.log.Printf("HOST S1F13 timer fired\n")
                 hm.sendS1F13()
+            case cmd :=<-hm.ctrlChan:
+                if(cmd == "quit"){
+                    return
+                }
+
         }
     }
-    hm.run = false
-    hm.log.Printf("Exit HOSTMODULE \n");
     return
 }

@@ -474,26 +474,21 @@ func (em * EVENTMODULE)processEvt(evt Evt){
     em.processMsg(msg)
 }
 
-func (em * EVENTMODULE)moduleStop(){
-    em.run = false
-    em.iChan <- Evt{ cmd : "quit"}
-    em.wg.Wait()
-}
-
-
 func (em *EVENTMODULE)moduleRun(){
-    defer em.wg.Done()
-    em.run = true
-    for em.run == true {
+    defer func(){
+        em.log.Printf("Exit EVENTMODULE \n");
+        em.wg.Done()
+    }()
+    for {
         select {
             case evt := <-em.iChan:
-                if(evt.cmd == "quit"){
-                    break
-                }
                 em.processEvt(evt)
+            case cmd :=<-em.ctrlChan:
+                if(cmd == "quit"){
+                    return
+                }
+
         }
     }
-    em.run = false
-    em.log.Printf("Exit EVENTMODULE \n");
     return
 }

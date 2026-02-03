@@ -140,26 +140,23 @@ func (rcm * RCMODULE)processEvt(evt Evt){
     rcm.processMsg(msg)
 }
 
-func (rcm * RCMODULE)moduleStop(){
-    rcm.run = false
-    rcm.iChan <- Evt{ cmd : "quit"}
-    rcm.wg.Wait()
-}
-
 func (rcm * RCMODULE)stateRun(){
-    defer rcm.wg.Done()
-    rcm.run = true
+    defer func() {
+        rcm.log.Printf("Exit RCMODULE \n");
+        rcm.wg.Done()
+    }()
 
-    for rcm.run == true {
+    for {
         select {
             case evt := <-rcm.iChan:
-                if(evt.cmd == "quit"){
-                    break
-                }
                 rcm.processEvt(evt)
+            case cmd := <-rcm.ctrlChan:
+                if(cmd == "quit"){
+                    return
+                }
+
+
         }
     }
-    rcm.run = false
-    rcm.log.Printf("Exit RCMODULE \n");
     return
 }

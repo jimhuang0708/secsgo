@@ -286,26 +286,22 @@ func (cm * COMMONMODULE)processEvt(evt Evt){
     cm.processMsg(msg)
 }
 
-func (cm * COMMONMODULE)moduleStop(){
-    cm.run = false
-    cm.iChan <- Evt{ cmd : "quit"}
-    cm.wg.Wait()
-}
 
 func (cm * COMMONMODULE)stateRun(){
-    defer cm.wg.Done()
-    cm.run = true
-
-    for cm.run == true {
+    defer func() {
+        cm.log.Printf("Exit COMMONMODULE \n");
+        cm.wg.Done()
+    }()
+    for  {
         select {
             case evt := <-cm.iChan:
-                if(evt.cmd == "quit"){
-                    break
-                }
                 cm.processEvt(evt)
+            case cmd :=<-cm.ctrlChan:
+                if(cmd == "quit"){
+                    return
+                }
+
         }
     }
-    cm.run = false
-    cm.log.Printf("Exit COMMONMODULE \n");
     return
 }

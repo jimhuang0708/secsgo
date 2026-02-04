@@ -39,21 +39,21 @@ type UICmd struct {
 }
 
 func CreateHostContext(deviceID int,mode string,addr string, hostLog *logger.Logger ) *HostContext {
-    baseLog := hostLog.With("context", "HostCtx", "deviceID", deviceID)
-    hc := &HostContext{
-                         BaseContext: BaseContext{
-                             UICmdChan :  make(chan string,10),
-                             UIEvtChan :  make(chan string,10),
-                             run : false,
-                             deviceID : deviceID,
-                             log: baseLog,
-                             wg : new(sync.WaitGroup),
-                         },
-                         log: baseLog,
-                         hostModule : CreateHOSTMODULE( baseLog.With("module", "HOSTMODULE")) ,
-                         dstModule : CreateDSTMODULE( baseLog.With("module", "DSTMODULE")),
-                         hsms_ss : nil,
-                     }
+    baseLog := hostLog.With("Context", "HostCtx", "deviceID", deviceID,"Session_mode", mode)
+    hc := &HostContext {
+              BaseContext: BaseContext{
+                  UICmdChan :  make(chan string,10),
+                  UIEvtChan :  make(chan string,10),
+                  run : false,
+                  deviceID : deviceID,
+                  log: baseLog,
+                  wg : new(sync.WaitGroup),
+              },
+              log: baseLog,
+              hostModule : CreateHOSTMODULE( baseLog.With("Module", "HOSTMODULE")) ,
+              dstModule : CreateDSTMODULE( baseLog.With("Module", "DSTMODULE")),
+              hsms_ss : nil,
+          }
     hc.BaseContext.attacher = hc
     hc.BaseContext.msgsender = hc
     data.SetLogger(baseLog.With("module", "DATA"));
@@ -80,8 +80,8 @@ func (hc *HostContext)regProcessModule(){
 }
 
 func (hc *HostContext)AttachSession(conn net.Conn,mode string){
-    ts := CreateTransport(conn, hc.log.With("component", "transport", "session_mode", mode))
-    hc.hsms_ss = CreateHSMS_SS(mode,ts,hc.deviceID, hc.log.With("component", "hsms_ss", "session_mode", mode))
+    ts := CreateTransport(conn, hc.log.With("Component", "transport"))
+    hc.hsms_ss = CreateHSMS_SS(mode,ts,hc.deviceID, hc.log.With("Component", "hsms_ss"))
 }
 
 func (hc *HostContext)SendMsg(e Evt){

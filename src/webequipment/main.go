@@ -288,10 +288,10 @@ func (conn *WsConn) readEquipment(ec *secs.EquipmentContext){
 
 func main() {
     h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{ Level: slog.LevelDebug, }) // h is slog.Handler
-    l := slog.New(h).With("module", "EquipmentMain") // *slog.Logger
+    l := slog.New(h).With("App", "EquipmentMain") // *slog.Logger
     eqLog = logger.New(l)
     /* init data module */
-    data.SetLogger(eqLog.With("module", "DATA"));
+    data.SetLogger(eqLog.With("Component", "DATA"));
     data.LoadConfig();
     data.InitSECSData();
     //data.ModuleStop()

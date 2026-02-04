@@ -227,7 +227,7 @@ func (conn *WsConn) readWebSocket(ctx context.Context,hc *secs.HostContext) {
 
 func main() {
     h := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{ Level: slog.LevelDebug, }) // h is slog.Handler
-    l := slog.New(h).With("module", "HostMain") // *slog.Logger
+    l := slog.New(h).With("App", "HostMain") // *slog.Logger
     hostLog = logger.New(l)
     router := gin.Default()
     router.Static("/site", "/srv/secs/")

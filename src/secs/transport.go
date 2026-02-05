@@ -36,6 +36,12 @@ func (t *Transport)ReadFullTimeout(p []byte,ms int)(string){
     return "OK"
 }
 
+func (t *Transport)TellUI(msgtype string , sml string){
+    item := &secsObj{ SML : sml , MsgType : msgtype, TimeStamp : time.Now().Format("15:04:05.000") }
+    uievt := &UIEvt{ EvtType : "Packet" , Source : "Transport" , Data : item }
+    jsonData, _ := json.Marshal(uievt)
+    t.oChan <- Evt{ cmd : "uievent" ,msg : string(jsonData)  }
+}
 
 func (t *Transport)ReadMsg()(string,sm.HSMSMessage){
     msgLen := make([]byte,4)
@@ -50,10 +56,7 @@ func (t *Transport)ReadMsg()(string,sm.HSMSMessage){
             info , _ := sm.Decode(append(msgLen,msg...))
             t.log.Printf("Get %s @transport\n",info.ToSml() )
             if(info != nil){
-                item := &secsObj{ SML : info.ToSml() , MsgType : "Receive" , TimeStamp : time.Now().Format("15:04:05.000") }
-                uievt := &UIEvt{ EvtType : "Packet" , Source : "Transport" , Data : item }
-                jsonData, _ := json.Marshal(uievt)
-                t.oChan <- Evt{ cmd : "uievent" ,msg : string(jsonData)  }
+                t.TellUI("Receive" , info.ToSml())
             }
 
             return "READOK" , info
@@ -80,10 +83,7 @@ func (t *Transport)SendAct( msg sm.HSMSMessage)(string){
     }
     if(msg != nil){
         t.log.Printf("SendAct %s\n",msg.ToSml());
-        item := secsObj{ SML : msg.ToSml() , MsgType : "Send" ,TimeStamp : time.Now().Format("15:04:05.000") }
-        uievt := &UIEvt{ EvtType : "Packet" , Source : "Transport" , Data : item }
-        jsonData, _ := json.Marshal(uievt)
-        t.oChan <- Evt{ cmd : "uievent" ,msg : string(jsonData)  }
+        t.TellUI("Send", msg.ToSml())
     }
     return "ACTOK"
 }

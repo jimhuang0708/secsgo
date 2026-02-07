@@ -68,7 +68,7 @@ func (em * EQCONSTMODULE)handleS2F15(msg *sm.DataMessage){
         em.sendS9FX(msg, 7)
         return ;
     }
-    ecs := make(map[uint32]interface{} )
+    ecs := make(map[uint32]sm.ElementType )
 
     for k := 0; k < item.Size() ; k++ {
         ecNode , err := item.(*sm.ListNode).Get(k);

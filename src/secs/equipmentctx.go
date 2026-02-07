@@ -288,7 +288,10 @@ func (ec *EquipmentContext) GetRun() bool{
 
 func (ec *EquipmentContext)SetVidUint(vid uint32 ,v uint32){
     ec.log.Printf("SetVidUint %d : %d",vid,v);
-    data.SetVidValue(vid,sm.CreateUintNode(4,v))
+    ok := data.SetVidValue(vid,sm.CreateUintNode(4,v))
+    if(ok == false){
+        ec.log.Printf("SetVidUint failed\n");
+    }
 }
 
 /* TODO : limit id should be fixed in config and can't not dynamically add by host*/
@@ -327,7 +330,7 @@ func (ec *EquipmentContext)SetEC(s string){
     if(node == nil){
         node = sm.CreateEmptyElementType()
     }
-    ecs := make(map[uint32]interface{} )
+    ecs := make(map[uint32]sm.ElementType )
     evtIdLst := data.GetEvtByName( "EQ_CONST_CHANGED")
     for k := 0; k < node.Size() ; k++ {
         ecNode , err := node.(*sm.ListNode).Get(k);

@@ -271,13 +271,13 @@ func cmdGetSVNameLst(svidLst []uint32, reply chan<- sm.ElementType) ACCESS_CMD {
 
 // setEC(ecs) int
 
-func SetEC(ecs map[uint32]interface{}) int {
+func SetEC(ecs map[uint32]sm.ElementType) int {
     reply := make(chan int, 1)
     gData.iChan <- cmdSetEC(ecs, reply)
     return <-reply
 }
 
-func cmdSetEC(ecs map[uint32]interface{}, reply chan<- int) ACCESS_CMD {
+func cmdSetEC(ecs map[uint32]sm.ElementType, reply chan<- int) ACCESS_CMD {
     return ACCESS_CMD{
         fn: func(sd *SECS_DATA) {
             ret := sd.setEC(ecs)

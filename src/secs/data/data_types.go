@@ -1,7 +1,7 @@
 package data
 
 import "sync"
-
+import sm "secs/secs_message"
 // ----------------------------
 // SECS-II JSON Node structure
 // ----------------------------
@@ -69,7 +69,7 @@ type SECSVARIABLE struct { // status/data variable
     id    uint32
     name  string
     units string
-    value interface{}
+    value sm.ElementType
     /*
        Equipment const variable
        Equipment const variable list format is not allowed

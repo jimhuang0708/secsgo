@@ -56,18 +56,30 @@ func (sd *SECS_DATA) isVidExist(id uint32) bool {
 func (sd *SECS_DATA) setVidValue(id uint32, v sm.ElementType) bool {
     _, ok := sd.svs[id]
     if ok {
-        sd.svs[id].value = v
-        return true
+        if(v.Type() == sd.svs[id].value.Type()){
+            sd.svs[id].value = v
+            return true
+        } else {
+            return false
+        }
     }
     _, ok = sd.dvs[id]
     if ok {
-        sd.dvs[id].value = v
-        return true
+        if(v.Type() == sd.dvs[id].value.Type()){
+            sd.dvs[id].value = v
+            return true
+        } else {
+            return false
+        }
     }
     _, ok = sd.ecs[id]
     if ok {
-        sd.ecs[id].value = v
-        return true
+        if(v.Type() == sd.ecs[id].value.Type()){
+            sd.ecs[id].value = v
+            return true
+        } else {
+            return false
+        }
     }
     return false
 }
@@ -303,7 +315,7 @@ func (sd *SECS_DATA) getSVNameLst(svidLst []uint32) sm.ElementType {
     return rootNode
 }
 
-func (sd *SECS_DATA) setEC(ecs map[uint32]interface{}) int {
+func (sd *SECS_DATA) setEC(ecs map[uint32]sm.ElementType) int {
     for k, v := range ecs {
         ec, ok := sd.ecs[k]
         if !ok {

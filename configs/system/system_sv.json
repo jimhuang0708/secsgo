@@ -6,7 +6,7 @@
       "id": 1,
       "nodevalue": {
         "type": "A",
-        "value": "MDLN"
+        "value": "SecsGo"
       }
     },
     {
@@ -15,7 +15,7 @@
       "id": 2,
       "nodevalue": {
         "type": "A",
-        "value": "SOFTREV"
+        "value": "Ver. 0.1"
       }
     },
     {
@@ -41,116 +41,6 @@
           0
         ]
       }
-    },
-    {
-      "name": "TEST",
-      "units": "kilo",
-      "id": 5,
-      "nodevalue": {
-        "type": "L",
-        "items": [
-          {
-            "type": "L",
-            "items": []
-          },
-          {
-            "type": "L",
-            "items": [
-              {
-                "type": "A",
-                "value": "text  12312text1"
-              },
-              {
-                "type": "U8",
-                "values": [1234567890,9876543210]
-              },
-              {
-                "type": "B",
-                "bytes": "0A0B"
-              },
-              {
-                "type": "F4",
-                "values": [1.1,2.2]
-              }
-
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "name": "temperature",
-      "units": "degree",
-      "id": 6,
-      "nodevalue": {
-        "type": "U4",
-        "values": [
-          50
-        ]
-      },
-      "limitevt": 307,
-      "max": {
-        "type": "U4",
-        "values": [
-          60
-        ]
-      },
-      "min": {
-        "type": "U4",
-        "values": [
-          40
-        ]
-      }
-    },
-    {
-      "name": "Rotation",
-      "units": "rpm",
-      "id": 7,
-      "nodevalue": {
-        "type": "U4",
-        "values": [
-          50
-        ]
-      },
-      "limitevt": 308,
-      "max": {
-        "type": "U4",
-        "values": [
-          100
-        ]
-      },
-      "min": {
-        "type": "U4",
-        "values": [
-          0
-        ]
-      }
-    },
-    {
-      "name": "Pressure",
-      "units": "psi",
-      "id": 8,
-      "nodevalue": {
-        "type": "U4",
-        "values": [
-          50
-        ]
-      },
-      "limitevt": 309,
-      "max": {
-        "type": "U4",
-        "values": [
-          100
-        ]
-      },
-      "min": {
-        "type": "U4",
-        "values": [
-          0
-        ]
-      }
     }
-
-
   ]
 }

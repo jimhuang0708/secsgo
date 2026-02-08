@@ -419,8 +419,8 @@ function bindEvents() {
 
     document.getElementById("s2f47").addEventListener("click", function () {
         dataitem = { "type": "L", "items": [
-                                               { "type" : "U4" , "values" : [ 6 ]  },
-                                               { "type" : "U4" , "values" : [ 7 ]  },
+                                               { "type" : "U4" , "values" : [ 1006 ]  },
+                                               { "type" : "U4" , "values" : [ 1007 ]  },
                                            ]
                    }
         cmd = { "stream" : 2 , "function" : 47 , "dataitem" : dataitem }

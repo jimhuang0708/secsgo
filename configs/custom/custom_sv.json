@@ -1,22 +1,113 @@
 {
 "customsv": [
     {
-      "name": "CUSTOM_MDLN",
-      "units": "",
-      "id": 1001,
+      "name": "TEST",
+      "units": "?",
+      "id": 1005,
       "nodevalue": {
-        "type": "A",
-        "value": "MDLN"
+        "type": "L",
+        "items": [
+          {
+            "type": "L",
+            "items": []
+          },
+          {
+            "type": "L",
+            "items": [
+              {
+                "type": "A",
+                "value": "This is test string"
+              },
+              {
+                "type": "U8",
+                "values": [1234567890,9876543210]
+              },
+              {
+                "type": "B",
+                "bytes": "0A0B"
+              },
+              {
+                "type": "F4",
+                "values": [1.1,2.2]
+              }
+
+            ]
+          }
+        ]
       }
     },
     {
-      "name": "CUSTOM_REV",
-      "units": "",
-      "id": 1002,
+      "name": "temperature",
+      "units": "degree",
+      "id": 1006,
       "nodevalue": {
-        "type": "A",
-        "value": "SOFTREV"
+        "type": "U4",
+        "values": [
+          50
+        ]
+      },
+      "limitevt": 1307,
+      "max": {
+        "type": "U4",
+        "values": [
+          60
+        ]
+      },
+      "min": {
+        "type": "U4",
+        "values": [
+          40
+        ]
+      }
+    },
+    {
+      "name": "Rotation",
+      "units": "rpm",
+      "id": 1007,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          50
+        ]
+      },
+      "limitevt": 1308,
+      "max": {
+        "type": "U4",
+        "values": [
+          100
+        ]
+      },
+      "min": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      }
+    },
+    {
+      "name": "Pressure",
+      "units": "psi",
+      "id": 1008,
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          50
+        ]
+      },
+      "limitevt": 1309,
+      "max": {
+        "type": "U4",
+        "values": [
+          100
+        ]
+      },
+      "min": {
+        "type": "U4",
+        "values": [
+          0
+        ]
       }
     }
+
   ]
 }

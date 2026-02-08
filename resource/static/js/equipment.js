@@ -75,7 +75,7 @@ function setLimitUI(p){
     let lowerEl = null
     let upperEl = null
     let name = ""
-    if( tokens[0] == 6) { //temperature
+    if( tokens[0] == 1006) { //temperature
         name = "temperature"
         if(tokens[1] == 0){ //
             lowerEl = document.querySelector(
@@ -100,7 +100,7 @@ function setLimitUI(p){
         }
     }
 
-    if( tokens[0] == 7) { //rpm
+    if( tokens[0] == 1007) { //rpm
         name = "rpm"
         if(tokens[1] == 2){ //
             lowerEl = document.querySelector(
@@ -123,7 +123,7 @@ function setLimitUI(p){
             params[name]['l2Lower'] = tokens[3]
         }
     }
-    if( tokens[0] == 8) { //temperature
+    if( tokens[0] == 1008) { //temperature
         name = "psi"
         if(tokens[1] == 4){ //
             lowerEl = document.querySelector(

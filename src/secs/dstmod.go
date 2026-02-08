@@ -56,6 +56,25 @@ func (dstm * DSTMODULE) PutEvt(e Evt) {
     dstm.iChan <- e
 }
 
+func (dstm * DSTMODULE) openSeek(dsName string,ckPnt int64)(*os.File,ACKC13){
+    file, err := os.OpenFile( dsName, os.O_RDONLY, 0666)
+    if(err != nil){
+        dstm.log.Printf("OpenFile failed : %v\n",err)
+        return nil,ACKC13UnknownDataSetName
+    } else {
+        dstm.log.Printf("OpenFile Success\n")
+    }
+
+    _ , err = file.Seek( ckPnt , io.SeekStart) // go to beginning
+    if err != nil {
+        file.Close()
+        return nil , ACKC13IllegalCheckpoint
+    } else {
+        dstm.log.Printf("SeekFile Success\n")
+    }
+    return file , ACKC13OK
+}
+
 func (dstm * DSTMODULE)sendS13F1(dsName string){
     msg :=  sm.CreateDataMessage( 13 , 1 , true , sm.CreateASCIINode(dsName) , -1 , 0 , "ALL" )
     act := Evt{ cmd : "send" , msg : msg ,ts : time.Now().Unix()}
@@ -79,13 +98,21 @@ func (dstm * DSTMODULE)handleS13F1(msg *sm.DataMessage){
     //
     // }
 
+    if _, err := os.Stat(dsName); err == nil {
+        // file exists
+        ack = ACKC13OK
+    } else {
+        ack = ACKC13UnknownDataSetName
+    }
     rootNode := sm.CreateListNode( sm.CreateASCIINode(dsName),sm.CreateBinaryNode( byte(ack) ) );
     replyMsg := sm.CreateDataMessage( 13, 2, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost() )
     act := Evt{ cmd : "send" , msg : replyMsg , ts : time.Now().Unix()  }
     dstm.oChan <- act
 
     //auto allow now
-    dstm.sendS13F3(1 , dsName  , 0)
+    if(ack == ACKC13OK){
+        dstm.sendS13F3(1 , dsName  , 0)
+    }
 
 }
 
@@ -140,16 +167,12 @@ func (dstm * DSTMODULE)handleS13F3(msg *sm.DataMessage){
         dstm.log.Printf("Send Handle Already open\n")
         ack = ACKC13HandleInUse
     } else {
-        file, err := os.OpenFile( dsName, os.O_RDONLY, 0666)
-        if(err != nil){
-            dstm.log.Printf("OpenFile failed : %v\n",err)
-            ack = ACKC13UnknownDataSetName
-            ckPnt = 0
-        } else {
-            dstm.log.Printf("OpenFile Success\n")
+        var file *os.File
+        file , ack = dstm.openSeek(dsName,int64(ckPnt))
+        if(ack == ACKC13OK){
+            dst := &DSTRANSFEROBJ{ handle:uint(handle) , buffer : nil , dsName : dsName , ckPnt : uint(ckPnt) , file : file , state : "IDLE" }
+            SEND_MAP[uint(handle)] = dst
         }
-        dst := &DSTRANSFEROBJ{ handle:uint(handle) , buffer : nil , dsName : dsName , ckPnt : uint(ckPnt) , file : file , state : "IDLE" }
-        SEND_MAP[uint(handle)] = dst
         dstm.log.Printf("Create Send Handle : %d\n",handle)
     }
     rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) , sm.CreateASCIINode(dsName),sm.CreateBinaryNode( byte(ack) ) , sm.CreateUintNode(1,RTYPE) , sm.CreateUintNode(4,RECLEN) );
@@ -215,6 +238,7 @@ func (dstm * DSTMODULE)handleS13F5(msg *sm.DataMessage){
     ack := ACKC13OK
     ckPnt := int64(0)
     buffer := make([]byte,  readLen)
+    filDataLstNode := sm.CreateListNode()
     if sendds , found := SEND_MAP[uint(handle)]; found {
         dstm.log.Printf("SEND Handle found\n")
         n , err := sendds.file.Read(buffer)
@@ -225,12 +249,14 @@ func (dstm * DSTMODULE)handleS13F5(msg *sm.DataMessage){
             ack = ACKC13EndOfData
             dstm.log.Printf("SEND Handle file reach end\n")
         }
+        filDataLstNode = sm.CreateListNode(sm.CreateBinaryNode(buffer...))
 
     } else {
-        dstm.log.Printf("SEND Handle not found\n",handle)
+        dstm.log.Printf("SEND Handle not found %v\n",handle)
         ack = ACKC13NoOpenDataSet
+        ckPnt = 0xFFFFFFFF
+        buffer = buffer[:0]
     }
-    filDataLstNode := sm.CreateListNode(sm.CreateBinaryNode(buffer...))
     rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) , sm.CreateBinaryNode( byte(ack) ) , sm.CreateUintNode(4,ckPnt) , filDataLstNode );
     replyMsg := sm.CreateDataMessage( 13, 6, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost() )
     act := Evt{ cmd : "send" , msg : replyMsg , ts : time.Now().Unix()  }
@@ -250,15 +276,15 @@ func (dstm * DSTMODULE)handleS13F6(msg *sm.DataMessage){
     ack := ackNode.Values().([]byte)[0]
     ckPntNode  , err := item.(*sm.ListNode).Get(2)
     ckPnt := ckPntNode.Values().([]uint64)[0]
-    filDataLstNode , err := item.(*sm.ListNode).Get(3)
-    filDataNode , err := filDataLstNode.(*sm.ListNode).Get(0)
-    filData := filDataNode.Values().([]byte)
-    dstm.log.Printf("handle : %d | ack : %d | ckPnt : %d | filData : %v\n",handle,ack,ckPnt,filData);
     if entry, ok := RECV_MAP[uint(handle)]; ok {
         if(ACKC13(ack) == ACKC13OK){
+            filDataLstNode , _ := item.(*sm.ListNode).Get(3)
+            filDataNode , _ := filDataLstNode.(*sm.ListNode).Get(0)
+            filData := filDataNode.Values().([]byte)
             entry.file.Write(filData)
             entry.ckPnt = uint(ckPnt)
             entry.state = "IDLE"
+            dstm.log.Printf("handle : %d | ack : %d | ckPnt : %d | filData : %v\n",handle,ack,ckPnt,filData);
         } else if(ACKC13(ack) == ACKC13EndOfData){
             dstm.log.Printf(" HandleS13F6 handle %d | ack : ACKC13EndOfData",handle);
             delete(RECV_MAP,uint(handle))
@@ -266,6 +292,7 @@ func (dstm * DSTMODULE)handleS13F6(msg *sm.DataMessage){
         } else {
             //TODO : need recovery
             entry.state = "IDLE"
+            delete(RECV_MAP,uint(handle))
             dstm.log.Printf("Err : HandleS13F6 handle %d | ack : %d ",handle,ack);
         }
     }
@@ -318,6 +345,41 @@ func (dstm * DSTMODULE)handleS13F8(msg *sm.DataMessage){
     return
 }
 
+//reset
+
+func (dstm * DSTMODULE)sendS13F9(handle uint){
+    for k ,v := range RECV_MAP {
+        v.file.Close()
+        delete(RECV_MAP, k )
+    }
+    for k ,v := range SEND_MAP {
+        v.file.Close()
+        delete(SEND_MAP, k )
+    }
+    msg :=  sm.CreateDataMessage( 13 , 9 , true , sm.CreateEmptyElementType()  , -1 , 0 , "ALL" )
+    act := Evt{ cmd : "send" , msg : msg ,ts : time.Now().Unix()}
+    dstm.oChan <- act
+}
+
+func (dstm * DSTMODULE)handleS13F9(msg *sm.DataMessage){
+    for k ,v := range RECV_MAP {
+        v.file.Close()
+        delete(RECV_MAP, k )
+    }
+    for k ,v := range SEND_MAP {
+        v.file.Close()
+        delete(SEND_MAP, k )
+    }
+    replymsg :=  sm.CreateDataMessage( 13 , 10 , true , sm.CreateEmptyElementType()  , -1 , 0 , "ALL" )
+    act := Evt{ cmd : "send" , msg : replymsg  , ts : time.Now().Unix()  }
+    dstm.oChan <- act
+}
+
+func (dstm * DSTMODULE)handleS13F10(msg *sm.DataMessage){
+    return
+}
+
+
 
 func (dstm * DSTMODULE)processMsg(msg *sm.DataMessage)(bool){
     if(msg.StreamCode() == 13){
@@ -345,7 +407,12 @@ func (dstm * DSTMODULE)processMsg(msg *sm.DataMessage)(bool){
         if(msg.FunctionCode() == 8){
             dstm.handleS13F8(msg)
         }
-
+        if(msg.FunctionCode() == 9){
+            dstm.handleS13F9(msg)
+        }
+        if(msg.FunctionCode() == 10){
+            dstm.handleS13F10(msg)
+        }
     }
     return true
 }

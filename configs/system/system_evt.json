@@ -44,27 +44,6 @@
             "id"    : 306,
             "rpt"   : [],
             "enable": true
-        },
-        {
-            "name" : "limit_evt_vid6",
-            "id"    : 307,
-            "rpt"   : [2],
-            "enable": true
-        },
-        {
-            "name" : "limit_evt_vid7",
-            "id"    : 308,
-            "rpt"   : [3],
-            "enable": true
-        },
-        {
-            "name" : "limit_evt_vid8",
-            "id"    : 309,
-            "rpt"   : [4],
-            "enable": true
         }
-
-
-
     ]
 }

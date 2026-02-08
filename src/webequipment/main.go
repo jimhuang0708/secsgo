@@ -211,35 +211,35 @@ func (conn *WsConn) readWebSocket(ctx context.Context, ec *secs.EquipmentContext
         if( TypeStr == "temperature"){
             v := genericData["data"].(map[string]interface{})["value"].(float64)
             //v,_ := strconv.Atoi(data);
-            ec.SetVidUint(6,uint32(v))
+            ec.SetVidUint(1006,uint32(v))
         }
         if( TypeStr == "rpm"){
             v := genericData["data"].(map[string]interface{})["value"].(float64)
             //v,_ := strconv.Atoi(data);
-            ec.SetVidUint(7,uint32(v))
+            ec.SetVidUint(1007,uint32(v))
         }
         if( TypeStr == "psi"){
             v := genericData["data"].(map[string]interface{})["value"].(float64)
             //v,_ := strconv.Atoi(data);
-            ec.SetVidUint(8,uint32(v))
+            ec.SetVidUint(1008,uint32(v))
         }
         if( TypeStr == "temperature_limit"){
             limitid := genericData["data"].(map[string]interface{})["limitid"].(float64)
             upperDB := genericData["data"].(map[string]interface{})["upperdb"].(float64)
             lowerDB := genericData["data"].(map[string]interface{})["lowerdb"].(float64)
-            ec.SetVidLimit( 6 ,uint32(limitid),uint32(upperDB),uint32(lowerDB))
+            ec.SetVidLimit( 1006 ,uint32(limitid),uint32(upperDB),uint32(lowerDB))
         }
         if( TypeStr == "rpm_limit"){
             limitid := genericData["data"].(map[string]interface{})["limitid"].(float64)
             upperDB := genericData["data"].(map[string]interface{})["upperdb"].(float64)
             lowerDB := genericData["data"].(map[string]interface{})["lowerdb"].(float64)
-            ec.SetVidLimit( 7 ,uint32(limitid),uint32(upperDB),uint32(lowerDB))
+            ec.SetVidLimit( 1007 ,uint32(limitid),uint32(upperDB),uint32(lowerDB))
         }
         if( TypeStr == "psi_limit"){
             limitid := genericData["data"].(map[string]interface{})["limitid"].(float64)
             upperDB := genericData["data"].(map[string]interface{})["upperdb"].(float64)
             lowerDB := genericData["data"].(map[string]interface{})["lowerdb"].(float64)
-            ec.SetVidLimit( 8 ,uint32(limitid),uint32(upperDB),uint32(lowerDB))
+            ec.SetVidLimit( 1008 ,uint32(limitid),uint32(upperDB),uint32(lowerDB))
         }
         if( TypeStr == "communication" ) {
             v := genericData["data"].(map[string]interface{})["value"].(string)

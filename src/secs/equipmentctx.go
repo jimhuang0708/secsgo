@@ -187,7 +187,7 @@ func (ec *EquipmentContext )doEvt(act Evt){
         return
     }
 
-    if(act.cmd == "send" || act.cmd == "sendforce"){//proxy only
+    if(act.cmd == "send"){//proxy only
         ec.ctrlState.iChan <- act
         return
     }

@@ -49,14 +49,6 @@ func (cs * CTRLSTATE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
     return
 }
 
-func (cs * CTRLSTATE)trigEvtForce(e uint32,dvCtx map[uint32]interface{}){
-    p := make(map[string]interface{})
-    p["evtid"] = e
-    p["dvctx"] = dvCtx
-    cs.oChan <- Evt{ cmd : "TRIG_EVENT_FORCE" , msg : p ,ts : time.Now().Unix()  }
-    return
-}
-
 
 /*
 0 : no change,//previous control state use
@@ -93,11 +85,30 @@ func (cs * CTRLSTATE)stateToCode(CTRLSTATE string,ctrlSubState string)(int){
 
 }
 
+func (cs * CTRLSTATE)codeToState(code int)(string , string){
+    switch code {
+    case 1:
+        return "OFFLINE" , "EQUIPMENT"
+    case 2:
+        return "OFFLINE" , "ATTEMPTONLINE"
+    case 3:
+        return "OFFLINE" , "HOST"
+    case 4:
+        return "ONLINE" , "LOCAL"
+    case 5:
+        return "ONLINE" , "REMOTE"
+    default:
+        return "" , ""
+    }
+}
+
+
+
 func (cs * CTRLSTATE)updateCTRLSTATE(CTRLSTATE string,ctrlSubState string){
     stateCodeNow := cs.stateToCode(cs.ctrlState,cs.ctrlSubState)
     stateCodeWill := cs.stateToCode(CTRLSTATE,ctrlSubState)
-    cs.ctrlState = CTRLSTATE
-    cs.ctrlSubState = ctrlSubState
+    //cs.ctrlState = CTRLSTATE
+    //cs.ctrlSubState = ctrlSubState
     if(stateCodeNow != stateCodeWill){
         //changed
         //fill related sv
@@ -105,18 +116,24 @@ func (cs * CTRLSTATE)updateCTRLSTATE(CTRLSTATE string,ctrlSubState string){
         data.SetVidValue(4 , sm.CreateUintNode(4,stateCodeNow ))
         dvContext := make(map[uint32]interface{})
         vidList := data.GetDvByName( "CURRENT_STATE_NAME")
-        if(stateCodeWill == 1 || stateCodeWill == 2 || stateCodeWill == 3){
+        //Attemponline don't need issue event
+        if(stateCodeWill == 1 ||  stateCodeWill == 3){
             dvContext[ vidList[0] ] = sm.CreateASCIINode("OFFLINE")
-            cs.trigEvtForce(302,dvContext) //offline
+            evtids := data.GetEvtByName("CONTROL_STATE_OFFLINE")
+            cs.trigEvt(evtids[0],dvContext) //offline
+        } else if( stateCodeWill == 2) {
+            cs.ctrlState = "OFFLINE"
+            cs.ctrlSubState = "ATTEMPTONLINE"
         } else if(stateCodeWill == 4){
             dvContext[ vidList[0] ] =  sm.CreateASCIINode("ONLINE_LOCAL")
-            cs.trigEvtForce(300,dvContext) //local
+            evtids := data.GetEvtByName("CONTROL_STATE_LOCAL")
+            cs.trigEvt(evtids[0],dvContext) //local
         } else if(stateCodeWill == 5){
             dvContext[ vidList[0] ] =  sm.CreateASCIINode("ONLINE_REMOTE")
-            cs.trigEvtForce(301,dvContext) //remote
+            evtids := data.GetEvtByName("CONTROL_STATE_REMOTE")
+            cs.trigEvt(evtids[0],dvContext) //remote
        }
     }
-    cs.TellUI()
     return
 }
 
@@ -347,6 +364,34 @@ func (cs *CTRLSTATE)processEvt(evt Evt ,sessionID string){
     }
 }
 
+func (cs *CTRLSTATE) IsCtrlStateChangEvt(evt Evt) (bool){
+    msg := evt.msg.(*sm.DataMessage)
+    if( msg.StreamCode() == 6){
+        if(msg.FunctionCode() == 11 ){
+            item , err := msg.Get()
+            if(err != nil || item.Type()!= "L" || item.Size() != 3 ){
+                return false;
+            }
+            evtIDNode , err := item.(*sm.ListNode).Get(1)
+            if(evtIDNode.Type() != "U4" || err != nil ){
+                return false
+            }
+            evtID := uint32(evtIDNode.Values().([]uint64)[0])
+            evtTarget := data.GetEvtByName("CONTROL_STATE_OFFLINE" , "CONTROL_STATE_LOCAL" ,"CONTROL_STATE_REMOTE")
+
+
+            if(evtID == evtTarget[0] || evtID == evtTarget[1] || evtID == evtTarget[2]){
+                _ , codeNode , _  , _  , _ , _ := data.GetVidElementType(3)
+                code := int(codeNode.(sm.ElementType).Values().([]uint64)[0])
+                cs.log.Printf("IsCtrlStateChangEvt detect statecode : %d\n" , code);
+                cs.ctrlState , cs.ctrlSubState = cs.codeToState(code)
+                cs.TellUI()
+                return true
+            }
+        }
+    }
+    return false
+}
 
 func waitAny(sessions map[string]*COMMUNICATESTATE) (Evt, string, bool) {
     cases := make([]reflect.SelectCase, 0, len(sessions))
@@ -391,10 +436,9 @@ func (cs *CTRLSTATE)stateRun(){
         select {
             case evt := <-cs.iChan:
                 /*
-                  after enter offline state , equipment have to send offline event
-                  so use sendforce to send event
+                  cs.IsCtrlStateChangEvt(evt) for send ctrl change event first then change ctrl state
                 */
-                if(cs.ctrlState == "OFFLINE" && evt.cmd != "sendforce" ){
+                if(cs.IsCtrlStateChangEvt(evt) == false && cs.ctrlState == "OFFLINE" ){
                     cs.log.Printf("State is offline,don't send anything back\n");
                     break
                 }

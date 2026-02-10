@@ -392,6 +392,11 @@ func (lm * LIMITMONITORMODULE)processMsg(msg *sm.DataMessage)(bool){
 }
 
 func (lm * LIMITMONITORMODULE)processEvt(evt Evt){
+    if(evt.cmd == "executefn"){
+        fn := evt.msg.(func())
+        fn()
+        return
+    }
     msg := evt.msg.(*sm.DataMessage)
     lm.processMsg(msg)
 }

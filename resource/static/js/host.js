@@ -372,7 +372,7 @@ function bindEvents() {
                                     {
                                         "type": "U4",
                                         "values": [
-                                            6
+                                            1006
                                         ]
                                     },
                                     {

@@ -195,18 +195,7 @@ func (conn *WsConn) readWebSocket(ctx context.Context, ec *secs.EquipmentContext
         TypeStr := genericData["type"].(string)
         if( TypeStr == "mode"){
             data := genericData["data"].(map[string]interface{})["value"].(string)
-            if(data == "online_request"){
-                ec.Operate_Ctrl(0)
-            }
-            if(data == "offline"){
-                ec.Operate_Ctrl(1)
-            }
-            if(data == "online_local"){
-                ec.Operate_Ctrl(2)
-            }
-            if(data == "online_remote"){
-                ec.Operate_Ctrl(3)
-            }
+            ec.Operate_Ctrl(data)
         }
         if( TypeStr == "temperature"){
             v := genericData["data"].(map[string]interface{})["value"].(float64)

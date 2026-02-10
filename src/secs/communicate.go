@@ -197,7 +197,6 @@ func (cs *COMMUNICATESTATE)processEvt(evt Evt){
         return
     }
 
-
     if( cs.comState == "ENABLED" ){
         if( evt.cmd == "NOTIFY_SELECTED" ) {
             cs.comEnabledSubState = "WAIT_DELAY"
@@ -234,6 +233,14 @@ func (cs *COMMUNICATESTATE )handleInput(evt Evt){
     if(evt.cmd == "WAITS1F14_TIMEOUT"){
         cs.log.Printf("Resend S1F13\n");
         cs.communicateTimeout()
+        return
+    }
+    if(evt.cmd == "operation"){
+        if(evt.msg.(string) == "SET_COM_ENABLE"){
+            cs.OP_SetComEnabled(true)
+        } else if(evt.msg.(string) == "SET_COM_DISABLE"){
+            cs.OP_SetComEnabled(false)
+        }
         return
     }
     cs.hsms_ss.iChan <- evt

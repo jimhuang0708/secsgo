@@ -257,7 +257,6 @@ func (ec *EquipmentContext )StateStop(){
     ec.run = false
 }
 
-////////////
 
 func (ec *EquipmentContext)AttachSession(conn net.Conn,mode string){
     ts := CreateTransport(conn, ec.log.With("Component", "transport"));
@@ -266,22 +265,20 @@ func (ec *EquipmentContext)AttachSession(conn net.Conn,mode string){
     CreateCOMMUNICATESTATE( data.G_STATE.DEFAULT_COMSTATE , ss, ec.ctrlState, ec.log.With("Component", "communicate"));
 }
 
-func (ec *EquipmentContext)Operate_Ctrl(value int){
-    if(value == 0){
-        ec.ctrlState.OP_AttemptOnLine()
-    }
-    if(value == 1){
-        ec.ctrlState.OP_OffLine()
-    }
-    if(value == 2){
-        ec.ctrlState.OP_Local()
-    }
-    if(value == 3){
-        ec.ctrlState.OP_Remote()
+////////////////////API
+func (ec *EquipmentContext)Operate_Ctrl(op string){
+    ec.ctrlState.iChan <- Evt{ cmd : "operation" , msg : op }
+}
+
+func (ec *EquipmentContext)SetCommunicate(enable bool){
+    ec.log.Printf("SetCommunicate %t",enable);
+    if(enable){
+        ec.ctrlState.iChan <- Evt{ cmd : "operation" , msg : "SET_COM_ENABLE" }
+    } else {
+        ec.ctrlState.iChan <- Evt{ cmd : "operation" , msg : "SET_COM_DISABLE" }
     }
 }
 
-////////////////////API
 func (ec *EquipmentContext) GetRun() bool{
     return ec.run
 }
@@ -297,12 +294,11 @@ func (ec *EquipmentContext)SetVidUint(vid uint32 ,v uint32){
 /* TODO : limit id should be fixed in config and can't not dynamically add by host*/
 func (ec *EquipmentContext)SetVidLimit(vid uint32 ,limitid uint32,upperDB uint32,lowerDB uint32){
     ec.log.Printf("SetVidLimit vid : %d | limitid : %d | upperdb : %d | lowerdb : %d",vid,limitid,upperDB,lowerDB);
-    ec.lmtModule.setLimits( vid , limitid , sm.CreateUintNode(4,upperDB) , sm.CreateUintNode(4,lowerDB)  )
-}
+    fn := func() {
+              ec.lmtModule.setLimits( vid, limitid, sm.CreateUintNode(4, upperDB), sm.CreateUintNode(4, lowerDB) )
+          };
 
-func (ec *EquipmentContext)SetCommunicate(enable bool){
-    ec.log.Printf("SetCommunicate %t",enable);
-    ec.ctrlState.SetCommunicate(enable)
+    ec.lmtModule.iChan <- Evt{ cmd : "executefn" , msg : fn }
 }
 
 func (ec *EquipmentContext)SendText(text string){
@@ -319,8 +315,6 @@ func (ec *EquipmentContext)SendRecognizeEvent(){
 func (ec *EquipmentContext)SetAlarm(id uint64,v int){
     ec.alarmModule.setAlarm(id,v)
 }
-
-
 
 func (ec *EquipmentContext)SetEC(s string){
     raw := []byte(s)

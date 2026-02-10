@@ -276,19 +276,19 @@ function bindEvents() {
 
     // 第二組：四個按鈕
     document.getElementById("btnOnlineRequest").addEventListener("click", function () {
-        sendControlEvent("mode", { value: "online_request" });
+        sendControlEvent("mode", { value: "ATTEMPTONLINE" });
     });
 
     document.getElementById("btnOffline").addEventListener("click", function () {
-        sendControlEvent("mode", { value: "offline" });
+        sendControlEvent("mode", { value: "OFFLINE" });
     });
 
     document.getElementById("btnOnlineRemote").addEventListener("click", function () {
-        sendControlEvent("mode", { value: "online_remote" });
+        sendControlEvent("mode", { value: "ONLINE_REMOTE" });
     });
 
     document.getElementById("btnOnlineLocal").addEventListener("click", function () {
-        sendControlEvent("mode", { value: "online_local" });
+        sendControlEvent("mode", { value: "ONLINE_LOCAL" });
     });
 
     document.getElementById("btnSendText").addEventListener("click", function () {

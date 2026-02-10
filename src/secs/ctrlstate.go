@@ -302,6 +302,24 @@ func (cs * CTRLSTATE)OP_Remote(){
     }
 }
 
+func (cs * CTRLSTATE)Operate_Ctrl(cmd string){
+    if(cmd == "ATTEMPTONLINE"){
+        cs.OP_AttemptOnLine()
+    }
+    if(cmd == "OFFLINE"){
+        cs.OP_OffLine()
+    }
+    if(cmd == "ONLINE_LOCAL"){
+        cs.OP_Local()
+    }
+    if(cmd == "ONLINE_REMOTE"){
+        cs.OP_Remote()
+    }
+    if(cmd == "SET_COM_ENABLE" || cmd == "SET_COM_DISABLE"){
+        cs.SetCommunicate(cmd)
+    }
+}
+
 func (cs *CTRLSTATE)processMsg(msg *sm.DataMessage)(bool){
     if( msg.StreamCode() == 1){
         if(msg.FunctionCode() == 0 ){
@@ -413,12 +431,37 @@ func waitAny(sessions map[string]*COMMUNICATESTATE) (Evt, string, bool) {
     return v.Interface().(Evt), keys[i], ok
 }
 
-func (cs *CTRLSTATE)SetCommunicate(v bool) {
+func (cs *CTRLSTATE)SetCommunicate(op string) {
     for _ , s := range cs.session {
-        s.OP_SetComEnabled(v)
+        s.iChan <- Evt { cmd : "operation" , msg : op}
     }
 }
 
+func (cs *CTRLSTATE)ProcessEvt(evt Evt){
+    if(evt.cmd == "send"){
+        /*
+        cs.IsCtrlStateChangEvt(evt) for send ctrl change event first then change ctrl state
+       */
+        if(cs.IsCtrlStateChangEvt(evt) == false && cs.ctrlState == "OFFLINE" ){
+            cs.log.Printf("State is offline,don't send anything back\n");
+            return
+        }
+        sourceHost := evt.msg.(*sm.DataMessage).SourceHost()
+        cs.log.Printf("send back source host [%s]\n",sourceHost);
+        if( sourceHost == "ALL"){
+            for _, comm := range cs.session {
+                comm.iChan<-evt
+            }
+        } else {
+            cs.session[sourceHost].iChan <- evt
+        }
+        return
+    }
+    if(evt.cmd == "operation"){
+        cs.Operate_Ctrl(evt.msg.(string))
+    }
+
+}
 
 func (cs *CTRLSTATE)stateRun(){
     ticker := time.NewTicker(10 * time.Millisecond)
@@ -435,22 +478,7 @@ func (cs *CTRLSTATE)stateRun(){
     for  {
         select {
             case evt := <-cs.iChan:
-                /*
-                  cs.IsCtrlStateChangEvt(evt) for send ctrl change event first then change ctrl state
-                */
-                if(cs.IsCtrlStateChangEvt(evt) == false && cs.ctrlState == "OFFLINE" ){
-                    cs.log.Printf("State is offline,don't send anything back\n");
-                    break
-                }
-                sourceHost := evt.msg.(*sm.DataMessage).SourceHost()
-                cs.log.Printf("send back source host [%s]\n",sourceHost);
-                if( sourceHost == "ALL"){
-                    for _, comm := range cs.session {
-                        comm.iChan<-evt
-                    }
-                } else {
-                    cs.session[sourceHost].iChan <- evt
-                }
+                cs.ProcessEvt(evt)
             case <-ticker.C:
                 evt, sessionID, ok := waitAny(cs.session)
                 if ok {
@@ -460,7 +488,6 @@ func (cs *CTRLSTATE)stateRun(){
                 if(cmd == "quit"){
                     return
                 }
-
         }
     }
     return

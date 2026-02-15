@@ -124,6 +124,11 @@ func (am * ALARMMODULE)processMsg(msg *sm.DataMessage)(bool){
 
 
 func (am * ALARMMODULE)processEvt(evt Evt){
+    if(evt.cmd == "executefn"){
+        fn := evt.msg.(func())
+        fn()
+        return
+    }
     am.processMsg(evt.msg.(*sm.DataMessage))
 }
 

@@ -113,6 +113,11 @@ func (tm * TERMINALMODULE)processMsg(msg *sm.DataMessage)(bool){
 }
 
 func (tm * TERMINALMODULE)processEvt(evt Evt){
+    if(evt.cmd == "executefn"){
+        fn := evt.msg.(func())
+        fn()
+        return
+    }
     msg := evt.msg.(*sm.DataMessage)
     tm.processMsg(msg)
 }

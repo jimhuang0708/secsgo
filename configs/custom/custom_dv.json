@@ -1,7 +1,7 @@
 {
 "customdv": [
     {
-      "name": "ECID_CHANGED",
+      "name": "ECID_CHANGED_CUSTOM",
       "units": "",
       "id": 1110,
       "nodevalue": {
@@ -12,7 +12,7 @@
       }
     },
     {
-      "name": "EC_VALUE_CHANGED",
+      "name": "EC_VALUE_CHANGED_CUSTOM",
       "units": "",
       "id": 1111,
       "nodevalue": {

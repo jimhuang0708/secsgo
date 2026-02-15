@@ -4,6 +4,7 @@ import (
     "time"
     "secs/data"
     "secs/logger"
+    "errors"
     sm "secs/secs_message"
 )
 
@@ -61,6 +62,40 @@ func (em * EQCONSTMODULE)handleS2F13(msg *sm.DataMessage){
 
 }
 
+
+func (em * EQCONSTMODULE)SetECS(node sm.ElementType,trig bool)(error,byte){
+    ecs := make(map[uint32]sm.ElementType )
+    evtIdLst := data.GetEvtByName( "EQ_CONST_CHANGED")
+    for k := 0; k < node.Size() ; k++ {
+        ecNode , err := node.(*sm.ListNode).Get(k);
+        if(ecNode.Type() != "L" || ecNode.Size() != 2  || err != nil ){
+            return errors.New("wrong type") , 0;
+        }
+        ecIDNode , err := ecNode.(*sm.ListNode).Get(0)
+        if(ecIDNode.Type() != "U4" || ecIDNode.Size() != 1  || err != nil ){
+            return errors.New("wrong type") , 0 ;
+        }
+        ecID := uint32(ecIDNode.Values().([]uint64)[0])
+        ecValueNode , err := ecNode.(*sm.ListNode).Get(1)
+        ecs[ecID] = ecValueNode
+
+        if(trig){
+            dvContext := make(map[uint32]interface{})
+            vidList := data.GetDvByName("ECID_CHANGED","EC_VALUE_CHANGED","PREVIOUS_EC_VALUE")
+            dvContext[ vidList[0] ] = sm.CreateUintNode(4,ecID)
+            dvContext[ vidList[1] ] = ecValueNode.Clone()
+            ecIDLst := make([]uint32, 1 )
+            ecIDLst[0] = ecID
+            oldNodeLst := data.GetEC(ecIDLst)
+            oldNode , _ := oldNodeLst.(*sm.ListNode).Get(0)
+            dvContext[ vidList[2] ] = oldNode.Clone()
+            em.trigEvt(evtIdLst[0],dvContext)
+        }
+    }
+    ret := data.SetEC(ecs)
+    return nil , byte(ret)
+}
+
 func (em * EQCONSTMODULE)handleS2F15(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "L" || item.Size() < 1 || err != nil){
@@ -68,32 +103,23 @@ func (em * EQCONSTMODULE)handleS2F15(msg *sm.DataMessage){
         em.sendS9FX(msg, 7)
         return ;
     }
-    ecs := make(map[uint32]sm.ElementType )
-
-    for k := 0; k < item.Size() ; k++ {
-        ecNode , err := item.(*sm.ListNode).Get(k);
-        if(ecNode.Type() != "L" || ecNode.Size() != 2  || err != nil ){
-            em.log.Printf("error S2F15 format\n");
-            em.sendS9FX(msg, 7)
-            return;
-        }
-        ecIDNode , err := ecNode.(*sm.ListNode).Get(0)
-        if(ecIDNode.Type() != "U4" || ecIDNode.Size() != 1  || err != nil ){
-            em.log.Printf("error S2F15 format\n");
-            em.sendS9FX(msg, 7)
-            return;
-        }
-        ecID := uint32(ecIDNode.Values().([]uint64)[0])
-        ecValueNode , err := ecNode.(*sm.ListNode).Get(1)
-        ecs[ecID] = ecValueNode
+    err , ret := em.SetECS(item,false)
+    if(err != nil){
+        em.log.Printf("Error S2F15 format\n")
+        em.sendS9FX(msg, 7)
+        return
     }
-    ret := data.SetEC(ecs)
     em.log.Printf("ret : %v \n",ret);
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 16, false,  sm.CreateBinaryNode( byte( ret) )  ,
                   -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     em.oChan <- act
-
 }
+
+func (em * EQCONSTMODULE)operatorSetECS(node sm.ElementType){
+    err , ret := em.SetECS(node,true)
+    em.log.Printf("operatorSetECS | ret : %d , error : %v \n",ret,err);
+}
+
 func (em * EQCONSTMODULE)handleS2F29(msg *sm.DataMessage){
     item , err := msg.Get()
     if( item.Type() != "L" || err != nil){
@@ -136,6 +162,12 @@ func (em * EQCONSTMODULE)processMsg(msg *sm.DataMessage)(bool){
 }
 
 func (em * EQCONSTMODULE)processEvt(evt Evt){
+    if(evt.cmd == "executefn"){
+        fn := evt.msg.(func())
+        fn()
+        return
+    }
+
     msg := evt.msg.(*sm.DataMessage)
     em.processMsg(msg)
 }

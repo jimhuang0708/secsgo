@@ -295,25 +295,33 @@ func (ec *EquipmentContext)SetVidUint(vid uint32 ,v uint32){
 func (ec *EquipmentContext)SetVidLimit(vid uint32 ,limitid uint32,upperDB uint32,lowerDB uint32){
     ec.log.Printf("SetVidLimit vid : %d | limitid : %d | upperdb : %d | lowerdb : %d",vid,limitid,upperDB,lowerDB);
     fn := func() {
-              ec.lmtModule.setLimits( vid, limitid, sm.CreateUintNode(4, upperDB), sm.CreateUintNode(4, lowerDB) )
-          };
-
+        ec.lmtModule.setLimits( vid, limitid, sm.CreateUintNode(4, upperDB), sm.CreateUintNode(4, lowerDB) )
+    };
     ec.lmtModule.iChan <- Evt{ cmd : "executefn" , msg : fn }
 }
 
 func (ec *EquipmentContext)SendText(text string){
     ec.log.Printf("SendText %s",text);
-    ec.terminalModule.sendS10F1(text)
+    fn := func() {
+        ec.terminalModule.sendS10F1(text)
+    }
+    ec.terminalModule.iChan <- Evt{ cmd : "executefn" , msg : fn }
 }
 
 func (ec *EquipmentContext)SendRecognizeEvent(){
     ec.log.Printf("SendRecognizeEvent");
-    ec.terminalModule.sendRecognizeEvent()
+    fn := func() {
+        ec.terminalModule.sendRecognizeEvent()
+    }
+    ec.terminalModule.iChan <- Evt{ cmd : "executefn" , msg : fn }
 }
 
 
 func (ec *EquipmentContext)SetAlarm(id uint64,v int){
-    ec.alarmModule.setAlarm(id,v)
+    fn := func() {
+        ec.alarmModule.setAlarm(id,v)
+    }
+    ec.alarmModule.iChan <- Evt{ cmd : "executefn" , msg : fn }
 }
 
 func (ec *EquipmentContext)SetEC(s string){
@@ -324,36 +332,10 @@ func (ec *EquipmentContext)SetEC(s string){
     if(node == nil){
         node = sm.CreateEmptyElementType()
     }
-    ecs := make(map[uint32]sm.ElementType )
-    evtIdLst := data.GetEvtByName( "EQ_CONST_CHANGED")
-    for k := 0; k < node.Size() ; k++ {
-        ecNode , err := node.(*sm.ListNode).Get(k);
-        if(ecNode.Type() != "L" || ecNode.Size() != 2  || err != nil ){
-            ec.log.Printf("error SetEC format");
-            return;
-        }
-        ecIDNode , err := ecNode.(*sm.ListNode).Get(0)
-        if(ecIDNode.Type() != "U4" || ecIDNode.Size() != 1  || err != nil ){
-            ec.log.Printf("error SetEC format");
-            return;
-        }
-        ecID := uint32(ecIDNode.Values().([]uint64)[0])
-        ecValueNode , err := ecNode.(*sm.ListNode).Get(1)
-        ecs[ecID] = ecValueNode
-
-        dvContext := make(map[uint32]interface{})
-        vidList := data.GetDvByName("ECID_CHANGED","EC_VALUE_CHANGED","PREVIOUS_EC_VALUE")
-        dvContext[ vidList[0] ] = sm.CreateUintNode(4,ecID)
-        dvContext[ vidList[1] ] = ecValueNode.Clone()
-        ecIDLst := make([]uint32, 1 )
-        ecIDLst[0] = ecID
-        oldNodeLst := data.GetEC(ecIDLst)
-        oldNode , _ := oldNodeLst.(*sm.ListNode).Get(0)
-        dvContext[ vidList[2] ] = oldNode.Clone()
-        ec.ecModule.trigEvt(evtIdLst[0],dvContext)
+    fn := func() {
+        ec.ecModule.operatorSetECS(node)
     }
-    ret := data.SetEC(ecs)
-    ec.log.Printf("ret : %v",ret);
+    ec.ecModule.iChan <- Evt{ cmd : "executefn" , msg : fn }
 }
 
 func (ec *EquipmentContext)GetUIEvt()(string,bool){

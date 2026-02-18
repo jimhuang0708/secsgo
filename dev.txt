@@ -1,3 +1,9 @@
 log
 src/webserver/main | jq -Rr 'fromjson? | .msg'
 sudo ./src/webequipment/main | grep '^{.*}' | jq -Rr 'fromjson? | del(.time) | del(.level)| to_entries | map("\(.key)=\(.value|tostring)") | join(" ")'
+
+
+
+
+
+SXF0 is not requirement,could simply ignore ,wait timeout handle

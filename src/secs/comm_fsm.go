@@ -22,6 +22,7 @@ import (
     "fmt"
     "sync"
     "time"
+    sm "secs/secs_message"
 )
 
 //
@@ -105,11 +106,11 @@ func (s EqpRegionState) String() string {
 // ---------- Events (Triggers) ----------
 //
 
-type Event int
+type CommEventType int
 
 const (
     // Table 3.2 #1
-    EvSystemInit Event = iota
+    EvSystemInit CommEventType = iota
 
     // Table 3.2 #2 / #3
     EvOperatorEnable
@@ -132,7 +133,7 @@ const (
     EvCommFailure
 )
 
-func (e Event) String() string {
+func (e CommEventType) String() string {
     switch e {
     case EvSystemInit:
         return "EvSystemInit"
@@ -165,7 +166,7 @@ func (e Event) String() string {
 // ---------- Config ----------
 //
 
-type Config struct {
+type CommConfig struct {
     // Table 3.2 #1: system default may be DISABLED or ENABLED.
     SystemDefault MajorState // MajorDisabled or MajorEnabled
 
@@ -176,13 +177,19 @@ type Config struct {
     StrictDiscard bool
 }
 
-func DefaultConfig() Config {
-    return Config{
+/*func DefaultCommConfig() CommConfig {
+    return CommConfig{
         SystemDefault:  MajorDisabled,
         CommDelay:     5 * time.Second,
         StrictDiscard: true,
     }
+}*/
+
+type CommFSMEvent struct {
+    Type      CommEventType
+    Parameter interface{}
 }
+
 
 //
 // ---------- Actions (external effects) ----------
@@ -191,7 +198,7 @@ func DefaultConfig() Config {
 type Actions interface {
     // Establish communications transactions
     SendS1F13()
-    //SendS1F14_CommAck0()
+    SendS1F14_CommAck0(msg *sm.DataMessage)
 
     // Queue/spool handling
     DequeueAllMessagesQueuedToSend()
@@ -209,10 +216,10 @@ type Actions interface {
 //
 
 type ComFSM struct {
-    cfg Config
+    cfg CommConfig
     a   Actions
 
-    events chan Event
+    events chan CommFSMEvent
 
     mu      sync.Mutex
     major   MajorState
@@ -226,11 +233,11 @@ type ComFSM struct {
     commDelayT *time.Timer
 }
 
-func CreateComFSM(cfg Config, a Actions) *ComFSM {
+func CreateComFSM(cfg CommConfig, a Actions) *ComFSM {
     m := &ComFSM{
         cfg:    cfg,
         a:      a,
-        events: make(chan Event, 128),
+        events: make(chan CommFSMEvent, 128),
         major:  MajorDisabled,
         // enabled/regions will be set on SystemInit when MajorEnabled
     }
@@ -238,10 +245,10 @@ func CreateComFSM(cfg Config, a Actions) *ComFSM {
 }
 
 // Emit injects an event into the FSM; safe from any goroutine.
-func (m *ComFSM) Emit(ev Event) { m.events <- ev }
+func (m *ComFSM) Emit(ev CommFSMEvent) { m.events <- ev }
 
 // TryEmit is a non-blocking variant.
-func (m *ComFSM) TryEmit(ev Event) bool {
+func (m *ComFSM) TryEmit(ev CommFSMEvent) bool {
     select {
     case m.events <- ev:
         return true
@@ -292,7 +299,7 @@ func (m *ComFSM) startCommDelayTimerLocked() {
     }
     m.commDelayT = time.AfterFunc(d, func() {
         // IMPORTANT: do not mutate FSM state in timer callback
-        m.Emit(EvCommDelayExpired)
+        m.Emit(CommFSMEvent{EvCommDelayExpired , nil })
     })
 }
 
@@ -372,16 +379,16 @@ func (m *ComFSM) reenterNotCommunicatingLocked(why string) {
 // ---------- Event handler ----------
 //
 
-func (m *ComFSM) handle(ev Event) {
+func (m *ComFSM) handle(ev CommFSMEvent) {
     m.mu.Lock()
     defer m.mu.Unlock()
 
-    m.a.Logf("[FSM] event=%s", ev.String())
+    m.a.Logf("[FSM] event=%s", ev.Type.String())
     m.logStateLocked("before")
 
     // --- Major DISABLED ---
     if m.major == MajorDisabled {
-        switch ev {
+        switch ev.Type {
         case EvSystemInit:
             // Table 3.2 #1: System initialization -> System Default
             if m.cfg.SystemDefault == MajorEnabled {
@@ -403,7 +410,7 @@ func (m *ComFSM) handle(ev Event) {
     }
 
     // --- Major ENABLED common ---
-    if ev == EvOperatorDisable {
+    if ev.Type == EvOperatorDisable {
         // Table 3.2 #3: ENABLED -> DISABLED from any enabled state
         m.enterDisabledLocked("Table3.2#3 Operator ENABLED->DISABLED")
         m.logStateLocked("after")
@@ -414,14 +421,14 @@ func (m *ComFSM) handle(ev Event) {
     switch m.enabled {
 
     case EnabledCommunicating:
-        switch ev {
+        switch ev.Type {
         case EvCommFailure:
             // Table 3.2 #14: COMMUNICATING + comm failure -> NOT_COMMUNICATING; Dequeue queued messages.
             m.reenterNotCommunicatingLocked("Table3.2#14 COMMUNICATING failure -> NOT_COMMUNICATING")
 
         case EvRecvS1F13:
             // Spec text: If receive S1F13 while COMMUNICATING, respond S1F14 COMMACK=0
-            //m.a.SendS1F14_CommAck0()
+            m.a.SendS1F14_CommAck0( ev.Parameter.(*sm.DataMessage) )
         case EvLinkDisconnected:
             m.reenterNotCommunicatingLocked("Link down -> COMM failure")
         default:
@@ -432,7 +439,7 @@ func (m *ComFSM) handle(ev Event) {
         // Harel AND: host region + equipment region both active; same event can affect both.
         // Additionally enforce NOT_COMMUNICATING discard rule if configured.
         if m.cfg.StrictDiscard {
-            switch ev {
+            switch ev.Type {
             case EvRecvS1F13,  EvRecvS9Fx:
                 // allowed
             case EvRecvOtherMsg:
@@ -446,8 +453,8 @@ func (m *ComFSM) handle(ev Event) {
         switch m.host {
         case HostWaitCRFromHost:
             // Table 3.2 #15: WAIT_CR_FROM_HOST + recv S1F13 -> COMMUNICATING; Action: send S1F14 COMMACK=0
-            if ev == EvRecvS1F13 {
-                //m.a.SendS1F14_CommAck0()
+            if ev.Type == EvRecvS1F13 {
+                m.a.SendS1F14_CommAck0(ev.Parameter.(*sm.DataMessage))
                 hostTriggeredCommunicating = true
             }
         }
@@ -457,7 +464,7 @@ func (m *ComFSM) handle(ev Event) {
         switch m.eqp {
 
         case EqpWaitCRA:
-            switch ev {
+            switch ev.Type {
             case EvConnTransactionFail:
                 // Table 3.2 #6: WAIT_CRA + connection transaction failure -> WAIT_DELAY
                 // Actions: init CommDelay timer; dequeue all queued-to-send
@@ -475,7 +482,7 @@ func (m *ComFSM) handle(ev Event) {
             }
 
         case EqpWaitDelay:
-            switch ev {
+            switch ev.Type {
             case EvCommDelayExpired:
                 // Table 3.2 #7: WAIT_DELAY expired -> WAIT_CRA; Action: send S1F13
                 m.a.SendS1F13()

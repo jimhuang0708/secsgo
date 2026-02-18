@@ -34,15 +34,9 @@ func RandUint64String() string {
     return fmt.Sprintf("%d", n)
 }
 
-func CreateCOMMUNICATESTATE(comState string,hsms_ss * HSMS_SS,cs * CTRLSTATE, log *logger.Logger) *COMMUNICATESTATE {
-    mode := MajorEnabled
-    if(comState == "DISABLED"){
-        mode = MajorDisabled
-    } else {
-        mode = MajorEnabled
-    }
-    config := Config {
-        SystemDefault:  mode,
+func CreateCOMMUNICATESTATE(comState int,hsms_ss * HSMS_SS,cs * CTRLSTATE, log *logger.Logger) *COMMUNICATESTATE {
+    config := CommConfig {
+        SystemDefault:  MajorState(comState),
         CommDelay:     5 * time.Second,
         StrictDiscard: true,
     }
@@ -65,9 +59,9 @@ func (cs * COMMUNICATESTATE)TellUI(){ //notify UI comstate changed
 
 func (cs *COMMUNICATESTATE)OP_SetComEnabled(enable bool){
     if(enable){
-        cs.comfsm.Emit(EvOperatorEnable)
+        cs.comfsm.Emit(CommFSMEvent{EvOperatorEnable , nil})
     } else {
-        cs.comfsm.Emit(EvOperatorDisable)
+        cs.comfsm.Emit(CommFSMEvent{EvOperatorDisable , nil})
     }
 }
 
@@ -96,7 +90,7 @@ func (cs *COMMUNICATESTATE)handleS1F14(msg *sm.DataMessage){
     v := node0.Values()
     if( v.([]byte)[0] == 0){ //accept
         cs.log.Printf("Enter COMMUNICATE STATE | Local initiated\n")
-        cs.comfsm.Emit(EvRecvExpectedS1F14_CommAck0)
+        cs.comfsm.Emit(CommFSMEvent{EvRecvExpectedS1F14_CommAck0 , nil})
         return;
     } else { //reject
         cs.log.Printf("S1F14 invalid format just restartS1F13 timer!\n")
@@ -114,8 +108,8 @@ func (cs *COMMUNICATESTATE)handleS1F13(msg *sm.DataMessage){
         return ;
 
     }
-    cs.comfsm.Emit(EvRecvS1F13)
-    cs.SendS1F14_CommAck0(msg)
+    cs.comfsm.Emit(CommFSMEvent{EvRecvS1F13,msg})
+    //cs.SendS1F14_CommAck0(msg)
     return
 }
 
@@ -186,14 +180,14 @@ func (cs *COMMUNICATESTATE)processEvt(evt Evt){
 
     if(evt.cmd == "HSMS_SS_EXIT"){
         cs.log.Printf("COMMUNICATESTATE Get HSMS_SS_EXIT\n");
-        cs.comfsm.Emit(EvLinkDisconnected)
+        cs.comfsm.Emit(CommFSMEvent{EvLinkDisconnected,nil})
         cs.oChan <- Evt{ cmd : "COMMUNICATESTATE_EXIT" , msg : nil , ts : time.Now().Unix() }
         return
     }
 
     if( evt.cmd == "NOTIFY_SELECTED" ) {
         cs.log.Printf("TODO : resinitial FSM\n");
-        cs.comfsm.Emit(EvSystemInit)
+        cs.comfsm.Emit(CommFSMEvent{EvSystemInit,nil})
         return
     }
 
@@ -214,7 +208,7 @@ func (cs *COMMUNICATESTATE)getState()(string){
 func (cs *COMMUNICATESTATE )handleInput(evt Evt){
     if(evt.cmd == "WAITS1F14_TIMEOUT"){
         cs.log.Printf("Resend S1F13\n");
-        cs.comfsm.Emit(EvConnTransactionFail)
+        cs.comfsm.Emit(CommFSMEvent{EvConnTransactionFail,nil})
         return
     }
 

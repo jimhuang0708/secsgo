@@ -344,7 +344,7 @@ func (em * EVENTMODULE)handleS2F37(msg *sm.DataMessage){
 func (em * EVENTMODULE)handleS6F12(msg *sm.DataMessage){
     node , err := msg.Get()
     if( node.Type()  != "B" || err != nil || node.Size() != 1){
-        em.log.Printf("handleS6F15 event id should be one u4\n")
+        em.log.Printf("handleS6F12 event id should be one u4\n")
         em.sendS9FX(msg,7)
         return ;
     }

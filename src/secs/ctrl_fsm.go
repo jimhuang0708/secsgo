@@ -4,6 +4,7 @@ package secs
 import (
     "errors"
     "fmt"
+    "strings"
     "sync"
 )
 
@@ -31,67 +32,61 @@ func (m CtrlMajorState) String() string {
     }
 }
 
-// OfflineSubstate applies only when MajorOffline.
-type OfflineSubstate int
-
+// CtrlSubState merges OFFLINE CtrlSubStates and ONLINE CtrlSubStates.
+type CtrlSubState int
 
 const (
-    OffSubNone OfflineSubstate = iota
-    OffEquipmentOffline
-    OffAttemptOnline
-    OffHostOffline
+    SubNone CtrlSubState = iota
+
+    // OFFLINE CtrlSubStates
+    SubEquipmentOffline
+    SubAttemptOnline
+    SubHostOffline
+
+    // ONLINE CtrlSubStates
+    SubLocal
+    SubRemote
 )
 
-func (s OfflineSubstate) String() string {
+func (s CtrlSubState) String() string {
     switch s {
-    case OffSubNone:
+    case SubNone:
         return "NONE"
-    case OffEquipmentOffline:
-        return "EQUIPMENT_OFFLINE"
-    case OffAttemptOnline:
-        return "ATTEMPT_ONLINE"
-    case OffHostOffline:
-        return "HOST_OFFLINE"
+    case SubEquipmentOffline:
+        return "EQUIPMENT"
+    case SubAttemptOnline:
+        return "ATTEMPTONLINE"
+    case SubHostOffline:
+        return "HOST"
+    case SubLocal:
+        return "LOCAL"
+    case SubRemote:
+        return "REMOTE"
     default:
-        return fmt.Sprintf("OfflineSubstate(%d)", int(s))
+        return fmt.Sprintf("CtrlSubState(%d)", int(s))
     }
 }
 
-// OnlineSubstate applies only when MajorOnline.
-type OnlineSubstate int
+func (s CtrlSubState) isOfflineSub() bool {
+    return s == SubEquipmentOffline || s == SubAttemptOnline || s == SubHostOffline
+}
 
-const (
-    OnSubNone OnlineSubstate = iota
-    OnLocal
-    OnRemote
-)
-
-func (s OnlineSubstate) String() string {
-    switch s {
-    case OnSubNone:
-        return "NONE"
-    case OnLocal:
-        return "LOCAL"
-    case OnRemote:
-        return "REMOTE"
-    default:
-        return fmt.Sprintf("OnlineSubstate(%d)", int(s))
-    }
+func (s CtrlSubState) isOnlineSub() bool {
+    return s == SubLocal || s == SubRemote
 }
 
 // ControlState is a complete control state.
 type ControlState struct {
-    Major   CtrlMajorState
-    Offline OfflineSubstate
-    Online  OnlineSubstate
+    Major CtrlMajorState
+    Minor CtrlSubState
 }
 
 func (s ControlState) String() string {
     switch s.Major {
     case MajorOffline:
-        return fmt.Sprintf("OFFLINE/%s", s.Offline)
+        return fmt.Sprintf("OFFLINE/%s", s.Minor)
     case MajorOnline:
-        return fmt.Sprintf("ONLINE/%s", s.Online)
+        return fmt.Sprintf("ONLINE/%s", s.Minor)
     case MajorUndefined:
         return "UNDEFINED"
     default:
@@ -102,35 +97,32 @@ func (s ControlState) String() string {
 func (s ControlState) Normalize() ControlState {
     switch s.Major {
     case MajorOffline:
-        s.Online = OnSubNone
-        if s.Offline == OffSubNone {
-            s.Offline = OffEquipmentOffline
+        if !s.Minor.isOfflineSub() {
+            s.Minor = SubEquipmentOffline
         }
     case MajorOnline:
-        s.Offline = OffSubNone
-        if s.Online == OnSubNone {
-            s.Online = OnLocal
+        if !s.Minor.isOnlineSub() {
+            s.Minor = SubLocal
         }
     default:
-        s.Offline = OffSubNone
-        s.Online = OnSubNone
+        s.Minor = SubNone
     }
     return s
 }
 
 // -------------------- Events --------------------
 
-// EventType is used for transition decision.
-type EventType int
+// CtrlEventType is used for transition decisions.
+type CtrlEventType int
 
 const (
     // Table 3.3
     // #1 Entry into CONTROL state system initialization.
-    EvEnterControl EventType = iota + 1
+    EvEnterControl CtrlEventType = iota + 1
     // #2 Entry into OFF-LINE state (system initialization).
-    EvEnterOffline
+    //EvEnterOffline
     // #7 Entry into ON-LINE state.
-    EvEnterOnline
+    //EvEnterOnline
 
     // #3 Operator actuates ON-LINE switch.
     EvOperatorOnlineSwitch
@@ -143,24 +135,24 @@ const (
     EvOperatorSetLocal
 
     // #10 Host sends "Set OFF-LINE" (S1F15) and equipment accepts.
-    EvHostSetOfflineAccepted
+    EvHostSetOfflineRequest
     // #11 Host requests go ON-LINE (S1F17) and equipment accepts.
-    EvHostGoOnlineAccepted
+    EvHostSetOnlineRequest
 
-    // #4 Attempt ON-LINE times out / comm failure / bad S1F2 / etc.
+    // #4 Attempt ON-LINE failed.
     EvAttemptOnlineFailed
-    // #5 Equipment receives expected S1F2 while attempting on-line.
-    EvAttemptOnlineS1F2Received
+    // #5 Attempt ON-LINE success condition met (e.g. expected S1F2 received).
+    EvAttemptOnlineAccepted
 )
 
-func (t EventType) String() string {
+func (t CtrlEventType) String() string {
     switch t {
     case EvEnterControl:
         return "EnterControl"
-    case EvEnterOffline:
+    /*case EvEnterOffline:
         return "EnterOffline"
     case EvEnterOnline:
-        return "EnterOnline"
+        return "EnterOnline"*/
     case EvOperatorOnlineSwitch:
         return "OperatorOnlineSwitch"
     case EvOperatorOfflineSwitch:
@@ -169,116 +161,111 @@ func (t EventType) String() string {
         return "OperatorSetRemote"
     case EvOperatorSetLocal:
         return "OperatorSetLocal"
-    case EvHostSetOfflineAccepted:
-        return "HostSetOfflineAccepted(S1F15)"
-    case EvHostGoOnlineAccepted:
-        return "HostGoOnlineAccepted(S1F17)"
+    case EvHostSetOfflineRequest:
+        return "HostSetOfflineAccepted"
+    case EvHostSetOnlineRequest:
+        return "HostGoOnlineAccepted"
     case EvAttemptOnlineFailed:
         return "AttemptOnlineFailed"
-    case EvAttemptOnlineS1F2Received:
-        return "AttemptOnlineS1F2Received(S1F2)"
+    case EvAttemptOnlineAccepted:
+        return "AttemptOnlineAccepted"
     default:
-        return fmt.Sprintf("EventType(%d)", int(t))
+        return fmt.Sprintf("CtrlEventType(%d)", int(t))
     }
 }
 
-// Event carries a type plus optional payload.
-type CtrlFSMEvent struct {
-    Type      EventType
-    Parameter interface{}
+// CtrlEvent carries a type plus reserved payload.
+type CtrlEvent struct {
+    Type      CtrlEventType
+    Parameter interface{} // reserved
 }
 
-// -------------------- Hooks --------------------
+func NewCtrlEvent(t CtrlEventType, param interface{}) CtrlEvent {
+    return CtrlEvent{Type: t, Parameter: param}
+}
 
-// Hooks lets you attach side effects (send messages, publish events, logs, etc.)
-type Hooks struct {
-    // OnTransition is called after a transition is applied.
-    OnTransition func(from, to ControlState, ev CtrlFSMEvent, transitionNo int)
+// -------------------- Hooks (interface) --------------------
 
-    // GEM-ish helper callbacks (optional)
-    OnEnterAttemptOnline     func(ev CtrlFSMEvent)
-    OnEnterOffline           func(sub OfflineSubstate, ev CtrlFSMEvent)
-    OnOnlineSubstateChanged  func(sub OnlineSubstate, ev CtrlFSMEvent)
-    OnInvalidTransition      func(from ControlState, ev CtrlFSMEvent, reason error)
-    OnStateInitialized       func(state ControlState, ev CtrlFSMEvent, transitionNo int)
+type CtrlHooks interface {
+    OnTransition(from, to ControlState, ev CtrlEvent, transitionNo int)
+    OnInvalidTransition(from ControlState, ev CtrlEvent, reason error)
+    OnStateInitialized(state ControlState, ev CtrlEvent, transitionNo int)
+}
+
+
+// -------------------- Config --------------------
+
+type CtrlConfig struct {
+    DEFAULT_CTRLMAINSTATE        string
+    DEFAULT_CTRLCtrlSubState         string
+    DEFAULT_REJECT_CTRLCtrlSubState  string
+    DEFAULT_ACCEPT_CTRLCtrlSubState  string
 }
 
 // -------------------- Errors --------------------
 
 var (
     ErrInvalidTransition = errors.New("invalid transition for current state")
+    ErrBadConfig         = errors.New("bad ctrl config")
 )
 
 // -------------------- FSM --------------------
 
-type FSM struct {
+type CtrlFSM struct {
     mu    sync.Mutex
     state ControlState
-    hooks Hooks
+    cfg   CtrlConfig
+    hooks CtrlHooks
 }
 
-type CtrlFSMCfg struct {
-    // For #1 (EnterControl) "CONTROL (Substate conditional on configuration)"
-    // If true -> initial enters ONLINE; otherwise OFFLINE.
-    DefaultOnline bool
+func CreateCtrlFSM(cfg CtrlConfig, hooks CtrlHooks) (*CtrlFSM, error) {
 
-    // For #2 (EnterOffline) default offline substate.
-    DefaultOfflineSub OfflineSubstate
-
-    // For #7 (EnterOnline) default online substate.
-    DefaultOnlineSub OnlineSubstate
-}
-
-func NewFSM(cfg CtrlFSMCfg, hooks Hooks) *FSM {
-    off := cfg.DefaultOfflineSub
-    if off == OffSubNone {
-        off = OffEquipmentOffline
+    // Validate config strings early (so runtime transitions don't blow up unexpectedly).
+    if _, err := parseCtrlMajorState(cfg.DEFAULT_CTRLMAINSTATE); err != nil {
+        return nil, fmt.Errorf("%w: DEFAULT_CTRLMAINSTATE: %v", ErrBadConfig, err)
     }
-    on := cfg.DefaultOnlineSub
-    if on == OnSubNone {
-        on = OnLocal
+    if _, err := parseCtrlSubState(cfg.DEFAULT_CTRLCtrlSubState); err != nil {
+        return nil, fmt.Errorf("%w: DEFAULT_CTRLCtrlSubState: %v", ErrBadConfig, err)
+    }
+    if _, err := parseCtrlSubState(cfg.DEFAULT_REJECT_CTRLCtrlSubState); err != nil {
+        return nil, fmt.Errorf("%w: DEFAULT_REJECT_CTRLCtrlSubState: %v", ErrBadConfig, err)
+    }
+    if _, err := parseCtrlSubState(cfg.DEFAULT_ACCEPT_CTRLCtrlSubState); err != nil {
+        return nil, fmt.Errorf("%w: DEFAULT_ACCEPT_CTRLCtrlSubState: %v", ErrBadConfig, err)
     }
 
-    init := ControlState{Major: MajorUndefined, Offline: OffSubNone, Online: OnSubNone}.Normalize()
+    init := ControlState{Major: MajorUndefined, Minor: SubNone}.Normalize()
 
-    // store defaults in FSM via hooks closure? We'll keep cfg in struct for clarity.
-    return &FSM{
+    return &CtrlFSM{
         state: init,
+        cfg:   cfg,
         hooks: hooks,
-    }
+    }, nil
 }
 
-// State returns current state snapshot.
-func (f *FSM) State() ControlState {
+func (f *CtrlFSM) State() ControlState {
     f.mu.Lock()
     defer f.mu.Unlock()
     return f.state
 }
 
-// Emit applies an event to the FSM.
-// Event.Parameter is carried to hooks for side effects.
-func (f *FSM) Emit(cfg CtrlFSMCfg, ev CtrlFSMEvent) error {
+func (f *CtrlFSM) Emit(ev CtrlEvent) error {
     f.mu.Lock()
     defer f.mu.Unlock()
 
     from := f.state
     to := from
-    var transitionNo int
-
-    // Normalize cfg defaults
-    defOff := cfg.DefaultOfflineSub
-    if defOff == OffSubNone {
-        defOff = OffEquipmentOffline
-    }
-    defOn := cfg.DefaultOnlineSub
-    if defOn == OnSubNone {
-        defOn = OnLocal
-    }
+    transitionNo := 0
 
     apply := func(newState ControlState, tNo int) {
         to = newState.Normalize()
         transitionNo = tNo
     }
+
+    defMajor, _ := parseCtrlMajorState(f.cfg.DEFAULT_CTRLMAINSTATE)
+    defSub, _ := parseCtrlSubState(f.cfg.DEFAULT_CTRLCtrlSubState)
+    rejectSub, _ := parseCtrlSubState(f.cfg.DEFAULT_REJECT_CTRLCtrlSubState)
+    acceptSub, _ := parseCtrlSubState(f.cfg.DEFAULT_ACCEPT_CTRLCtrlSubState)
 
     // -------------------- Transition Table (Table 3.3) --------------------
     switch ev.Type {
@@ -288,65 +275,68 @@ func (f *FSM) Emit(cfg CtrlFSMCfg, ev CtrlFSMEvent) error {
         if from.Major != MajorUndefined {
             return f.invalid(from, ev, fmt.Errorf("%w: EnterControl only allowed from UNDEFINED", ErrInvalidTransition))
         }
-        if cfg.DefaultOnline {
-            apply(ControlState{Major: MajorOnline, Online: defOn}, 1)
-        } else {
-            apply(ControlState{Major: MajorOffline, Offline: defOff}, 1)
-        }
+        apply(ControlState{Major: defMajor, Minor: defSub}, 1)
+        f.state = to
+        f.hooks.OnStateInitialized(f.state, ev, transitionNo)
+        f.hooks.OnTransition(from, to, ev, transitionNo)
+        return nil
 
     // #2 (Undefined) Entry into OFF-LINE state.
-    case EvEnterOffline:
+    /*case EvEnterOffline:
         if from.Major != MajorUndefined {
             return f.invalid(from, ev, fmt.Errorf("%w: EnterOffline only allowed from UNDEFINED", ErrInvalidTransition))
         }
-        apply(ControlState{Major: MajorOffline, Offline: defOff}, 2)
-
+        apply(ControlState{Major: MajorOffline, Minor: defSub}, 2)
+        f.state = to
+        f.hooks.OnStateInitialized(f.state, ev, transitionNo)
+        f.hooks.OnTransition(from, to, ev, transitionNo)
+        return nil
+     */
     // #7 (Undefined) Entry into ON-LINE state.
-    case EvEnterOnline:
+    /*case EvEnterOnline:
         if from.Major != MajorUndefined {
             return f.invalid(from, ev, fmt.Errorf("%w: EnterOnline only allowed from UNDEFINED", ErrInvalidTransition))
         }
-        apply(ControlState{Major: MajorOnline, Online: defOn}, 7)
-
+        // If DEFAULT_CTRLCtrlSubState is offline-like, Normalize() will force LOCAL.
+        apply(ControlState{Major: MajorOnline, Minor: defSub}, 7)
+        f.state = to
+        f.hooks.OnStateInitialized(f.state, ev, transitionNo)
+        f.hooks.OnTransition(from, to, ev, transitionNo)
+        return nil
+     */
     // #3 EQUIPMENT_OFF-LINE + Operator actuates ON-LINE switch => ATTEMPT_ON-LINE
     case EvOperatorOnlineSwitch:
-        if from.Major == MajorOffline && from.Offline == OffEquipmentOffline {
-            apply(ControlState{Major: MajorOffline, Offline: OffAttemptOnline}, 3)
-        } else if from.Major == MajorOffline && from.Offline == OffHostOffline {
-            // spec text: in HOST_OFFLINE operator may request ON-LINE but must be denied.
+        if from.Major == MajorOffline && from.Minor == SubEquipmentOffline {
+            apply(ControlState{Major: MajorOffline, Minor: SubAttemptOnline}, 3)
+        } else if from.Major == MajorOffline && from.Minor == SubHostOffline {
             return f.invalid(from, ev, fmt.Errorf("%w: operator ON-LINE denied in HOST_OFFLINE", ErrInvalidTransition))
         } else {
             return f.invalid(from, ev, fmt.Errorf("%w: operator ON-LINE only valid in OFFLINE/EQUIPMENT_OFFLINE", ErrInvalidTransition))
         }
 
-    // #4 ATTEMPT_ON-LINE + failure => new state conditional on configuration (comm fail -> equipment/host offline)
+    // #4 ATTEMPT_ON-LINE + failure => DEFAULT_REJECT_CTRLCtrlSubState (offline-like)
     case EvAttemptOnlineFailed:
-        if from.Major == MajorOffline && from.Offline == OffAttemptOnline {
-            // Common practice: if comm not established -> EQUIPMENT_OFFLINE; if host forced -> HOST_OFFLINE.
-            // Use cfg.DefaultOfflineSub to decide, or allow caller to put desired target in ev.Parameter.
-            if target, ok := ev.Parameter.(OfflineSubstate); ok && (target == OffEquipmentOffline || target == OffHostOffline) {
-                apply(ControlState{Major: MajorOffline, Offline: target}, 4)
-            } else {
-                apply(ControlState{Major: MajorOffline, Offline: defOff}, 4)
-            }
+        if from.Major == MajorOffline && from.Minor == SubAttemptOnline {
+            apply(ControlState{Major: MajorOffline, Minor: rejectSub}, 4)
         } else {
             return f.invalid(from, ev, fmt.Errorf("%w: AttemptOnlineFailed only valid in OFFLINE/ATTEMPT_ONLINE", ErrInvalidTransition))
         }
 
-    // #5 ATTEMPT_ON-LINE + receives expected S1F2 => ON-LINE
-    case EvAttemptOnlineS1F2Received:
-        if from.Major == MajorOffline && from.Offline == OffAttemptOnline {
-            apply(ControlState{Major: MajorOnline, Online: defOn}, 5)
+    // #5 ATTEMPT_ON-LINE + accepted condition => DEFAULT_ACCEPT_CTRLCtrlSubState (online-like)
+    case EvAttemptOnlineAccepted:
+        if from.Major == MajorOffline && from.Minor == SubAttemptOnline {
+            // IMPORTANT: acceptSub is defined as "Attemponline 成功後的 CtrlSubState"
+            // It should normally be LOCAL or REMOTE. Normalize() will enforce online CtrlSubState if MajorOnline.
+            apply(ControlState{Major: MajorOnline, Minor: acceptSub}, 5)
         } else {
-            return f.invalid(from, ev, fmt.Errorf("%w: AttemptOnlineS1F2Received only valid in OFFLINE/ATTEMPT_ONLINE", ErrInvalidTransition))
+            return f.invalid(from, ev, fmt.Errorf("%w: AttemptOnlineAccepted only valid in OFFLINE/ATTEMPT_ONLINE", ErrInvalidTransition))
         }
 
     // #6 ON-LINE + Operator actuates OFF-LINE switch => EQUIPMENT_OFF-LINE
     case EvOperatorOfflineSwitch:
         if from.Major == MajorOnline {
-            apply(ControlState{Major: MajorOffline, Offline: OffEquipmentOffline}, 6)
+            apply(ControlState{Major: MajorOffline, Minor: SubEquipmentOffline}, 6)
         } else if from.Major == MajorOffline {
-            // already offline: no-op or invalid. Choose invalid for clarity.
             return f.invalid(from, ev, fmt.Errorf("%w: operator OFF-LINE only meaningful from ONLINE", ErrInvalidTransition))
         } else {
             return f.invalid(from, ev, fmt.Errorf("%w: operator OFF-LINE invalid from UNDEFINED", ErrInvalidTransition))
@@ -354,32 +344,32 @@ func (f *FSM) Emit(cfg CtrlFSMCfg, ev CtrlFSMEvent) error {
 
     // #8 LOCAL + operator sets REMOTE => REMOTE
     case EvOperatorSetRemote:
-        if from.Major == MajorOnline && from.Online == OnLocal {
-            apply(ControlState{Major: MajorOnline, Online: OnRemote}, 8)
+        if from.Major == MajorOnline && from.Minor == SubLocal {
+            apply(ControlState{Major: MajorOnline, Minor: SubRemote}, 8)
         } else {
             return f.invalid(from, ev, fmt.Errorf("%w: SetRemote only valid in ONLINE/LOCAL", ErrInvalidTransition))
         }
 
     // #9 REMOTE + operator sets LOCAL => LOCAL
     case EvOperatorSetLocal:
-        if from.Major == MajorOnline && from.Online == OnRemote {
-            apply(ControlState{Major: MajorOnline, Online: OnLocal}, 9)
+        if from.Major == MajorOnline && from.Minor == SubRemote {
+            apply(ControlState{Major: MajorOnline, Minor: SubLocal}, 9)
         } else {
             return f.invalid(from, ev, fmt.Errorf("%w: SetLocal only valid in ONLINE/REMOTE", ErrInvalidTransition))
         }
 
-    // #10 ON-LINE + host accepts Set OFF-LINE (S1F15) => HOST_OFF-LINE
-    case EvHostSetOfflineAccepted:
+    // #10 ON-LINE + host accepts Set OFF-LINE => HOST_OFF-LINE
+    case EvHostSetOfflineRequest:
         if from.Major == MajorOnline {
-            apply(ControlState{Major: MajorOffline, Offline: OffHostOffline}, 10)
+            apply(ControlState{Major: MajorOffline, Minor: SubHostOffline}, 10)
         } else {
             return f.invalid(from, ev, fmt.Errorf("%w: HostSetOfflineAccepted only valid from ONLINE", ErrInvalidTransition))
         }
 
-    // #11 HOST_OFF-LINE + host accepts go ON-LINE (S1F17) => ON-LINE (transition 7 entry to online)
-    case EvHostGoOnlineAccepted:
-        if from.Major == MajorOffline && from.Offline == OffHostOffline {
-            apply(ControlState{Major: MajorOnline, Online: defOn}, 11)
+    // #11 HOST_OFF-LINE + host accepts go ON-LINE => ON-LINE (DEFAULT_ACCEPT_CTRLCtrlSubState is used)
+    case EvHostSetOnlineRequest:
+        if from.Major == MajorOffline && from.Minor == SubHostOffline {
+            apply(ControlState{Major: MajorOnline, Minor: acceptSub}, 11)
         } else {
             return f.invalid(from, ev, fmt.Errorf("%w: HostGoOnlineAccepted only valid in OFFLINE/HOST_OFFLINE", ErrInvalidTransition))
         }
@@ -388,72 +378,52 @@ func (f *FSM) Emit(cfg CtrlFSMCfg, ev CtrlFSMEvent) error {
         return f.invalid(from, ev, fmt.Errorf("%w: unknown event type %v", ErrInvalidTransition, ev.Type))
     }
 
-    // If no state changed (shouldn't happen here), treat as invalid.
     if transitionNo == 0 {
         return f.invalid(from, ev, fmt.Errorf("%w: no transition fired", ErrInvalidTransition))
     }
 
-    // Apply state
     f.state = to
-
-    // -------------------- Hooks / Side effects --------------------
-    // Initialize hook (optional - same as transition hook but clearer)
-    if f.hooks.OnStateInitialized != nil && (ev.Type == EvEnterControl || ev.Type == EvEnterOffline || ev.Type == EvEnterOnline) {
-        f.hooks.OnStateInitialized(f.state, ev, transitionNo)
-    }
-
-    // Enter offline hook
-    if from.Major != MajorOffline && to.Major == MajorOffline {
-        if f.hooks.OnEnterOffline != nil {
-            f.hooks.OnEnterOffline(to.Offline, ev)
-        }
-    }
-
-    // Enter attempt online hook
-    if to.Major == MajorOffline && to.Offline == OffAttemptOnline && !(from.Major == MajorOffline && from.Offline == OffAttemptOnline) {
-        if f.hooks.OnEnterAttemptOnline != nil {
-            f.hooks.OnEnterAttemptOnline(ev)
-        }
-    }
-
-    // Online substate change hook
-    if to.Major == MajorOnline {
-        if from.Major != MajorOnline || from.Online != to.Online {
-            if f.hooks.OnOnlineSubstateChanged != nil {
-                f.hooks.OnOnlineSubstateChanged(to.Online, ev)
-            }
-        }
-    }
-
-    // Transition hook
-    if f.hooks.OnTransition != nil {
-        f.hooks.OnTransition(from, to, ev, transitionNo)
-    }
-
+    f.hooks.OnTransition(from, to, ev, transitionNo)
     return nil
 }
 
-func (f *FSM) invalid(from ControlState, ev CtrlFSMEvent , reason error) error {
-    if f.hooks.OnInvalidTransition != nil {
-        f.hooks.OnInvalidTransition(from, ev, reason)
-    }
+func (f *CtrlFSM) invalid(from ControlState, ev CtrlEvent, reason error) error {
+    f.hooks.OnInvalidTransition(from, ev, reason)
     return reason
 }
 
-// -------------------- Helpers --------------------
+// -------------------- Parsing helpers (string -> enum) --------------------
 
-// Convenience constructors
-func NewEvent(t EventType, param interface{}) CtrlFSMEvent {
-    return CtrlFSMEvent{Type: t, Parameter: param}
+func parseCtrlMajorState(s string) (CtrlMajorState, error) {
+    v := strings.ToUpper(strings.TrimSpace(s))
+    switch v {
+    case "OFFLINE":
+        return MajorOffline, nil
+    case "ONLINE":
+        return MajorOnline, nil
+    case "UNDEFINED", "":
+        return MajorUndefined, nil
+    default:
+        return MajorUndefined, fmt.Errorf("unsupported main state %q (use OFFLINE/ONLINE)", s)
+    }
 }
 
-// DefaultCtrlFSMConfig returns a sensible default mapping:
-// - default enter offline => EQUIPMENT_OFFLINE
-// - default enter online => LOCAL
-func DefaultCtrlFSMConfig() CtrlFSMCfg {
-    return CtrlFSMCfg{
-        DefaultOnline:     false,
-        DefaultOfflineSub: OffEquipmentOffline,
-        DefaultOnlineSub:  OnLocal,
+func parseCtrlSubState(s string) (CtrlSubState, error) {
+    v := strings.ToUpper(strings.TrimSpace(s))
+    switch v {
+    case "NONE", "":
+        return SubNone, nil
+    case "EQUIPMENT":
+        return SubEquipmentOffline, nil
+    case "ATTEMPTONLINE":
+        return SubAttemptOnline, nil
+    case "HOST":
+        return SubHostOffline, nil
+    case "LOCAL":
+        return SubLocal, nil
+    case "REMOTE":
+        return SubRemote, nil
+    default:
+        return SubNone, fmt.Errorf("unsupported sub state %q (use EQUIPMENT_OFFLINE/ATTEMPT_ONLINE/HOST_OFFLINE/LOCAL/REMOTE)", s)
     }
 }

@@ -92,9 +92,7 @@ func (ec *EquipmentContext)regProcessModule(){
         }
     }
 
-    if(ec.ctrlState.ctrlState == "OFFLINE"){
-        //set report ack direct to evtModule ,prevent OFFLINE last report cause T3 timeout
-        ec.dispatchMap[6][12] = ec.evtModule
+    if(ec.ctrlState.ctrl_fsm.state.Major.String() == "OFFLINE"){
         return
     }
 

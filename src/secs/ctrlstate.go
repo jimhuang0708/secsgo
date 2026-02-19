@@ -11,19 +11,16 @@ import (
 type CTRLSTATE struct{
     BaseModule
     session map[string]*COMMUNICATESTATE
-    ctrlState string
-    ctrlSubState string
-    ctrlRejectSubstate string
-    ctrlAcceptSubstate string
+    ctrl_fsm *CtrlFSM
 }
 
 func CreateCTRLSTATE( log *logger.Logger) *CTRLSTATE {
     o := CTRLSTATE { BaseModule : CreateBaseModule(log),
                      session : make(map[string]*COMMUNICATESTATE,100),
-                     ctrlState : data.G_STATE.DEFAULT_CTRLSTATE,
-                     ctrlSubState : data.G_STATE.DEFAULT_CTRLSUBSTATE,
-                     ctrlRejectSubstate : data.G_STATE.DEFAULT_REJECT_CTRLSUBSTATE,
-                     ctrlAcceptSubstate : data.G_STATE.DEFAULT_ACCEPT_CTRLSUBSTATE }
+                     ctrl_fsm : nil }
+    ctrl_fsm , _ :=  CreateCtrlFSM(CtrlConfig{ data.G_STATE.DEFAULT_CTRLSTATE , data.G_STATE.DEFAULT_CTRLSUBSTATE , data.G_STATE.DEFAULT_REJECT_CTRLSUBSTATE , data.G_STATE.DEFAULT_ACCEPT_CTRLSUBSTATE} , &o )
+    o.ctrl_fsm = ctrl_fsm
+    o.ctrl_fsm.Emit(CtrlEvent {EvEnterControl,nil})
     o.wg.Add(1)
     go o.stateRun()
     o.TellUI()
@@ -35,7 +32,7 @@ func (cs * CTRLSTATE)attachSession( s *COMMUNICATESTATE ){
 }
 
 func (cs * CTRLSTATE)TellUI(){
-    uievt := &UIEvt{ EvtType : "CtrlChange" , Source : "CtrlState" , Data : cs.ctrlSubState + "@" + cs.ctrlState }
+    uievt := &UIEvt{ EvtType : "CtrlChange" , Source : "CtrlState" , Data : cs.ctrl_fsm.state.Minor.String() + "@" + cs.ctrl_fsm.state.Major.String() }
     jsonData, _ := json.Marshal(uievt)
     cs.oChan <- Evt{ cmd : "uievent" ,msg : string(jsonData)  }
 }
@@ -48,6 +45,87 @@ func (cs * CTRLSTATE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
     cs.oChan <- Evt{ cmd : "TRIG_EVENT" , msg : p ,ts : time.Now().Unix()  }
     return
 }
+
+func (cs * CTRLSTATE) OnTransition(from, to ControlState, ev CtrlEvent, transitionNo int){
+
+    switch ev.Type {
+        case EvEnterControl: {
+        }
+        case EvHostSetOfflineRequest : {//offline - host
+            result := byte(0) //accept
+            //if( refusecondition ){ currently no refused .
+            //    result = 1 //refuse
+            //}
+            cs.log.Printf("Accept host offline request  %s@%s -> %s@%s\n",from.Minor.String(),from.Major.String(),to.Minor.String(),to.Major.String())
+            cs.sendS1F16(result,ev.Parameter.(*sm.DataMessage))
+        }
+        case EvHostSetOnlineRequest : {//online 
+            result := byte(0)
+            cs.log.Printf("Accept host online request  %s@%s -> %s@%s\n",from.Minor.String(),from.Major.String(),to.Minor.String(),to.Major.String())
+            cs.sendS1F18(result,ev.Parameter.(*sm.DataMessage))
+        }
+        case EvOperatorOnlineSwitch : {
+            cs.log.Printf("Accept OP_AttemptOnLine |  %s@%s -> %s%s\n",from.Minor.String(),from.Major.String(),to.Minor.String(),to.Major.String())
+            cs.sendS1F1();
+        }
+        case EvOperatorOfflineSwitch : {
+            cs.log.Printf("Accept OP_OffLine |  %s@%s -> %s@%s\n",from.Minor.String(),from.Major.String(),to.Minor.String(),to.Major.String())
+        }
+        case EvOperatorSetRemote : {
+            cs.log.Printf("Accept OP_Remote |  %s@%s -> %s@%s\n",from.Minor.String(),from.Major.String(),to.Minor.String(),to.Major.String())
+        }
+        case EvOperatorSetLocal : {
+            cs.log.Printf("Accept OP_Local |  %s@%s -> %s@%s\n",from.Minor.String(),from.Major.String(),to.Minor.String(),to.Major.String())
+
+        }
+        case EvAttemptOnlineFailed : {
+            cs.log.Printf("Rejct ATTEMPTONLINE  %s@%s -> %s@%s",from.Minor.String(),from.Major.String(),to.Minor.String(),to.Major.String())
+        }
+        case EvAttemptOnlineAccepted : {
+            cs.log.Printf("Accept ATTEMPTONLINE  %s@%s -> %s@%s\n",from.Minor.String(),from.Major.String(),to.Minor.String(),to.Major.String())
+        }
+    }
+    cs.TrigCrlCahnged(from, to)
+    cs.TellUI()
+}
+func (cs * CTRLSTATE) OnInvalidTransition(from ControlState, ev CtrlEvent, reason error) {
+    switch ev.Type {
+        case EvEnterControl: {
+        }
+        case EvHostSetOfflineRequest : {//offline - host
+            result := byte(2) ////already offline
+            //result = 1 //refuse
+            cs.log.Printf("Reject host offline request | current control state %s@%s\n",from.Minor.String(),from.Major.String())
+            cs.sendS1F16(result,ev.Parameter.(*sm.DataMessage))
+        }
+        case EvHostSetOnlineRequest : {//online
+            result := byte(2)
+            //result = 1 //refuse
+            cs.log.Printf("Reject host online request | current control state %s@%s\n",from.Minor.String(),from.Major.String())
+            cs.sendS1F18(result,ev.Parameter.(*sm.DataMessage))
+        }
+        case EvOperatorOnlineSwitch : {
+            cs.log.Printf("Reject OP_AttemptOnLine | current : %s@%s\n",from.Minor.String(),from.Major.String())
+        }
+        case EvOperatorOfflineSwitch : {
+            cs.log.Printf("Reject OP_OffLine | current : %s@%s\n",from.Minor.String(),from.Major.String())
+        }
+        case EvOperatorSetRemote : {
+            cs.log.Printf("Reject OP_Remote | current : %s@%s\n",from.Minor.String(),from.Major.String())
+        }
+        case EvOperatorSetLocal : {
+            cs.log.Printf("Reject OP_Local | current : %s@%s\n",from.Minor.String(),from.Major.String())
+        }
+        case EvAttemptOnlineFailed : {
+            cs.log.Printf(">handleS1F0() Keep %s@%s \n",from.Minor.String(),from.Major.String())
+        }
+        case EvAttemptOnlineAccepted : {
+            cs.log.Printf("handleS1F2() Keep %s@%s \n",from.Minor.String(),from.Major.String())
+        }
+    }
+
+}
+func (cs * CTRLSTATE) OnStateInitialized(state ControlState, ev CtrlEvent, transitionNo int)  {}
 
 
 /*
@@ -81,7 +159,7 @@ func (cs * CTRLSTATE)stateToCode(CTRLSTATE string,ctrlSubState string)(int){
             return 5;
         }
     }
-    return -1;//unknown
+    return 0;//unknown
 
 }
 
@@ -104,11 +182,9 @@ func (cs * CTRLSTATE)codeToState(code int)(string , string){
 
 
 
-func (cs * CTRLSTATE)updateCTRLSTATE(CTRLSTATE string,ctrlSubState string){
-    stateCodeNow := cs.stateToCode(cs.ctrlState,cs.ctrlSubState)
-    stateCodeWill := cs.stateToCode(CTRLSTATE,ctrlSubState)
-    //cs.ctrlState = CTRLSTATE
-    //cs.ctrlSubState = ctrlSubState
+func (cs * CTRLSTATE)TrigCrlCahnged(from, to ControlState){
+    stateCodeNow := cs.stateToCode(from.Major.String() ,from.Minor.String())
+    stateCodeWill := cs.stateToCode(to.Major.String(),to.Minor.String())
     if(stateCodeNow != stateCodeWill){
         //changed
         //fill related sv
@@ -122,8 +198,7 @@ func (cs * CTRLSTATE)updateCTRLSTATE(CTRLSTATE string,ctrlSubState string){
             evtids := data.GetEvtByName("CONTROL_STATE_OFFLINE")
             cs.trigEvt(evtids[0],dvContext) //offline
         } else if( stateCodeWill == 2) {
-            cs.ctrlState = "OFFLINE"
-            cs.ctrlSubState = "ATTEMPTONLINE"
+
         } else if(stateCodeWill == 4){
             dvContext[ vidList[0] ] =  sm.CreateASCIINode("ONLINE_LOCAL")
             evtids := data.GetEvtByName("CONTROL_STATE_LOCAL")
@@ -162,52 +237,23 @@ func (cs * CTRLSTATE)sendS1F1(){
 
 
 func (cs * CTRLSTATE)handleS1F15(msg *sm.DataMessage){
-    result := byte(0)
     item , err := msg.Get()
     if(err != nil || item.Type()!= "empty" || item.Size() != 0 ){
         cs.log.Printf("error S1F15 format\n");
         cs.sendS9FX(msg, 7)
         return ;
     }
-
-    if(cs.ctrlState == "ONLINE"){
-        cs.log.Printf("Accept host offline request  %s@%s -> %s@%s\n",cs.ctrlSubState,cs.ctrlState,"HOST","OFFLINE")
-        cs.updateCTRLSTATE("OFFLINE","HOST")
-        result = 0 //accept
-    }
-    //if( refusecondition ){ currently no refused .
-    //    result = 1 //refuse
-    //}
-    if(cs.ctrlState == "OFFLINE"){
-        cs.log.Printf("Reject host offline request | reason : already offline | %s@%s\n",cs.ctrlSubState,cs.ctrlState)
-        result = 2 //already offline
-    }
-    cs.sendS1F16(result,msg)
+    cs.ctrl_fsm.Emit(CtrlEvent {EvHostSetOfflineRequest,msg})
 }
 
 func (cs * CTRLSTATE)handleS1F17(msg *sm.DataMessage){
-    result := byte(0)
     item , err := msg.Get()
     if(err != nil || item.Type()!= "empty" || item.Size() != 0 ){
         cs.log.Printf("error S1F17 format\n");
         cs.sendS9FX(msg , 7)
         return ;
     }
-    if(cs.ctrlState == "OFFLINE" && cs.ctrlSubState == "HOST"){
-        cs.log.Printf("Accept host online request  %s@%s -> %s@%s\n",cs.ctrlSubState,cs.ctrlState,cs.ctrlAcceptSubstate,cs.ctrlState)
-        cs.updateCTRLSTATE("ONLINE",cs.ctrlAcceptSubstate)
-        result = 0 //accept
-    }
-    if(cs.ctrlState == "OFFLINE" && cs.ctrlSubState == "EQUIPMENT"){
-        cs.log.Printf("Reject host online request | reason : equipment offline | %s@%s\n",cs.ctrlSubState,cs.ctrlState)
-        result = 1 //refuse
-    }
-    if(cs.ctrlState == "ONLINE"){
-        cs.log.Printf("Reject host online request | reason : already online | %s@%s\n",cs.ctrlSubState,cs.ctrlState)
-        result = 2 //already online
-    }
-
-    cs.sendS1F18(result,msg)
+    cs.ctrl_fsm.Emit(CtrlEvent {EvHostSetOnlineRequest,msg})
 }
 
 /* send by Equipment only */
@@ -237,69 +283,40 @@ func (cs * CTRLSTATE)sendStopTransaction(msg *sm.DataMessage) {
 
 //3
 func (cs * CTRLSTATE)OP_AttemptOnLine(){
-    if(cs.ctrlState == "OFFLINE" && cs.ctrlSubState == "EQUIPMENT" && len(cs.session) > 0 ){
-        cs.log.Printf("Accept OP_AttemptOnLine |  %s@%s -> %s%s\n",cs.ctrlSubState,cs.ctrlState,"ATTEMPTONLINE",cs.ctrlState)
-        cs.updateCTRLSTATE(cs.ctrlState,"ATTEMPTONLINE")
-        cs.sendS1F1();
-    } else {
-        cs.log.Printf("Reject OP_AttemptOnLine | current : %s@%s\n",cs.ctrlSubState,cs.ctrlState)
+    if( len(cs.session) > 0 ){
+        cs.ctrl_fsm.Emit(CtrlEvent {EvOperatorOnlineSwitch,nil})
     }
 }
 
 //4
 func (cs * CTRLSTATE)handleS1F0(){
-    if(cs.ctrlState == "OFFLINE" && cs.ctrlSubState == "ATTEMPTONLINE"){
-        cs.log.Printf("Rejct ATTEMPTONLINE  %s@%s -> %s@%s",cs.ctrlSubState,cs.ctrlState,cs.ctrlRejectSubstate,cs.ctrlState)
-        cs.updateCTRLSTATE(cs.ctrlState,cs.ctrlRejectSubstate)
-    } else {
-        cs.log.Printf(">handleS1F0() Keep %s@%s \n",cs.ctrlState,cs.ctrlSubState)
-    }
+    cs.ctrl_fsm.Emit(CtrlEvent {EvAttemptOnlineFailed,nil})
 }
 
 //5
 func (cs * CTRLSTATE)handleS1F2(msg *sm.DataMessage){
-    if(cs.ctrlState == "OFFLINE" && cs.ctrlSubState == "ATTEMPTONLINE"){
-        item , err := msg.Get()
-        if(err != nil || item.Type()!= "L" || item.Size() != 0 ){
-            cs.log.Printf("error S1F2 format\n");
-            cs.sendS9FX(msg, 7)
-            return ;
-        }
-        cs.log.Printf("Accept ATTEMPTONLINE  %s@%s -> %s@%s\n",cs.ctrlSubState,cs.ctrlState,cs.ctrlAcceptSubstate,"ONLINE")
-        cs.updateCTRLSTATE("ONLINE",cs.ctrlAcceptSubstate)
-    } else {
-        cs.log.Printf("handleS1F2() Keep %s@%s \n",cs.ctrlState,cs.ctrlSubState)
+    item , err := msg.Get()
+    if(err != nil || item.Type()!= "L" || item.Size() != 0 ){
+        cs.log.Printf("error S1F2 format\n");
+        cs.sendS9FX(msg, 7)
+        return ;
     }
+    cs.ctrl_fsm.Emit(CtrlEvent {EvAttemptOnlineAccepted,msg})
 }
 
 //6 12
 func (cs * CTRLSTATE)OP_OffLine(){
-    if(cs.ctrlState == "ONLINE"  || ( cs.ctrlState == "OFFLINE"  && cs.ctrlSubState == "HOST") ){
-        cs.log.Printf("Accept OP_OffLine |  %s@%s -> %s@%s\n",cs.ctrlSubState,cs.ctrlState,"EQUIPMENT","OFFLINE")
-        cs.updateCTRLSTATE("OFFLINE","EQUIPMENT")
-    } else {
-        cs.log.Printf("Reject OP_OffLine | current : %s@%s\n",cs.ctrlSubState,cs.ctrlState)
-    }
+    cs.ctrl_fsm.Emit(CtrlEvent {EvOperatorOfflineSwitch,nil})
 }
 
 //9
 func (cs * CTRLSTATE)OP_Local(){
-    if(cs.ctrlState == "ONLINE"  && cs.ctrlSubState == "REMOTE"  ){
-        cs.log.Printf("Accept OP_Local |  %s@%s -> %s@%s\n",cs.ctrlSubState,cs.ctrlState,"LOCAL",cs.ctrlState)
-        cs.updateCTRLSTATE(cs.ctrlState,"LOCAL")
-    } else {
-        cs.log.Printf("Reject OP_Local | current : %s@%s\n",cs.ctrlSubState,cs.ctrlState)
-    }
+    cs.ctrl_fsm.Emit(CtrlEvent {EvOperatorSetLocal,nil})
 }
 
 //8
 func (cs * CTRLSTATE)OP_Remote(){
-    if(cs.ctrlState == "ONLINE"  && cs.ctrlSubState == "LOCAL" ){
-        cs.log.Printf("Accept OP_Remote |  %s@%s -> %s@%s\n",cs.ctrlSubState,cs.ctrlState,cs.ctrlSubState,cs.ctrlState)
-        cs.updateCTRLSTATE(cs.ctrlState,"REMOTE")
-    } else {
-        cs.log.Printf("Reject OP_Remote | current : %s@%s\n",cs.ctrlSubState,cs.ctrlState)
-    }
+    cs.ctrl_fsm.Emit(CtrlEvent {EvOperatorSetRemote,nil})
 }
 
 func (cs * CTRLSTATE)Operate_Ctrl(cmd string){
@@ -341,7 +358,7 @@ func (cs *CTRLSTATE)processMsg(msg *sm.DataMessage)(bool){
             return true
         }
     }
-    if(cs.ctrlState == "ONLINE"){
+    if(cs.ctrl_fsm.state.Major.String() == "ONLINE"){
         return false //need more process
     } else {
         if(msg.WaitBit()){
@@ -365,7 +382,7 @@ func (cs *CTRLSTATE)processEvt(evt Evt ,sessionID string){
         delete (cs.session,sessionID)
         if( len(cs.session) == 0 ){
             cs.log.Printf("All host leave!\n");
-            cs.updateCTRLSTATE("OFFLINE","EQUIPMENT")
+            //cs.updateCTRLSTATE("OFFLINE","EQUIPMENT")
         }
         return
     }
@@ -402,7 +419,6 @@ func (cs *CTRLSTATE) IsCtrlStateChangEvt(evt Evt) (bool){
                 _ , codeNode , _  , _  , _ , _ := data.GetVidElementType(3)
                 code := int(codeNode.(sm.ElementType).Values().([]uint64)[0])
                 cs.log.Printf("IsCtrlStateChangEvt detect statecode : %d\n" , code);
-                cs.ctrlState , cs.ctrlSubState = cs.codeToState(code)
                 cs.TellUI()
                 return true
             }
@@ -442,7 +458,7 @@ func (cs *CTRLSTATE)ProcessEvt(evt Evt){
         /*
         cs.IsCtrlStateChangEvt(evt) for send ctrl change event first then change ctrl state
        */
-        if(cs.IsCtrlStateChangEvt(evt) == false && cs.ctrlState == "OFFLINE" ){
+        if(cs.IsCtrlStateChangEvt(evt) == false && cs.ctrl_fsm.state.Major.String() == "OFFLINE" ){
             cs.log.Printf("State is offline,don't send anything back\n");
             return
         }

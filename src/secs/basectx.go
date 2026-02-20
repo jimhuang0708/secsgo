@@ -28,13 +28,28 @@ type BaseContext struct {
     msgsender MsgSender
     UICmdChan chan string
     UIEvtChan chan string
-    run bool
     dispatchMap [255][255]MSGMODULE
     deviceID int
     log *logger.Logger
     wg  *sync.WaitGroup
+    ctrlChan  chan string
 }
 
+func CreateBaseContext(deviceID int,log *logger.Logger) BaseContext {
+    return BaseContext{
+            UICmdChan : make(chan string,10),
+            UIEvtChan : make(chan string,10),
+            deviceID : deviceID,
+            log: log,
+            wg : new(sync.WaitGroup),
+            ctrlChan : make(chan string,10),
+    }
+}
+
+func (bc * BaseContext)Stop(){
+    bc.ctrlChan <- "quit"
+    bc.wg.Wait()
+}
 
 func (bc *BaseContext)buildError(msg *sm.DataMessage,f int){
     bin := make([]byte, 10)

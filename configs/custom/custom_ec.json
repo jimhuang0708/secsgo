@@ -1,28 +1,82 @@
 {
 "customec": [
     {
-      "name": "CUSTOM_TEST1",
+      "name": "CUSTOM_EQ_CONST1",
       "units": "myunits",
       "id": 1206,
-      "desc": "4:On-line/Local, 5:ON-line/Remote",
+      "desc": "",
       "nodevalue": {
-        "type": "A",
-        "value": "here is default value,but you can set later"
+        "type": "U4",
+        "values": [
+          0
+        ]
       },
       "max": {
-        "type": "A",
-        "value": "maxvalue"
+        "type": "U4",
+        "values": [
+          1000
+        ]
       },
       "min": {
-        "type": "A",
-        "value": "minvalue"
+        "type": "U4",
+        "values": [
+          1
+        ]
       }
     },
     {
-      "name": "CUSTOM_TEST2",
+      "name": "CUSTOM_EQ_CONST2",
       "units": "myunits",
       "id": 1207,
-      "desc": "4:On-line/Local, 5:ON-line/Remote",
+      "desc": "",
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      },
+      "max": {
+        "type": "U4",
+        "values": [
+          1000
+        ]
+      },
+      "min": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      }
+    },
+    {
+      "name": "CUSTOM_EQ_CONST3",
+      "units": "myunits",
+      "id": 1208,
+      "desc": "",
+      "nodevalue": {
+        "type": "U4",
+        "values": [
+          0
+        ]
+      },
+      "max": {
+        "type": "U4",
+        "values": [
+          1000
+        ]
+      },
+      "min": {
+        "type": "U4",
+        "values": [
+          1
+        ]
+      }
+    },
+    {
+      "name": "CUSTOM_EQ_CONST4",
+      "units": "myunits",
+      "id": 1209,
+      "desc": "",
       "nodevalue": {
         "type": "A",
         "value": "here is default value,but you can set later"
@@ -36,6 +90,5 @@
         "value": "minvalue"
       }
     }
-
-  ]    
+  ]
 }

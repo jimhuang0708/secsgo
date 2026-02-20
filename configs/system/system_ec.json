@@ -122,24 +122,6 @@
           9.9
         ]
       }
-    },
-    {
-      "name": "TEST",
-      "units": "myunits",
-      "id": 206,
-      "desc": "",
-      "nodevalue": {
-        "type": "A",
-        "value": "here is default value,but you can set later"
-      },
-      "max": {
-        "type": "A",
-        "value": "maxvalue"
-      },
-      "min": {
-        "type": "A",
-        "value": "minvalue"
-      }
     }
-  ]    
+  ]
 }

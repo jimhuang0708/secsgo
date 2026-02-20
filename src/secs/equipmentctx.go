@@ -4,10 +4,8 @@ import (
     "encoding/json"
     //"log/slog"
     "net"
-    "time"
     "secs/data"
     "secs/logger"
-    "sync"
     sm "secs/secs_message"
 )
 
@@ -49,14 +47,7 @@ type EquipmentContext struct {
 func CreateEquipmentContext(deviceID int, mode string, addr string  ,eqLog *logger.Logger) *EquipmentContext {
     baseLog := eqLog.With( "Context" , "EquipmentCtx" , "deviceID", deviceID ,"Session_mode", mode)
     ec := &EquipmentContext{
-        BaseContext: BaseContext{
-            UICmdChan : make(chan string,10),
-            UIEvtChan : make(chan string,10),
-            run : false,
-            deviceID : deviceID,
-            log: baseLog,
-            wg : new(sync.WaitGroup),
-        },
+        BaseContext: CreateBaseContext(deviceID,baseLog),
         log: baseLog,
         ctrlState : CreateCTRLSTATE( baseLog.With("Module", "CTRLSTATE")),
         evtModule : CreateEVENTMODULE( baseLog.With("Module", "EVENTMODULE")),
@@ -206,11 +197,26 @@ func (ec *EquipmentContext )doEvt(act Evt){
 }
 
 func (ec *EquipmentContext )stateRun(mode string,addr string){
-    ec.run = true
     quit := make(chan struct{})
+    defer func() {
+        close(quit)
+        ec.wg.Wait()
+        ec.ctrlState.Stop()
+        ec.evtModule.moduleStop()
+        ec.commonModule.moduleStop()
+        ec.ecModule.moduleStop()
+        ec.tdcModule.moduleStop()
+        ec.alarmModule.moduleStop()
+        ec.terminalModule.moduleStop()
+        ec.rcModule.moduleStop()
+        ec.lmtModule.moduleStop()
+        ec.dstModule.moduleStop()
+        ec.log.Printf("Exit EquipmentContext")
+    }()
+
     ec.wg.Add(1)
     go ec.Connect(mode,addr,quit)
-    for ec.run {
+    for {
         select {
             case act := <-ec.evtModule.oChan:
                 ec.doEvt(act);
@@ -232,27 +238,12 @@ func (ec *EquipmentContext )stateRun(mode string,addr string){
                 ec.doEvt(act);
             case evt := <-ec.ctrlState.oChan:
                 ec.stateTrig(evt)
-            default:
-                time.Sleep(100 * time.Millisecond)
+            case cmd :=<-ec.ctrlChan:
+                if(cmd == "quit"){
+                    return
+                }
         }
     }
-    close(quit)
-    ec.wg.Wait()
-    ec.ctrlState.Stop()
-    ec.evtModule.moduleStop()
-    ec.commonModule.moduleStop()
-    ec.ecModule.moduleStop()
-    ec.tdcModule.moduleStop()
-    ec.alarmModule.moduleStop()
-    ec.terminalModule.moduleStop()
-    ec.rcModule.moduleStop()
-    ec.lmtModule.moduleStop()
-    ec.dstModule.moduleStop()
-    ec.log.Printf("Exit EquipmentContext")
-}
-
-func (ec *EquipmentContext )StateStop(){
-    ec.run = false
 }
 
 
@@ -275,10 +266,6 @@ func (ec *EquipmentContext)SetCommunicate(enable bool){
     } else {
         ec.ctrlState.iChan <- Evt{ cmd : "operation" , msg : "SET_COM_DISABLE" }
     }
-}
-
-func (ec *EquipmentContext) GetRun() bool{
-    return ec.run
 }
 
 func (ec *EquipmentContext)SetVidUint(vid uint32 ,v uint32){

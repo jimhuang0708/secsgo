@@ -132,11 +132,19 @@ func (cs *COMMUNICATESTATE)SendS1F14_CommAck0(msg *sm.DataMessage){
 }
 
 func (cs *COMMUNICATESTATE)DequeueAllMessagesQueuedToSend(){
-    cs.log.Printf("TODO : clean all messageq\n")
+    for {
+        select {
+            case <-cs.hsms_ss.iChan:
+            // discard
+            default:
+                return
+        }
+    }
+
 }
 
 func (cs *COMMUNICATESTATE) DiscardInbound(reason string) {
-    cs.log.Printf(reason)
+    // nothing to do
 }
 
 func (cs *COMMUNICATESTATE) Logf(format string, args ...any) {

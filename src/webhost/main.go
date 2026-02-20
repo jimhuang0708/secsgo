@@ -104,7 +104,7 @@ func wsHost(c *gin.Context) {
 
     go wsConn.readHost(hc)
     wsConn.readWebSocket(c,hc)
-    hc.StateStop()
+    hc.Stop()
 }
 
 var ErrShortBuffer = errors.New("not enough data in buffer to read full message")

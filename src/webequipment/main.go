@@ -106,7 +106,7 @@ func wsEquipment(c *gin.Context) {
     go wsConn.readEquipment(ec)
     wsConn.readWebSocket(c,ec)
     wsConn.run = false
-    ec.StateStop()
+    ec.Stop()
     eqLog.Printf("wsEquipment Exit\n");
 }
 

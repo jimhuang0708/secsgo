@@ -18,7 +18,7 @@ func CreateCTRLSTATE( log *logger.Logger) *CTRLSTATE {
     o := CTRLSTATE { BaseModule : CreateBaseModule(log),
                      session : make(map[string]*COMMUNICATESTATE,100),
                      ctrl_fsm : nil }
-    ctrl_fsm , _ :=  CreateCtrlFSM(CtrlConfig{ data.G_STATE.DEFAULT_CTRLSTATE , data.G_STATE.DEFAULT_CTRLSUBSTATE , data.G_STATE.DEFAULT_REJECT_CTRLSUBSTATE , data.G_STATE.DEFAULT_ACCEPT_CTRLSUBSTATE} , &o )
+    ctrl_fsm , _ :=  CreateCtrlFSM(CtrlConfig{ data.G_STATE.DEFAULT_CTRLMAINSTATE , data.G_STATE.DEFAULT_CTRLSUBSTATE , data.G_STATE.DEFAULT_REJECT_CTRLSUBSTATE , data.G_STATE.DEFAULT_ACCEPT_CTRLSUBSTATE} , &o )
     o.ctrl_fsm = ctrl_fsm
     o.ctrl_fsm.Emit(CtrlEvent {EvEnterControl,nil})
     o.wg.Add(1)

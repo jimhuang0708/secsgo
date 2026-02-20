@@ -6,7 +6,6 @@ import (
     "time"
     "secs/data"
     "secs/logger"
-    "sync"
     sm "secs/secs_message"
 )
 
@@ -41,14 +40,7 @@ type UICmd struct {
 func CreateHostContext(deviceID int,mode string,addr string, hostLog *logger.Logger ) *HostContext {
     baseLog := hostLog.With("Context", "HostCtx", "deviceID", deviceID,"Session_mode", mode)
     hc := &HostContext {
-              BaseContext: BaseContext{
-                  UICmdChan :  make(chan string,10),
-                  UIEvtChan :  make(chan string,10),
-                  run : false,
-                  deviceID : deviceID,
-                  log: baseLog,
-                  wg : new(sync.WaitGroup),
-              },
+              BaseContext: CreateBaseContext(deviceID,baseLog),
               log: baseLog,
               hostModule : CreateHOSTMODULE( baseLog.With("Module", "HOSTMODULE")) ,
               dstModule : CreateDSTMODULE( baseLog.With("Module", "DSTMODULE")),
@@ -82,6 +74,7 @@ func (hc *HostContext)regProcessModule(){
 func (hc *HostContext)AttachSession(conn net.Conn,mode string){
     ts := CreateTransport(conn, hc.log.With("Component", "transport"))
     hc.hsms_ss = CreateHSMS_SS(mode,ts,hc.deviceID, hc.log.With("Component", "hsms_ss"))
+    hc.ctrlChan <- "update_hsms_ss"
 }
 
 func (hc *HostContext)SendMsg(e Evt){
@@ -135,7 +128,7 @@ func (hc *HostContext)processEvt(evt Evt){
         uievt := &UIEvt{ EvtType : "disconnect" , Source : "Transport" , Data : nil }
         jsonData, _ := json.Marshal(uievt)
         hc.processUIEvt(string(jsonData))
-        hc.StateStop()
+        hc.Stop()
     } else if( evt.cmd == "recv" ) {
         //hc.hostModule.iChan <- evt
         hc.regProcessModule();
@@ -151,24 +144,22 @@ func (hc *HostContext)processEvt(evt Evt){
     }
 }
 
-func (hc *HostContext)StateStop(){
-    hc.run = false
-    return
-}
-
 func (hc *HostContext)stateRun(mode string,addr string){
-    hc.run = true
     quit := make(chan struct{})
+    defer func(){
+        close(quit)
+        hc.wg.Wait()
+        if(hc.hsms_ss != nil){
+            hc.hsms_ss.Stop()
+        }
+        hc.dstModule.moduleStop()
+        hc.hostModule.moduleStop()
+        hc.log.Printf("Exit HostContext")
+    }()
     hc.wg.Add(1)
     go hc.Connect(mode,addr,quit)
-
-    for hc.run {
-        var hsms_oChan <-chan Evt
-        if hc.hsms_ss != nil {
-            hsms_oChan = hc.hsms_ss.oChan
-        } else {
-            hsms_oChan = nil
-        }
+    var hsms_oChan <-chan Evt
+    for {
         select {
             case o := <-hsms_oChan:
                 hc.log.Printf("get from hsms_ss.oChan %v",o);
@@ -190,24 +181,19 @@ func (hc *HostContext)stateRun(mode string,addr string){
 
             case o := <- hc.UICmdChan:
                 hc.doUICommand(o)
-            default:
-                time.Sleep(100 * time.Millisecond)
+            case cmd :=<-hc.ctrlChan:
+                if(cmd == "quit"){
+                    return
+                }
+                if(cmd == "update_hsms_ss"){
+                    hsms_oChan = hc.hsms_ss.oChan
+                    break
+                }
         }
     }
-    close(quit)
-    hc.wg.Wait()
-    if(hc.hsms_ss != nil){
-        hc.hsms_ss.Stop()
-    }
-    hc.dstModule.moduleStop()
-    hc.hostModule.moduleStop()
-    hc.log.Printf("Exit HostContext")
 }
 
 ////////////////////API
-func (hc *HostContext)GetRun() bool{
-    return hc.run
-}
 
 func (hc *HostContext)ReadEq(dsName string) {
     hc.dstModule.sendS13F3(1 , dsName  , 0)

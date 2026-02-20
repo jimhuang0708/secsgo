@@ -14,7 +14,7 @@ import (
 )
 
 type DEFAULT_STATE struct{
-    DEFAULT_CTRLSTATE string
+    DEFAULT_CTRLMAINSTATE string
     DEFAULT_CTRLSUBSTATE string
     DEFAULT_REJECT_CTRLSUBSTATE string
     DEFAULT_ACCEPT_CTRLSUBSTATE string
@@ -67,7 +67,7 @@ func LoadConfig() {
     viper.SetConfigName("custom_alarm.json")
     viper.MergeInConfig()
 
-    G_STATE.DEFAULT_CTRLSTATE = viper.Get("DEFAULT_CTRLSTATE").(string)
+    G_STATE.DEFAULT_CTRLMAINSTATE = viper.Get("DEFAULT_CTRLMAINSTATE").(string)
     G_STATE.DEFAULT_CTRLSUBSTATE = viper.Get("DEFAULT_CTRLSUBSTATE").(string)
     G_STATE.DEFAULT_REJECT_CTRLSUBSTATE = viper.Get("DEFAULT_REJECT_CTRLSUBSTATE").(string)
     G_STATE.DEFAULT_ACCEPT_CTRLSUBSTATE = viper.Get("DEFAULT_ACCEPT_CTRLSUBSTATE").(string)

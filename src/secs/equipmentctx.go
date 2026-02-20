@@ -255,25 +255,27 @@ func (ec *EquipmentContext)AttachSession(conn net.Conn,mode string){
 }
 
 ////////////////////API
-func (ec *EquipmentContext)Operate_Ctrl(op string){
-    ec.ctrlState.iChan <- Evt{ cmd : "operation" , msg : op }
-}
-
-func (ec *EquipmentContext)SetCommunicate(enable bool){
-    ec.log.Printf("SetCommunicate %t",enable);
-    if(enable){
-        ec.ctrlState.iChan <- Evt{ cmd : "operation" , msg : "SET_COM_ENABLE" }
-    } else {
-        ec.ctrlState.iChan <- Evt{ cmd : "operation" , msg : "SET_COM_DISABLE" }
-    }
-}
-
 func (ec *EquipmentContext)SetVidUint(vid uint32 ,v uint32){
     ec.log.Printf("SetVidUint %d : %d",vid,v);
     ok := data.SetVidValue(vid,sm.CreateUintNode(4,v))
     if(ok == false){
         ec.log.Printf("SetVidUint failed\n");
     }
+}
+
+func (ec *EquipmentContext)Operate_Ctrl(op string){
+    fn := func() {
+        ec.ctrlState.Operate_Ctrl(op)
+    }
+    ec.ctrlState.iChan <- Evt{ cmd : "executefn" , msg : fn }
+}
+
+func (ec *EquipmentContext)SetCommunicate(enable bool){
+    ec.log.Printf("SetCommunicate %t",enable);
+    fn := func() {
+        ec.ctrlState.SetCommunicate(enable)
+    }
+    ec.ctrlState.iChan <- Evt{ cmd : "executefn" , msg : fn }
 }
 
 /* TODO : limit id should be fixed in config and can't not dynamically add by host*/

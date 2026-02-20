@@ -332,9 +332,6 @@ func (cs * CTRLSTATE)Operate_Ctrl(cmd string){
     if(cmd == "ONLINE_REMOTE"){
         cs.OP_Remote()
     }
-    if(cmd == "SET_COM_ENABLE" || cmd == "SET_COM_DISABLE"){
-        cs.SetCommunicate(cmd)
-    }
 }
 
 func (cs *CTRLSTATE)processMsg(msg *sm.DataMessage)(bool){
@@ -447,9 +444,12 @@ func waitAny(sessions map[string]*COMMUNICATESTATE) (Evt, string, bool) {
     return v.Interface().(Evt), keys[i], ok
 }
 
-func (cs *CTRLSTATE)SetCommunicate(op string) {
+func (cs *CTRLSTATE)SetCommunicate(enable bool) {
     for _ , s := range cs.session {
-        s.iChan <- Evt { cmd : "operation" , msg : op}
+        fn := func() {
+            s.OP_SetComEnabled(enable)
+        }
+        s.iChan <- Evt{ cmd : "executefn" , msg : fn }
     }
 }
 
@@ -473,10 +473,11 @@ func (cs *CTRLSTATE)ProcessEvt(evt Evt){
         }
         return
     }
-    if(evt.cmd == "operation"){
-        cs.Operate_Ctrl(evt.msg.(string))
+    if(evt.cmd == "executefn"){
+        fn := evt.msg.(func())
+        fn()
+        return
     }
-
 }
 
 func (cs *CTRLSTATE)stateRun(){

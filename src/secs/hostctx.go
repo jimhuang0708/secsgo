@@ -196,11 +196,17 @@ func (hc *HostContext)stateRun(mode string,addr string){
 ////////////////////API
 
 func (hc *HostContext)ReadEq(dsName string) {
-    hc.dstModule.sendS13F3(1 , dsName  , 0)
+    fn := func() {
+        hc.dstModule.sendS13F3(1 , dsName  , 0)
+    }
+    hc.dstModule.iChan <- Evt{ cmd : "executefn" , msg : fn }
 }
 
 func (hc *HostContext)WriteEq(dsName string) {
-    hc.dstModule.sendS13F1( dsName )
+    fn := func() {
+        hc.dstModule.sendS13F1( dsName )
+    }
+    hc.dstModule.iChan <- Evt{ cmd : "executefn" , msg : fn }
 }
 
 func (hc *HostContext)GetUIEvt()(string,bool){

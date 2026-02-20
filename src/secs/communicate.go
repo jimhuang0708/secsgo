@@ -219,13 +219,9 @@ func (cs *COMMUNICATESTATE )handleInput(evt Evt){
         cs.comfsm.Emit(CommFSMEvent{EvConnTransactionFail,nil})
         return
     }
-
-    if(evt.cmd == "operation"){
-        if(evt.msg.(string) == "SET_COM_ENABLE"){
-            cs.OP_SetComEnabled(true)
-        } else if(evt.msg.(string) == "SET_COM_DISABLE"){
-            cs.OP_SetComEnabled(false)
-        }
+    if(evt.cmd == "executefn"){
+        fn := evt.msg.(func())
+        fn()
         return
     }
     cs.hsms_ss.iChan <- evt

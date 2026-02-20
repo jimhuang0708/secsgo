@@ -421,6 +421,12 @@ func (dstm * DSTMODULE)processEvt(evt Evt){
     if(evt.msg == nil){
         return
     }
+
+    if(evt.cmd == "executefn"){
+        fn := evt.msg.(func())
+        fn()
+        return
+    }
     msg := evt.msg.(*sm.DataMessage)
     dstm.processMsg(msg)
 }

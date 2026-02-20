@@ -64,6 +64,7 @@ func (em * EQCONSTMODULE)handleS2F13(msg *sm.DataMessage){
 
 
 func (em * EQCONSTMODULE)SetECS(node sm.ElementType,trig bool)(error,byte){
+    dvContextMap := make(map[uint32]interface{})
     ecs := make(map[uint32]sm.ElementType )
     evtIdLst := data.GetEvtByName( "EQ_CONST_CHANGED")
     for k := 0; k < node.Size() ; k++ {
@@ -79,20 +80,24 @@ func (em * EQCONSTMODULE)SetECS(node sm.ElementType,trig bool)(error,byte){
         ecValueNode , err := ecNode.(*sm.ListNode).Get(1)
         ecs[ecID] = ecValueNode
 
-        if(trig){
-            dvContext := make(map[uint32]interface{})
-            vidList := data.GetDvByName("ECID_CHANGED","EC_VALUE_CHANGED","PREVIOUS_EC_VALUE")
-            dvContext[ vidList[0] ] = sm.CreateUintNode(4,ecID)
-            dvContext[ vidList[1] ] = ecValueNode.Clone()
-            ecIDLst := make([]uint32, 1 )
-            ecIDLst[0] = ecID
-            oldNodeLst := data.GetEC(ecIDLst)
-            oldNode , _ := oldNodeLst.(*sm.ListNode).Get(0)
-            dvContext[ vidList[2] ] = oldNode.Clone()
-            em.trigEvt(evtIdLst[0],dvContext)
-        }
+        dvContext := make(map[uint32]interface{})
+        vidList := data.GetDvByName("ECID_CHANGED","EC_VALUE_CHANGED","PREVIOUS_EC_VALUE")
+        dvContext[ vidList[0] ] = sm.CreateUintNode(4,ecID)
+        dvContext[ vidList[1] ] = ecValueNode.Clone()
+        ecIDLst := make([]uint32, 1 )
+        ecIDLst[0] = ecID
+        oldNodeLst := data.GetEC(ecIDLst)
+        oldNode , _ := oldNodeLst.(*sm.ListNode).Get(0)
+        dvContext[ vidList[2] ] = oldNode.Clone()
+        //em.trigEvt(evtIdLst[0],dvContext)
+        dvContextMap[ecID] = dvContext
     }
     ret := data.SetEC(ecs)
+    if(trig && ret == 0){
+        for _ , v := range dvContextMap {
+             em.trigEvt(evtIdLst[0],v.(map[uint32]interface{}))
+        }
+    }
     return nil , byte(ret)
 }
 

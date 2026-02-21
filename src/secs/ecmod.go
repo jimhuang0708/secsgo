@@ -8,6 +8,14 @@ import (
     sm "secs/secs_message"
 )
 
+type EAC byte
+const(
+    EAC_OK EAC = iota
+    EAC_NOT_EXIST
+    EAC_BUSY
+    EAC_OUT_OF_RANGE
+)
+
 type EQCONSTMODULE struct{
     BaseModule
 }
@@ -108,7 +116,7 @@ func (em * EQCONSTMODULE)handleS2F15(msg *sm.DataMessage){
         em.sendS9FX(msg, 7)
         return ;
     }
-    err , ret := em.SetECS(item,false)
+    err , ret := em.SetECS(item,false) //ret is EAC code
     if(err != nil){
         em.log.Printf("Error S2F15 format\n")
         em.sendS9FX(msg, 7)

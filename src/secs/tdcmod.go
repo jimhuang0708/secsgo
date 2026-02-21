@@ -8,6 +8,16 @@ import (
     sm "secs/secs_message"
 )
 
+type TIAACK byte
+const(
+    TIAACK_OK TIAACK = iota
+    TIAACK_TOO_MANY_SVID
+    TIAACK_NO_MORE_TRACE_ALLOWED
+    TIAACK_INVALID_PERIOD
+    TIAACK_UNKNOWN_SVID
+    TIAACK_BAD_REPGSZ
+)
+
 /*
 * Trace Data Collection module
 */
@@ -116,7 +126,7 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
     if( totsmp == 0 ){
         tm.removeTrace(trid)
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 24, false,
-                                     sm.CreateBinaryNode( byte(0) ) ,
+                                     sm.CreateBinaryNode( byte(TIAACK_OK) ) ,
                                      -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
         tm.oChan <- act
         return
@@ -136,7 +146,7 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
             svidLst = append(svidLst , svID)
         } else {
             act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 24, false,
-                                         sm.CreateBinaryNode( byte(4) ) , //unknown vid return 4
+                                         sm.CreateBinaryNode( byte(TIAACK_UNKNOWN_SVID) ) , //unknown vid return 4
                                          -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix() }
             tm.oChan <- act
             return
@@ -156,7 +166,7 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
 
     tm.log.Printf("%v %v %v %v %v %d\n",trid,dsper,totsmp,repgsz,svidLst,second_cnt)
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 24, false,
-                                     sm.CreateBinaryNode( byte(0) ) ,
+                                     sm.CreateBinaryNode( byte(TIAACK_OK) ) ,
                                      -1 , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
     tm.oChan <- act
 }

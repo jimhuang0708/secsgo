@@ -6,6 +6,30 @@ import (
     "secs/logger"
     sm "secs/secs_message"
 )
+type DRACK byte
+const (
+    DRACK_OK DRACK = iota
+    DRACK_OUT_OF_SPACE
+    DRACK_INVALID_FORMAT
+    DRACK_RPTID_ALREADY_DEFINE
+    DRACK_INVALID_ID
+)
+
+type LRACK byte
+const (
+    LRACK_OK LRACK = iota
+    LRACK_OUT_OF_SPACE
+    LRACK_INVALID_FORMAT
+    LRACK_CEIDLINK_ALREADY_DEFINE
+    LRACK_CEID_INVALID
+    LRACK_RPTID_INVALID
+)
+
+type ERACK byte
+const (
+    ERACK_OK ERACK = iota
+    ERACK_DENY
+)
 
 const GEM_CTRL_STATE_LOCAL  = 300
 
@@ -40,22 +64,21 @@ func (em * EVENTMODULE)sendS1F24(msg *sm.DataMessage,evtLst []uint32){
 func (em * EVENTMODULE)sendS2F34(msg *sm.DataMessage,result string){
     if(result == "ok"){
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 34, false,
-                    sm.CreateBinaryNode( byte(0) ) , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(DRACK_OK) ) , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
     if(result == "duprpt"){
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 34, false,
-                    sm.CreateBinaryNode( byte(3) ) , -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(DRACK_RPTID_ALREADY_DEFINE) ) , -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
     if(result == "novid"){
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 34, false,
-                    sm.CreateBinaryNode( byte(4) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(DRACK_INVALID_ID) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
-
     return
 }
 
@@ -63,25 +86,25 @@ func (em * EVENTMODULE)sendS2F34(msg *sm.DataMessage,result string){
 func (em * EVENTMODULE)sendS2F36(msg *sm.DataMessage,result string){
     if(result == "ok"){
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2, 36, false,
-                    sm.CreateBinaryNode( byte(0) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(LRACK_OK) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
     if(result == "dupevt"){//duplicate evt
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 36, false,
-                    sm.CreateBinaryNode( byte(3) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(LRACK_CEIDLINK_ALREADY_DEFINE) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
     if(result == "noevt"){//invalid evnt id
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 36, false,
-                    sm.CreateBinaryNode( byte(4) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(LRACK_CEID_INVALID) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
     if(result == "norpt"){//invalid rpt id
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2, 36, false,
-                    sm.CreateBinaryNode( byte(5) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(LRACK_RPTID_INVALID) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
 
@@ -92,12 +115,12 @@ func (em * EVENTMODULE)sendS2F36(msg *sm.DataMessage,result string){
 func (em * EVENTMODULE)sendS2F38(msg *sm.DataMessage,result string){
     if(result == "accept"){
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 38, false,
-                    sm.CreateBinaryNode( byte(0) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(ERACK_OK) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
     if(result == "reject"){
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2, 38, false,
-                    sm.CreateBinaryNode( byte(1) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+                    sm.CreateBinaryNode( byte(ERACK_DENY) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
         em.oChan <- act
     }
     return

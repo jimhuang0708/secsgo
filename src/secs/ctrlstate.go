@@ -8,6 +8,19 @@ import (
     sm "secs/secs_message"
 )
 
+type OFLACK byte
+const(
+    OFLACK_OK OFLACK = iota
+)
+
+type ONLACK byte
+const(
+    ONLACK_OK ONLACK = iota
+    ONLACK_REFUSSE
+    ONLACK_ALREADY
+)
+
+
 type CTRLSTATE struct{
     BaseModule
     session map[string]*COMMUNICATESTATE
@@ -52,15 +65,11 @@ func (cs * CTRLSTATE) OnTransition(from, to ControlState, ev CtrlEvent, transiti
         case EvEnterControl: {
         }
         case EvHostSetOfflineRequest : {//offline - host
-            result := byte(0) //accept
-            //if( refusecondition ){ currently no refused .
-            //    result = 1 //refuse
-            //}
             cs.log.Printf("Accept host offline request  %s@%s -> %s@%s\n",from.Minor.String(),from.Major.String(),to.Minor.String(),to.Major.String())
-            cs.sendS1F16(result,ev.Parameter.(*sm.DataMessage))
+            cs.sendS1F16(ev.Parameter.(*sm.DataMessage))
         }
         case EvHostSetOnlineRequest : {//online 
-            result := byte(0)
+            result := ONLACK_OK
             cs.log.Printf("Accept host online request  %s@%s -> %s@%s\n",from.Minor.String(),from.Major.String(),to.Minor.String(),to.Major.String())
             cs.sendS1F18(result,ev.Parameter.(*sm.DataMessage))
         }
@@ -85,7 +94,7 @@ func (cs * CTRLSTATE) OnTransition(from, to ControlState, ev CtrlEvent, transiti
             cs.log.Printf("Accept ATTEMPTONLINE  %s@%s -> %s@%s\n",from.Minor.String(),from.Major.String(),to.Minor.String(),to.Major.String())
         }
     }
-    cs.TrigCrlCahnged(from, to)
+    cs.TrigCtrlCahnged(from, to)
     cs.TellUI()
 }
 func (cs * CTRLSTATE) OnInvalidTransition(from ControlState, ev CtrlEvent, reason error) {
@@ -93,14 +102,11 @@ func (cs * CTRLSTATE) OnInvalidTransition(from ControlState, ev CtrlEvent, reaso
         case EvEnterControl: {
         }
         case EvHostSetOfflineRequest : {//offline - host
-            result := byte(2) ////already offline
-            //result = 1 //refuse
             cs.log.Printf("Reject host offline request | current control state %s@%s\n",from.Minor.String(),from.Major.String())
-            cs.sendS1F16(result,ev.Parameter.(*sm.DataMessage))
+            cs.sendS1F16(ev.Parameter.(*sm.DataMessage))
         }
         case EvHostSetOnlineRequest : {//online
-            result := byte(2)
-            //result = 1 //refuse
+            result := ONLACK_ALREADY
             cs.log.Printf("Reject host online request | current control state %s@%s\n",from.Minor.String(),from.Major.String())
             cs.sendS1F18(result,ev.Parameter.(*sm.DataMessage))
         }
@@ -182,7 +188,7 @@ func (cs * CTRLSTATE)codeToState(code int)(string , string){
 
 
 
-func (cs * CTRLSTATE)TrigCrlCahnged(from, to ControlState){
+func (cs * CTRLSTATE)TrigCtrlCahnged(from, to ControlState){
     stateCodeNow := cs.stateToCode(from.Major.String() ,from.Minor.String())
     stateCodeWill := cs.stateToCode(to.Major.String(),to.Minor.String())
     if(stateCodeNow != stateCodeWill){
@@ -257,16 +263,16 @@ func (cs * CTRLSTATE)handleS1F17(msg *sm.DataMessage){
 }
 
 /* send by Equipment only */
-func (cs * CTRLSTATE)sendS1F16(result byte,msg *sm.DataMessage){
+func (cs * CTRLSTATE)sendS1F16(msg *sm.DataMessage){
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 16, false,
-                sm.CreateBinaryNode( byte(result) ) , -1 , msg.SystemBytes() , msg.SourceHost() ),ts : time.Now().Unix()}
+                sm.CreateBinaryNode( byte(OFLACK_OK) ) , -1 , msg.SystemBytes() , msg.SourceHost() ),ts : time.Now().Unix()}
     cs.session[msg.SourceHost()].iChan <- act
     cs.log.Printf("do request offline\n")
     return
 }
 
 /* send by Equipment only */
-func (cs * CTRLSTATE)sendS1F18(result byte,msg *sm.DataMessage){
+func (cs * CTRLSTATE)sendS1F18(result ONLACK,msg *sm.DataMessage){
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 18, false,
                 sm.CreateBinaryNode( byte(result) ) , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     cs.session[msg.SourceHost()].iChan <- act

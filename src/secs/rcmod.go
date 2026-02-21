@@ -8,6 +8,17 @@ import (
     sm "secs/secs_message"
 )
 
+type HCACK byte
+const (
+    HCACK_OK HCACK = iota
+    HCACK_INVALID_CMD
+    HCACK_CAN_NOT_DO
+    HCACK_PARAMETER_ERROR
+    HCACK__ASYNC
+    HCACK_REJECT //rejected, already in desired condition
+    HCACK_INVALID_OBJECT
+)
+
 /*
 remote commnad module
 */
@@ -111,7 +122,7 @@ func (rcm * RCMODULE)handleS2F41(msg *sm.DataMessage){
     rcm.TellUI(remotecmdstr)
 
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2,42, false,
-                                     sm.CreateListNode(sm.CreateBinaryNode( byte(0) )  , sm.CreateListNode()) ,
+                                     sm.CreateListNode(sm.CreateBinaryNode( byte(HCACK_OK) )  , sm.CreateListNode()) ,
                                      -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     rcm.oChan <- act
 }

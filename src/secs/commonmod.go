@@ -12,7 +12,11 @@ import (
     "errors"
     sm "secs/secs_message"
 )
-
+type TIACK byte
+const(
+    TIACK_OK TIACK = iota
+    TIACK_NOTDONE
+)
 type COMMONMODULE struct{
     BaseModule
 }
@@ -233,9 +237,9 @@ func (cm * COMMONMODULE)handleS2F31(msg *sm.DataMessage){
         return ;
     }
     timestr :=  item.Values().(string)
-    errCode := 0
+    errCode := TIACK_OK
     if(err != SyncTime(timestr)){
-        errCode = 1
+        errCode = TIACK_NOTDONE
     }
     ack := sm.CreateBinaryNode( byte(errCode) )
 

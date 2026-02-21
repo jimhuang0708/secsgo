@@ -7,6 +7,19 @@ import (
     sm "secs/secs_message"
 )
 
+type ACKC6 byte
+const(
+    ACKC6_OK ACKC6 = iota
+    ACKC6_ERROR
+)
+
+type ACKC10 byte
+const (
+    ACKC10_DISPLAY ACKC10 = iota
+    ACKC10_NOT_DISPLAY
+    ACKC10_TERMINAL_NOT_AVAILABLE
+)
+
 type HOSTMODULE struct{
     BaseModule
     timer_S1F13 *time.Timer
@@ -79,8 +92,7 @@ func (hm * HOSTMODULE)handleS10F1(msg *sm.DataMessage){
     hm.log.Printf("Get message from Equipment : \n %s\n",text);
 
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 10,2, false,
-                                     sm.CreateBinaryNode( byte(0) )   ,
-                                     -1 , msg.SystemBytes() ,msg.SourceHost()),ts : time.Now().Unix()}
+                                     sm.CreateBinaryNode( byte(ACKC10_DISPLAY) ) , -1 , msg.SystemBytes() ,msg.SourceHost()),ts : time.Now().Unix()}
     hm.oChan <- act
 }
 
@@ -103,7 +115,7 @@ func (hm *HOSTMODULE)sendS1F13(){
 
 func (hm *HOSTMODULE)sendS1F14(msg *sm.DataMessage){
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 14, false,
-                                   sm.CreateListNode ( sm.CreateBinaryNode( byte(0) ) ,  sm.CreateListNode() ),
+                                   sm.CreateListNode ( sm.CreateBinaryNode( byte(COMMACK_OK) ) ,  sm.CreateListNode() ),
                                    -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
     hm.oChan <- act
     return
@@ -137,21 +149,31 @@ func (hm *HOSTMODULE)processMsg(msg *sm.DataMessage)(bool){
             hm.handleS1F14(msg)
             return false
         }
+
+        if(msg.FunctionCode() == 16){
+            return false
+        }
+        if(msg.FunctionCode() == 18){
+            return false
+        }
+
+
     }
 
+    if(msg.StreamCode() == 5){
+        if(msg.FunctionCode() == 1){
+            act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 5, 2, false, sm.CreateBinaryNode(  byte(ACKC5_OK) ) , msg.SessionID() , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
+            hm.oChan <- act
+        }
+    }
 
     if(msg.StreamCode() == 6){
         if(msg.FunctionCode() == 1){
-            var node sm.ElementType
-            node = sm.CreateBinaryNode(  byte(0) )
-            act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 2, false,
-                                            node , msg.SessionID() , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
+            act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 2, false, sm.CreateBinaryNode(  byte(ACKC6_OK) ) , msg.SessionID() , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
             hm.oChan <- act
         }
         if(msg.FunctionCode() == 11){
-            act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 12, false,
-                                        sm.CreateBinaryNode( byte(0) ) ,
-                                        msg.SessionID() , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
+            act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 12, false, sm.CreateBinaryNode( byte(ACKC6_OK) ) , msg.SessionID() , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
             hm.oChan <- act
         }
     }

@@ -8,6 +8,12 @@ import (
     sm "secs/secs_message"
 )
 
+type ACKC5 byte
+const (
+    ACKC5_OK ACKC5 = iota
+    ACKC5_ERR
+
+)
 type ALARMMODULE struct{
     BaseModule
 }
@@ -83,7 +89,7 @@ func (am * ALARMMODULE)handleS5F3(msg *sm.DataMessage){
     if(alidNode.Size() > 0){
         alid = alidNode.Values().([]uint64)[0]
     }
-    ret := data.SetAlarmEnable(alid,aled)
+    ret := ACKC5(data.SetAlarmEnable(alid,aled))
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 5, 4, false, 
                                      sm.CreateBinaryNode( byte(ret) ) ,
                                      -1 , msg.SystemBytes() , msg.SourceHost() ),ts : time.Now().Unix()}

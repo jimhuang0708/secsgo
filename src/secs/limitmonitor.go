@@ -9,6 +9,33 @@ import (
     sm "secs/secs_message"
 )
 
+type VLAACK byte
+const (
+    VLAACK_OK VLAACK = iota
+    VLAACK_LIMIT_ATTRIBUTE_DEFINE_ERROR
+    VLAACK_CANNOT_PERFORM
+)
+
+type LVACK byte
+const(
+    LVACK_RESERVE LVACK = iota
+    LVACK_VID_NOT_EXIST
+    LVACK_LIMIT_NOT_SUPPORT_VID
+    LVACK_VARIABLE_REPEAT
+    LVACK_LIMIT_VALUE_ERROR
+)
+
+type LIMITACK byte
+const(
+    LIMITACK_RESERVE LIMITACK = iota
+    LIMITACK_ID_NOT_EXIST
+    LIMITACK_UPPER_OUTRANGE
+    LIMITACK_LOWER_OUTRANGE
+    LIMITACK_UPPER_SMALLER_THAN_LOWER
+    LIMITACK_ILLEGAL_FORMAT
+    LIMITACK_NOT_NUMERIC_ASCII
+    LIMITACK_DUPLICATE)
+
 type LIMITBOUND struct{
     upper interface{}
     lower interface{}
@@ -137,7 +164,7 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
         lm.log.Printf("Clean all limit bounds\n");
         lm.lmtWatch = make( map[uint32]*LIMITTARGE )
         act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 46, false,
-                                     sm.CreateListNode( sm.CreateBinaryNode( byte(0)  ) , sm.CreateListNode() ) ,
+                                     sm.CreateListNode( sm.CreateBinaryNode( byte(VLAACK_OK) ) , sm.CreateListNode() ) ,
                                      -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix() }
         lm.oChan <- act
         return
@@ -147,7 +174,7 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
         lm.sendS9FX(msg, 7)
         return ;
     }
-    vlaack := byte(0)
+    vlaack := VLAACK_OK
     rptNodes := make ( []interface{}, 0)
     for k := 0; k < attrLst.Size() ; k++ {
         attrNode , err := attrLst.(*sm.ListNode).Get(k)
@@ -167,9 +194,9 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
         ok , _ , maxNode , minNode , _ , _ := data.GetVidElementType( uint32(vid) )
         if(!ok ){
             lm.log.Printf("Error | vid : %d not exist\n ",vid);
-            rptNode := sm.CreateListNode( sm.CreateUintNode(4,vid) , sm.CreateBinaryNode( byte(1) ) , sm.CreateListNode()  ) //no such vid
+            rptNode := sm.CreateListNode( sm.CreateUintNode(4,vid) , sm.CreateBinaryNode( byte(LVACK_VID_NOT_EXIST) ) , sm.CreateListNode()  ) //no such vid
             rptNodes = append(rptNodes , rptNode)
-            vlaack = 1
+            vlaack = VLAACK_LIMIT_ATTRIBUTE_DEFINE_ERROR
             continue
         }
 
@@ -236,27 +263,27 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
 
             if(  lowerbound[0] > upperbound[0]  ){
                 lm.log.Printf("Error | lowerbound : %d > upperbound : %d\n ",lowerbound[0] , upperbound[0]);
-                lmtErrNode := sm.CreateListNode( lmtidNode , sm.CreateBinaryNode( byte(4)) ) //UPPERDB < LOWERDB
-                rptNode := sm.CreateListNode( sm.CreateUintNode(4,vid) , sm.CreateBinaryNode( byte(4) ) , lmtErrNode  ) //limit value error
+                lmtErrNode := sm.CreateListNode( lmtidNode , sm.CreateBinaryNode( byte(LIMITACK_UPPER_SMALLER_THAN_LOWER)) ) //UPPERDB < LOWERDB
+                rptNode := sm.CreateListNode( sm.CreateUintNode(4,vid) , sm.CreateBinaryNode( byte(LVACK_LIMIT_VALUE_ERROR) ) , lmtErrNode  ) //limit value error
                 rptNodes = append(rptNodes , rptNode)
-                vlaack = 1
+                vlaack = VLAACK_LIMIT_ATTRIBUTE_DEFINE_ERROR
                 break;
             }
             if( upperbound[0] > max[0] ){
                 lm.log.Printf("Error | upperbound : %d > max : %d\n ",upperbound[0] , max[0]);
-                lmtErrNode := sm.CreateListNode( lmtidNode , sm.CreateBinaryNode( byte(2)) )
-                rptNode := sm.CreateListNode( sm.CreateUintNode(4,vid) , sm.CreateBinaryNode( byte(4) ) , lmtErrNode  ) //limit value error
+                lmtErrNode := sm.CreateListNode( lmtidNode , sm.CreateBinaryNode( byte(LIMITACK_UPPER_OUTRANGE)) )
+                rptNode := sm.CreateListNode( sm.CreateUintNode(4,vid) , sm.CreateBinaryNode( byte(LVACK_LIMIT_VALUE_ERROR) ) , lmtErrNode  ) //limit value error
                 rptNodes = append(rptNodes , rptNode)
-                vlaack = 1
+                vlaack = VLAACK_LIMIT_ATTRIBUTE_DEFINE_ERROR
                 break;
             }
 
             if( lowerbound[0] < min[0] ){
                 lm.log.Printf("Error | lowerbound : %d < min : %d\n ",lowerbound[0] , min[0]);
-                lmtErrNode := sm.CreateListNode( lmtidNode , sm.CreateBinaryNode( byte(3)) )
-                rptNode := sm.CreateListNode( sm.CreateUintNode(4,vid) , sm.CreateBinaryNode( byte(4) ) , lmtErrNode  ) //limit value error
+                lmtErrNode := sm.CreateListNode( lmtidNode , sm.CreateBinaryNode( byte(LIMITACK_LOWER_OUTRANGE)) )
+                rptNode := sm.CreateListNode( sm.CreateUintNode(4,vid) , sm.CreateBinaryNode( byte(LVACK_LIMIT_VALUE_ERROR) ) , lmtErrNode  ) //limit value error
                 rptNodes = append(rptNodes , rptNode)
-                vlaack = 1
+                vlaack = VLAACK_LIMIT_ATTRIBUTE_DEFINE_ERROR
                 break;
             }
             lm.setLimits(uint32(vid),uint32(lmtid), upperboundNode.Clone() , lowerboundNode.Clone() )
@@ -264,7 +291,7 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
             lm.log.Printf("bound : %v | %v\n",upperboundNode,lowerboundNode);
         }
     }
-    vlaackNODE :=sm.CreateBinaryNode( vlaack  )
+    vlaackNODE :=sm.CreateBinaryNode( byte(vlaack)  )
     rptNodes = append( []interface{}{ vlaackNODE  } , rptNodes...  )
     lm.log.Printf("%v \n",vlaackNODE);
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 46, false,

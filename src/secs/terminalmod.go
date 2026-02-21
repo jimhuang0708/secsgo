@@ -80,7 +80,7 @@ func (tm * TERMINALMODULE)handleS10F3(msg *sm.DataMessage){
     tm.log.Printf("Get message from host : \n %s\n",text);
 
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 10,4, false,
-                                     sm.CreateBinaryNode( byte(0) )   ,
+                                     sm.CreateBinaryNode( byte(ACKC10_DISPLAY) )   ,
                                      -1 , msg.SystemBytes() ,msg.SourceHost()),ts : time.Now().Unix()}
     tm.oChan <- act
 }

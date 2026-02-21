@@ -25,6 +25,13 @@ type COMMUNICATESTATE struct{
     sessionID string
 }
 
+type COMMACK byte
+const (
+    COMMACK_OK COMMACK = iota
+    COMMACK_DENY
+)
+
+
 func RandUint64String() string {
     var b [8]byte
     if _, err := rand.Read(b[:]); err != nil {
@@ -88,12 +95,13 @@ func (cs *COMMUNICATESTATE)handleS1F14(msg *sm.DataMessage){
     }
 
     v := node0.Values()
-    if( v.([]byte)[0] == 0){ //accept
+    if( COMMACK(v.([]byte)[0]) == COMMACK_OK){ //accept
         cs.log.Printf("Enter COMMUNICATE STATE | Local initiated\n")
         cs.comfsm.Emit(CommFSMEvent{EvRecvExpectedS1F14_CommAck0 , nil})
         return;
     } else { //reject
-        cs.log.Printf("S1F14 invalid format just restartS1F13 timer!\n")
+        cs.comfsm.Emit(CommFSMEvent{EvConnTransactionFail,nil})
+        cs.log.Printf("S1F14 reject!\n")
     }
     return
 }
@@ -109,7 +117,6 @@ func (cs *COMMUNICATESTATE)handleS1F13(msg *sm.DataMessage){
 
     }
     cs.comfsm.Emit(CommFSMEvent{EvRecvS1F13,msg})
-    //cs.SendS1F14_CommAck0(msg)
     return
 }
 
@@ -125,7 +132,7 @@ func (cs *COMMUNICATESTATE)SendS1F13(){
 
 func (cs *COMMUNICATESTATE)SendS1F14_CommAck0(msg *sm.DataMessage){
     act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(1, 14, false,
-                               sm.CreateListNode ( sm.CreateBinaryNode( byte(0) ) ,  sm.CreateListNode( sm.CreateASCIINode("HMITaker") , sm.CreateASCIINode("1.0"))),
+                               sm.CreateListNode ( sm.CreateBinaryNode( byte(COMMACK_OK) ) ,  sm.CreateListNode( sm.CreateASCIINode("HMITaker") , sm.CreateASCIINode("1.0"))),
                                -1 , msg.SystemBytes(), msg.SourceHost() ),ts : time.Now().Unix()}
     cs.hsms_ss.iChan <- act
     return

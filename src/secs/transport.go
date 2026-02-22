@@ -40,7 +40,7 @@ func (t *Transport)TellUI(msgtype string , sml string){
     item := &secsObj{ SML : sml , MsgType : msgtype, TimeStamp : time.Now().Format("15:04:05.000") }
     uievt := &UIEvt{ EvtType : "Packet" , Source : "Transport" , Data : item }
     jsonData, _ := json.Marshal(uievt)
-    t.oChan <- Evt{ cmd : "uievent" ,msg : string(jsonData)  }
+    t.oChan <- Evt{ cmd : "uievent" ,ctx : string(jsonData)  }
 }
 
 func (t *Transport)ReadMsg()(string,sm.HSMSMessage){
@@ -48,7 +48,7 @@ func (t *Transport)ReadMsg()(string,sm.HSMSMessage){
     ret := t.ReadFullTimeout(msgLen,100)//wait anything
     if(ret == "OK"){
         secLen := binary.BigEndian.Uint32(msgLen)
-        //t.log.Printf("-> %d\n",secLen);
+        t.log.Printf("-> %d\n",secLen);
         msg := make([]byte,secLen)
         ret := t.ReadFullTimeout(msg,T8)
         if(ret == "OK"){
@@ -100,7 +100,7 @@ func CreateTransport(Conn net.Conn, log *logger.Logger)(*Transport){
 func (t *Transport)handleRead() {
     defer func() {
         t.log.Printf("Exit Transport Read\n");
-        t.oChan <- Evt{ cmd : "SOCKET_CLOSE" ,msg : nil  }
+        t.oChan <- Evt{ cmd : "SOCKET_CLOSE" ,ctx : nil  }
         t.wg.Done()
     }()
 
@@ -108,7 +108,8 @@ func (t *Transport)handleRead() {
         ret , msg := t.ReadMsg()
         if(ret == "READOK"){
             if(msg != nil){
-                t.oChan <- Evt{ cmd : "recv" ,msg : msg}
+                ctx := RecvCtx{ msg : msg }
+                t.oChan <- Evt{ cmd : "recv" ,ctx : ctx}
             }
         } else {
             t.log.Printf("Error : Read not ok\n");
@@ -120,15 +121,15 @@ func (t *Transport)handleRead() {
 func (t *Transport)handleSend() {
     defer func() {
         t.log.Printf("Exit Transport Send\n");
-        t.oChan <- Evt{ cmd : "SOCKET_CLOSE" ,msg : nil  }
+        t.oChan <- Evt{ cmd : "SOCKET_CLOSE" ,ctx : nil  }
         t.wg.Done()
     }()
     for {
         select {
             case act := <-t.iChan:
                 if(act.cmd == "send"){
-                    t.log.Printf("Put %s\n", act.msg.(sm.HSMSMessage).ToSml() )
-                    ret := t.SendAct(act.msg.(sm.HSMSMessage))
+                    t.log.Printf("Put %s\n", act.ctx.(SendCtx).msg.(sm.HSMSMessage).ToSml() )
+                    ret := t.SendAct(act.ctx.(SendCtx).msg.(sm.HSMSMessage))
                     if (ret == "WRITEERROR") {
                         t.log.Println("send error:", ret)
                         return

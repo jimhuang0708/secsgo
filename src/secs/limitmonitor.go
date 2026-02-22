@@ -119,7 +119,7 @@ func converToFloat64(n sm.ElementType)(bool,[]float64){
 func (lm * LIMITMONITORMODULE)TellUI(vid uint32,limitid uint32, upper float64,lower float64){
     uievt := &UIEvt{ EvtType : "S2F45" , Source : "LIMITMONITORMODULE" , Data : fmt.Sprintf("%d:%d:%f:%f",vid,limitid ,upper,lower) }
     jsonData, _ := json.Marshal(uievt)
-    lm.oChan <- Evt{ cmd : "uievent" ,msg : string(jsonData)  }
+    lm.oChan <- Evt{ cmd : "uievent" ,ctx : string(jsonData)  }
 }
 
 
@@ -163,9 +163,9 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
         //clean all limitbound
         lm.log.Printf("Clean all limit bounds\n");
         lm.lmtWatch = make( map[uint32]*LIMITTARGE )
-        act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 46, false,
-                                     sm.CreateListNode( sm.CreateBinaryNode( byte(VLAACK_OK) ) , sm.CreateListNode() ) ,
-                                     -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix() }
+        replyMsg := sm.CreateDataMessage( 2, 46, false, sm.CreateListNode( sm.CreateBinaryNode( byte(VLAACK_OK) ) , sm.CreateListNode() ) , -1 , msg.SystemBytes() , msg.SourceHost())
+        ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+        act := Evt{ cmd : "send" , ctx : ctx }
         lm.oChan <- act
         return
     }
@@ -294,9 +294,9 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
     vlaackNODE :=sm.CreateBinaryNode( byte(vlaack)  )
     rptNodes = append( []interface{}{ vlaackNODE  } , rptNodes...  )
     lm.log.Printf("%v \n",vlaackNODE);
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 46, false,
-                                     sm.CreateListNode(rptNodes...) ,
-                                     -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+    replyMsg := sm.CreateDataMessage( 2, 46, false, sm.CreateListNode(rptNodes...) , -1 , msg.SystemBytes() , msg.SourceHost())
+    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     lm.oChan <- act
 
 }
@@ -346,20 +346,17 @@ func (lm * LIMITMONITORMODULE)handleS2F47(msg *sm.DataMessage){
         limitNode := sm.CreateListNode( sm.CreateASCIINode(unit) , maxNode , minNode , sm.CreateListNode(boundNodes...) )
         limitNodes = append( limitNodes , sm.CreateListNode( vidNode , limitNode) )
     }
-
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 48, false,
-                                     sm.CreateListNode(limitNodes...) ,
-                                     -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+    replyMsg := sm.CreateDataMessage( 2, 48, false, sm.CreateListNode(limitNodes...) ,  -1 , msg.SystemBytes() , msg.SourceHost())
+    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     lm.oChan <- act
-
-
 }
 
 func (lm * LIMITMONITORMODULE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
     p := make( map[string]interface{} )
     p["evtid"] = e
     p["dvctx"] = dvCtx
-    lm.oChan <- Evt{ cmd : "TRIG_EVENT" , msg : p ,ts : time.Now().Unix() }
+    lm.oChan <- Evt{ cmd : "TRIG_EVENT" , ctx : p }
     return
 }
 
@@ -420,12 +417,14 @@ func (lm * LIMITMONITORMODULE)processMsg(msg *sm.DataMessage)(bool){
 
 func (lm * LIMITMONITORMODULE)processEvt(evt Evt){
     if(evt.cmd == "executefn"){
-        fn := evt.msg.(func())
+        fn := evt.ctx.(func())
         fn()
         return
     }
-    msg := evt.msg.(*sm.DataMessage)
-    lm.processMsg(msg)
+    if(evt.cmd == "recv"){
+        msg := evt.ctx.(RecvCtx).msg.(*sm.DataMessage)
+        lm.processMsg(msg)
+    }
 }
 
 func (lm * LIMITMONITORMODULE)stateRun(){

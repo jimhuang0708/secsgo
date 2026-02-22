@@ -1,6 +1,7 @@
 package secs
 
 import (
+    //"errors"
     "encoding/json"
     //"log/slog"
     "net"
@@ -21,12 +22,27 @@ const RTY = 3 //Retry
 const LNKTEST_DUR = 60000//linktest.req timing
 const EstablishCommunicationsTimeout = 10000 //send S1F13 and wait S1F14
 
+type SendCtx struct {
+    msg interface{}
+    cb func(error)(byte)
+    timeout int64
+}
+
+type RecvCtx struct {
+    msg interface{}
+}
+
+type TrigerEvtCtx struct{
+    evtid uint32
+    drvctx map[uint32]interface{}
+}
+
 type Evt struct{
     cmd string
-    msg any //msg type depend on cmd
-    waitAlarm any //use any. prevent compile error
-    ts  int64
+    ctx any
 }
+
+
 
 type EquipmentContext struct {
     BaseContext
@@ -153,10 +169,10 @@ func (ec *EquipmentContext)stateTrig(evt Evt){
         if(ec.dispatchHSMSDataMsg(evt)){
             return
         }
-        ec.sendUnknownError(evt.msg.(*sm.DataMessage))
+        ec.sendUnknownError(evt.ctx.(RecvCtx).msg.(*sm.DataMessage))
     } else if(evt.cmd == "uievent"){
         if( ec.UIEvtChan != nil ){
-            ec.processUIEvt(evt.msg.(string))
+            ec.processUIEvt(evt.ctx.(string))
         }
     } else if(evt.cmd == "TRIG_EVENT" || evt.cmd == "TRIG_EVENT_FORCE"){
         ec.trigEvent(evt) //just proxy to eventMod
@@ -164,7 +180,7 @@ func (ec *EquipmentContext)stateTrig(evt Evt){
     } else {
         if(evt.cmd == "READERROR" || evt.cmd == "T8_TIMEOUT" || evt.cmd == "WRITEERROR"){
             ec.log.Printf("Error | Event : %s",evt.cmd)
-            ec.ctrlState.iChan <-Evt{ cmd : "quit" , msg : nil }
+            ec.ctrlState.iChan <-Evt{ cmd : "quit" , ctx : nil }
             return
         }
     }
@@ -172,7 +188,7 @@ func (ec *EquipmentContext)stateTrig(evt Evt){
 
 func (ec *EquipmentContext )doEvt(act Evt){
     if(act.cmd == "quit"){
-        ec.ctrlState.iChan <-Evt{ cmd : "quit" , msg : nil }
+        ec.ctrlState.iChan <-Evt{ cmd : "quit" , ctx : nil }
         return
     }
 
@@ -188,7 +204,7 @@ func (ec *EquipmentContext )doEvt(act Evt){
 
     if(act.cmd == "uievent"){
         if( ec.UIEvtChan != nil ){
-            ec.processUIEvt(act.msg.(string))
+            ec.processUIEvt(act.ctx.(string))
         }
         return
     }
@@ -267,7 +283,7 @@ func (ec *EquipmentContext)Operate_Ctrl(op string){
     fn := func() {
         ec.ctrlState.Operate_Ctrl(op)
     }
-    ec.ctrlState.iChan <- Evt{ cmd : "executefn" , msg : fn }
+    ec.ctrlState.iChan <- Evt{ cmd : "executefn" , ctx : fn }
 }
 
 func (ec *EquipmentContext)SetCommunicate(enable bool){
@@ -275,7 +291,7 @@ func (ec *EquipmentContext)SetCommunicate(enable bool){
     fn := func() {
         ec.ctrlState.SetCommunicate(enable)
     }
-    ec.ctrlState.iChan <- Evt{ cmd : "executefn" , msg : fn }
+    ec.ctrlState.iChan <- Evt{ cmd : "executefn" , ctx : fn }
 }
 
 /* TODO : limit id should be fixed in config and can't not dynamically add by host*/
@@ -284,7 +300,7 @@ func (ec *EquipmentContext)SetVidLimit(vid uint32 ,limitid uint32,upperDB uint32
     fn := func() {
         ec.lmtModule.setLimits( vid, limitid, sm.CreateUintNode(4, upperDB), sm.CreateUintNode(4, lowerDB) )
     };
-    ec.lmtModule.iChan <- Evt{ cmd : "executefn" , msg : fn }
+    ec.lmtModule.iChan <- Evt{ cmd : "executefn" , ctx : fn }
 }
 
 func (ec *EquipmentContext)SendText(text string){
@@ -292,7 +308,7 @@ func (ec *EquipmentContext)SendText(text string){
     fn := func() {
         ec.terminalModule.sendS10F1(text)
     }
-    ec.terminalModule.iChan <- Evt{ cmd : "executefn" , msg : fn }
+    ec.terminalModule.iChan <- Evt{ cmd : "executefn" , ctx : fn }
 }
 
 func (ec *EquipmentContext)SendRecognizeEvent(){
@@ -300,7 +316,7 @@ func (ec *EquipmentContext)SendRecognizeEvent(){
     fn := func() {
         ec.terminalModule.sendRecognizeEvent()
     }
-    ec.terminalModule.iChan <- Evt{ cmd : "executefn" , msg : fn }
+    ec.terminalModule.iChan <- Evt{ cmd : "executefn" , ctx : fn }
 }
 
 
@@ -308,7 +324,7 @@ func (ec *EquipmentContext)SetAlarm(id uint64,v int){
     fn := func() {
         ec.alarmModule.setAlarm(id,v)
     }
-    ec.alarmModule.iChan <- Evt{ cmd : "executefn" , msg : fn }
+    ec.alarmModule.iChan <- Evt{ cmd : "executefn" , ctx : fn }
 }
 
 func (ec *EquipmentContext)SetEC(s string){
@@ -322,7 +338,7 @@ func (ec *EquipmentContext)SetEC(s string){
     fn := func() {
         ec.ecModule.operatorSetECS(node)
     }
-    ec.ecModule.iChan <- Evt{ cmd : "executefn" , msg : fn }
+    ec.ecModule.iChan <- Evt{ cmd : "executefn" , ctx : fn }
 }
 
 func (ec *EquipmentContext)GetUIEvt()(string,bool){

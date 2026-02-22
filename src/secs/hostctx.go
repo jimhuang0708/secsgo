@@ -85,10 +85,14 @@ func (hc *HostContext)SendMsg(e Evt){
     }
 }
 
+func (hc *HostContext)GenericCB(e error)(byte){
+    return 0;
+}
 
 func (hc *HostContext)sendSXFY(stream int , function int , node sm.ElementType) {
     msg := sm.CreateDataMessage( stream, function , true , node , hc.deviceID , 0 , "ALL" )
-    act := Evt{ cmd : "send" , msg : msg ,ts : time.Now().Unix() }
+    ctx := SendCtx{ msg : msg , cb : hc.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    act := Evt{ cmd : "send" , ctx : ctx }
     hc.hsms_ss.iChan <- act
     return
 }
@@ -123,7 +127,7 @@ func (hc *HostContext)processUIEvt(uievt string){
 
 func (hc *HostContext)processEvt(evt Evt){
     if(evt.cmd == "uievent"){
-        hc.processUIEvt(evt.msg.(string))
+        hc.processUIEvt(evt.ctx.(string))
     } else if(evt.cmd == "HSMS_SS_EXIT"){
         uievt := &UIEvt{ EvtType : "disconnect" , Source : "Transport" , Data : nil }
         jsonData, _ := json.Marshal(uievt)
@@ -135,7 +139,7 @@ func (hc *HostContext)processEvt(evt Evt){
         if(hc.dispatchHSMSDataMsg(evt)){
             return
         }
-        hc.sendUnknownError(evt.msg.(*sm.DataMessage))
+        hc.sendUnknownError(evt.ctx.(RecvCtx).msg.(*sm.DataMessage))
     }  else {
         if(evt.cmd == "READERROR" || evt.cmd == "T8_TIMEOUT" || evt.cmd == "WRITEERROR"){
             hc.log.Printf("Error | Event : %s",evt.cmd)
@@ -167,14 +171,14 @@ func (hc *HostContext)stateRun(mode string,addr string){
             case o := <-hc.hostModule.oChan:
                 hc.log.Printf("get from hc.hostModule.oChan %v",o);
                 if(o.cmd == "uievent"){
-                    hc.processUIEvt(o.msg.(string))
+                    hc.processUIEvt(o.ctx.(string))
                 } else {
                     hc.hsms_ss.iChan <- o
                 }
             case o := <-hc.dstModule.oChan:
                 hc.log.Printf("get from hc.dstModule.oChan %v",o);
                 if(o.cmd == "uievent"){
-                    hc.processUIEvt(o.msg.(string))
+                    hc.processUIEvt(o.ctx.(string))
                 } else {
                     hc.hsms_ss.iChan <- o
                 }
@@ -199,14 +203,14 @@ func (hc *HostContext)ReadEq(dsName string) {
     fn := func() {
         hc.dstModule.sendS13F3(1 , dsName  , 0)
     }
-    hc.dstModule.iChan <- Evt{ cmd : "executefn" , msg : fn }
+    hc.dstModule.iChan <- Evt{ cmd : "executefn" , ctx : fn }
 }
 
 func (hc *HostContext)WriteEq(dsName string) {
     fn := func() {
         hc.dstModule.sendS13F1( dsName )
     }
-    hc.dstModule.iChan <- Evt{ cmd : "executefn" , msg : fn }
+    hc.dstModule.iChan <- Evt{ cmd : "executefn" , ctx : fn }
 }
 
 func (hc *HostContext)GetUIEvt()(string,bool){

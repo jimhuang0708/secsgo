@@ -61,7 +61,7 @@ func CreateCOMMUNICATESTATE(comState int,hsms_ss * HSMS_SS,cs * CTRLSTATE, log *
 func (cs * COMMUNICATESTATE)TellUI(){ //notify UI comstate changed
     uievt := &UIEvt{ EvtType : "CommunicateChange" , Source : "ComState" , Data : cs.comfsm.major.String() }
     jsonData, _ := json.Marshal(uievt)
-    cs.oChan <- Evt{ cmd : "uievent" ,msg : string(jsonData)  }
+    cs.oChan <- Evt{ cmd : "uievent" ,ctx : string(jsonData)  }
 }
 
 func (cs *COMMUNICATESTATE)OP_SetComEnabled(enable bool){
@@ -120,20 +120,29 @@ func (cs *COMMUNICATESTATE)handleS1F13(msg *sm.DataMessage){
     return
 }
 
+func (cs *COMMUNICATESTATE)SendS1F13CB(err error)(byte){
+    fn := func(){
+        if(err != nil){
+           cs.iChan <- Evt{ cmd : "WAITS1F14_TIMEOUT" , ctx : nil  }
+        }
+    }
+    cs.iChan <- Evt{ cmd : "executefn" , ctx : fn }
+    return 0
+}
+
 func (cs *COMMUNICATESTATE)SendS1F13(){
     msg := sm.CreateDataMessage( 1, 13, true,sm.CreateListNode( sm.CreateASCIINode("HMITaker") , sm.CreateASCIINode("1.0")),-1,0, "ALL")
-
-    alarmEvt := Evt{ cmd : "WAITS1F14_TIMEOUT" , msg : msg ,ts : time.Now().Unix() }
-    wi := WaitItem {  evt : alarmEvt ,ts : time.Now().Unix() + (EstablishCommunicationsTimeout/1000) , evtChan : cs.iChan }
-    act := Evt{ cmd : "send" , msg : msg,ts : time.Now().Unix() , waitAlarm : wi }
+    ctx := SendCtx{ msg : msg , cb : cs.SendS1F13CB , timeout : time.Now().Unix() + (EstablishCommunicationsTimeout/1000) }
+    act := Evt{ cmd : "send" , ctx : ctx }
     cs.hsms_ss.iChan <- act
     return
 }
 
 func (cs *COMMUNICATESTATE)SendS1F14_CommAck0(msg *sm.DataMessage){
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(1, 14, false,
-                               sm.CreateListNode ( sm.CreateBinaryNode( byte(COMMACK_OK) ) ,  sm.CreateListNode( sm.CreateASCIINode("HMITaker") , sm.CreateASCIINode("1.0"))),
-                               -1 , msg.SystemBytes(), msg.SourceHost() ),ts : time.Now().Unix()}
+    rmsg := sm.CreateDataMessage(1, 14, false,sm.CreateListNode ( sm.CreateBinaryNode( byte(COMMACK_OK) ) , sm.CreateListNode( sm.CreateASCIINode("HMITaker") ,
+                                 sm.CreateASCIINode("1.0"))), -1 , msg.SystemBytes(), msg.SourceHost() )
+    ctx := SendCtx{ msg : rmsg , cb : nil , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     cs.hsms_ss.iChan <- act
     return
 }
@@ -166,7 +175,8 @@ func (cs *COMMUNICATESTATE)sendS9FX(msg *sm.DataMessage,f int){
         bin[i] = raw[i+4]
     }
     errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , -1 , 0 , msg.SourceHost() )
-    act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
+    ctx := SendCtx{ msg : errmsg , cb : nil , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     cs.hsms_ss.iChan <- act
     return
 }
@@ -182,7 +192,8 @@ func (cs *COMMUNICATESTATE)processMsg(msg *sm.DataMessage)(bool){
             return false
         }
     }
-    cs.oChan <- Evt{ cmd : "recv" , msg : msg , ts : time.Now().Unix() }
+    ctx := RecvCtx{ msg : msg }
+    cs.oChan <- Evt{ cmd : "recv" , ctx : ctx  }
     return true
 }
 
@@ -196,7 +207,7 @@ func (cs *COMMUNICATESTATE)processEvt(evt Evt){
     if(evt.cmd == "HSMS_SS_EXIT"){
         cs.log.Printf("COMMUNICATESTATE Get HSMS_SS_EXIT\n");
         cs.comfsm.Emit(CommFSMEvent{EvLinkDisconnected,nil})
-        cs.oChan <- Evt{ cmd : "COMMUNICATESTATE_EXIT" , msg : nil , ts : time.Now().Unix() }
+        cs.oChan <- Evt{ cmd : "COMMUNICATESTATE_EXIT" , ctx : nil }
         return
     }
 
@@ -206,8 +217,8 @@ func (cs *COMMUNICATESTATE)processEvt(evt Evt){
         return
     }
 
-    if( cs.comfsm.major.String() == "ENABLED" ){
-        msg := evt.msg.(*sm.DataMessage)
+    if( evt.cmd == "recv" && cs.comfsm.major.String() == "ENABLED" ){
+        msg := evt.ctx.(RecvCtx).msg.(*sm.DataMessage)
         cs.processMsg(msg)
     } else {
         cs.log.Printf("Communicate state is DISABLED %v| discard %v\n",evt,cs.comfsm.major.String())
@@ -227,7 +238,7 @@ func (cs *COMMUNICATESTATE )handleInput(evt Evt){
         return
     }
     if(evt.cmd == "executefn"){
-        fn := evt.msg.(func())
+        fn := evt.ctx.(func())
         fn()
         return
     }

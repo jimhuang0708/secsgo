@@ -54,81 +54,90 @@ func (em * EVENTMODULE) PutEvt(e Evt) {
 
 /* send by Equipment only */
 func (em * EVENTMODULE)sendS1F24(msg *sm.DataMessage,evtLst []uint32){
-
     node := data.GetEventNameList(evtLst)
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 24, false, node , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+    replyMsg := sm.CreateDataMessage( 1, 24, false, node , -1 , msg.SystemBytes() , msg.SourceHost())
+    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     em.oChan <- act
 }
 
 /* send by Equipment only */
 func (em * EVENTMODULE)sendS2F34(msg *sm.DataMessage,result string){
+    var replyMsg *sm.DataMessage = nil
     if(result == "ok"){
-        act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 34, false,
-                    sm.CreateBinaryNode( byte(DRACK_OK) ) , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
-        em.oChan <- act
+        replyMsg = sm.CreateDataMessage( 2, 34, false, sm.CreateBinaryNode( byte(DRACK_OK) ) , -1 , msg.SystemBytes() , msg.SourceHost())
     }
 
     if(result == "duprpt"){
-        act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 34, false,
-                    sm.CreateBinaryNode( byte(DRACK_RPTID_ALREADY_DEFINE) ) , -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
-        em.oChan <- act
+        replyMsg = sm.CreateDataMessage( 2, 34, false, sm.CreateBinaryNode( byte(DRACK_RPTID_ALREADY_DEFINE) ) , -1 , msg.SystemBytes(), msg.SourceHost())
     }
 
     if(result == "novid"){
-        act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 34, false,
-                    sm.CreateBinaryNode( byte(DRACK_INVALID_ID) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+        replyMsg = sm.CreateDataMessage( 2, 34, false, sm.CreateBinaryNode( byte(DRACK_INVALID_ID) ), -1 , msg.SystemBytes(), msg.SourceHost())
+    }
+
+    if(replyMsg != nil){
+        ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+        act := Evt{ cmd : "send" , ctx : ctx }
         em.oChan <- act
     }
+
     return
 }
 
 /* send by Equipment only */
 func (em * EVENTMODULE)sendS2F36(msg *sm.DataMessage,result string){
+    var replyMsg *sm.DataMessage = nil
     if(result == "ok"){
-        act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2, 36, false,
-                    sm.CreateBinaryNode( byte(LRACK_OK) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
-        em.oChan <- act
+        replyMsg = sm.CreateDataMessage(2, 36, false, sm.CreateBinaryNode( byte(LRACK_OK) ), -1 , msg.SystemBytes(), msg.SourceHost())
     }
 
     if(result == "dupevt"){//duplicate evt
-        act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 36, false,
-                    sm.CreateBinaryNode( byte(LRACK_CEIDLINK_ALREADY_DEFINE) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
-        em.oChan <- act
+        replyMsg = sm.CreateDataMessage( 2, 36, false, sm.CreateBinaryNode( byte(LRACK_CEIDLINK_ALREADY_DEFINE) ), -1 , msg.SystemBytes(), msg.SourceHost())
     }
 
     if(result == "noevt"){//invalid evnt id
-        act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 36, false,
-                    sm.CreateBinaryNode( byte(LRACK_CEID_INVALID) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
-        em.oChan <- act
+        replyMsg = sm.CreateDataMessage( 2, 36, false, sm.CreateBinaryNode( byte(LRACK_CEID_INVALID) ), -1 , msg.SystemBytes(), msg.SourceHost())
     }
 
     if(result == "norpt"){//invalid rpt id
-        act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2, 36, false,
-                    sm.CreateBinaryNode( byte(LRACK_RPTID_INVALID) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
-        em.oChan <- act
+        replyMsg = sm.CreateDataMessage(2, 36, false, sm.CreateBinaryNode( byte(LRACK_RPTID_INVALID) ), -1 , msg.SystemBytes(), msg.SourceHost())
     }
 
+    if(replyMsg != nil){
+        ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+        act := Evt{ cmd : "send" , ctx : ctx }
+        em.oChan <- act
+    }
     return
 }
 
 /* send by Equipment only */
 func (em * EVENTMODULE)sendS2F38(msg *sm.DataMessage,result string){
+    var replyMsg *sm.DataMessage = nil
     if(result == "accept"){
-        act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 38, false,
-                    sm.CreateBinaryNode( byte(ERACK_OK) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
-        em.oChan <- act
+        replyMsg = sm.CreateDataMessage( 2, 38, false, sm.CreateBinaryNode( byte(ERACK_OK) ), -1 , msg.SystemBytes(), msg.SourceHost())
     }
     if(result == "reject"){
-        act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2, 38, false,
-                    sm.CreateBinaryNode( byte(ERACK_DENY) ), -1 , msg.SystemBytes(), msg.SourceHost()),ts : time.Now().Unix()}
+        replyMsg =  sm.CreateDataMessage(2, 38, false, sm.CreateBinaryNode( byte(ERACK_DENY) ), -1 , msg.SystemBytes(), msg.SourceHost())
+    }
+
+    if(replyMsg != nil){
+        ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+        act := Evt{ cmd : "send" , ctx : ctx }
         em.oChan <- act
     }
     return
 }
 
+func (em * EVENTMODULE)GenericCB(e error)(byte){
+    return 0
+}
+
 func (em * EVENTMODULE)sendS6F11(node sm.ElementType){
-    cmd :=  "send"
-    act := Evt{ cmd : cmd , msg : sm.CreateDataMessage( 6, 11, true, node ,-1 , 0 , "ALL"), ts : time.Now().Unix()   }
+    msg := sm.CreateDataMessage( 6, 11, true, node ,-1 , 0 , "ALL")
+    ctx := SendCtx{ msg : msg , cb : em.GenericCB , timeout :  time.Now().Unix() + (T3/1000) }
+    act := Evt{ cmd : "send" , ctx : ctx }
     em.log.Printf("send report\n")
     em.oChan <- act
 }
@@ -386,15 +395,15 @@ func (em * EVENTMODULE)handleS6F15(msg *sm.DataMessage){
     em.log.Printf("evtID %d\n",evtID);
     rootNode := data.GetEventReport(evtID , nil )
     //em.log.Printf("rootNode : %v\n",rootNode);
-    var act Evt
+    var replyMsg *sm.DataMessage = nil
     if(rootNode != nil){
-        act = Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 16, false,
-                rootNode , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+        replyMsg = sm.CreateDataMessage(6, 16, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost())
     } else {
         em.log.Printf("evtID %d not found\n",evtID);
-        act = Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 16, false,
-                sm.CreateListNode() , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+        replyMsg =  sm.CreateDataMessage(6, 16, false, sm.CreateListNode() , -1 , msg.SystemBytes() , msg.SourceHost())
     }
+    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     em.oChan <- act
 }
 
@@ -409,15 +418,15 @@ func (em * EVENTMODULE)handleS6F19(msg *sm.DataMessage){
     em.log.Printf("rptID %d\n",rptID);
     rootNode := data.GetRptReport( rptID )
     //em.log.Printf("rootNode : %v\n",rootNode);
-    var act Evt
+    var replyMsg *sm.DataMessage = nil
     if(rootNode != nil){
-        act = Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 20, false,
-                rootNode , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+        replyMsg = sm.CreateDataMessage( 6, 20, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost())
     } else {
         em.log.Printf("rptID %d not found\n",rptID);
-        act = Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 20, false,
-                sm.CreateListNode() , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+        replyMsg = sm.CreateDataMessage( 6, 20, false, sm.CreateListNode() , -1 , msg.SystemBytes() , msg.SourceHost())
     }
+    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     em.oChan <- act
 }
 
@@ -463,7 +472,7 @@ func (em * EVENTMODULE)processMsg(msg *sm.DataMessage)(bool){
 }
 
 func (em * EVENTMODULE)buildEventReport(evt Evt){
-    paraemeter := evt.msg.(map[string]interface{})
+    paraemeter := evt.ctx.(map[string]interface{})
     evtID := paraemeter["evtid"].(uint32)
     dvCtx := paraemeter["dvctx"].(map[uint32]interface{})
     rootNode := data.GetEventReport(evtID ,dvCtx )
@@ -482,9 +491,10 @@ func (em * EVENTMODULE)processEvt(evt Evt){
         em.buildEventReport(evt)
         return;
     }
-
-    msg := evt.msg.(*sm.DataMessage)
-    em.processMsg(msg)
+    if(evt.cmd == "recv"){
+        msg := evt.ctx.(RecvCtx).msg.(*sm.DataMessage)
+        em.processMsg(msg)
+    }
 }
 
 func (em *EVENTMODULE)moduleRun(){

@@ -2,7 +2,7 @@ package secs
 
 import (
     "net"
-    "time"
+//    "time"
 //    "secs/data"
     "secs/logger"
     "encoding/json"
@@ -58,7 +58,8 @@ func (bc *BaseContext)buildError(msg *sm.DataMessage,f int){
         bin[i] = raw[i+4]
     }
     errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , bc.deviceID , 0 , msg.SourceHost() )
-    act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
+    ctx := SendCtx{ msg : errmsg , cb : nil , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     bc.msgsender.SendMsg(act)
     return
 }
@@ -73,7 +74,7 @@ func (bc *BaseContext)buildStopTransaction(msg *sm.DataMessage){
 */
 
 func (bc *BaseContext)dispatchHSMSDataMsg(evt Evt)(bool){
-    msg := evt.msg.(*sm.DataMessage)
+    msg := evt.ctx.(RecvCtx).msg.(*sm.DataMessage)
     // all sessionId shoule be same as equipment's DEVICE ID
     if(msg.SessionID() != bc.deviceID){
         // this situation should be block in hsms_ss

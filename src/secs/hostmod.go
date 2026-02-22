@@ -41,7 +41,7 @@ func (hm *HOSTMODULE) PutEvt(e Evt) {
 func (hm * HOSTMODULE)TellUI(text string){
     uievt := &UIEvt{ EvtType : "S10F1" , Source : "TERMINALMODULE" , Data : text }
     jsonData, _ := json.Marshal(uievt)
-    hm.oChan <- Evt{ cmd : "uievent" ,msg : string(jsonData)  }
+    hm.oChan <- Evt{ cmd : "uievent" ,ctx : string(jsonData)  }
 }
 
 
@@ -91,22 +91,20 @@ func (hm * HOSTMODULE)handleS10F1(msg *sm.DataMessage){
     hm.TellUI(text)
     hm.log.Printf("Get message from Equipment : \n %s\n",text);
 
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 10,2, false,
-                                     sm.CreateBinaryNode( byte(ACKC10_DISPLAY) ) , -1 , msg.SystemBytes() ,msg.SourceHost()),ts : time.Now().Unix()}
+    replyMsg :=  sm.CreateDataMessage( 10,2, false, sm.CreateBinaryNode( byte(ACKC10_DISPLAY) ) , -1 , msg.SystemBytes() ,msg.SourceHost())
+    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     hm.oChan <- act
 }
 
-
-
-func (hm *HOSTMODULE)sendS1F13_Timeout(){
-    hm.log.Printf("HOST S1F13 T3 timeout\n");
-    hm.restartS1F13()
-    return
+func (hm *HOSTMODULE)GenericCB(e error)(byte){
+    return 0
 }
 
 func (hm *HOSTMODULE)sendS1F13(){
     msg := sm.CreateDataMessage( 1, 13, true, sm.CreateListNode(), -1, 0 , "ALL" )
-    act := Evt{ cmd : "send" , msg : msg,ts : time.Now().Unix()}
+    ctx := SendCtx{ msg : msg , cb : hm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    act := Evt{ cmd : "send" , ctx : ctx }
     hm.log.Printf("HOST sendS1F13()\n")
     hm.oChan <- act
     return
@@ -114,9 +112,9 @@ func (hm *HOSTMODULE)sendS1F13(){
 
 
 func (hm *HOSTMODULE)sendS1F14(msg *sm.DataMessage){
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 14, false,
-                                   sm.CreateListNode ( sm.CreateBinaryNode( byte(COMMACK_OK) ) ,  sm.CreateListNode() ),
-                                   -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+    replyMsg := sm.CreateDataMessage( 1, 14, false, sm.CreateListNode ( sm.CreateBinaryNode( byte(COMMACK_OK) ) ,  sm.CreateListNode() ), -1 , msg.SystemBytes() , msg.SourceHost())
+    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     hm.oChan <- act
     return
 }
@@ -127,13 +125,11 @@ func (hm *HOSTMODULE)processMsg(msg *sm.DataMessage)(bool){
             var node sm.ElementType
             node = sm.CreateListNode( )
             //allow attempt online
-            act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 2, false,
-                                             node , msg.SessionID() , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
-
+            replyMsg := sm.CreateDataMessage( 1, 2, false, node , msg.SessionID() , msg.SystemBytes(),msg.SourceHost())
             //reject attempt online
-            //act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 0, false,
-            //                                 node , msg.SessionID() , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
-
+            //replyMsg := sm.CreateDataMessage( 1, 0, false, node , msg.SessionID() , msg.SystemBytes(),msg.SourceHost())
+            ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+            act := Evt{ cmd : "send" , ctx : ctx }
             hm.log.Printf("HOST do On-Line Identification\n")
             hm.oChan <- act
         }
@@ -162,18 +158,24 @@ func (hm *HOSTMODULE)processMsg(msg *sm.DataMessage)(bool){
 
     if(msg.StreamCode() == 5){
         if(msg.FunctionCode() == 1){
-            act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 5, 2, false, sm.CreateBinaryNode(  byte(ACKC5_OK) ) , msg.SessionID() , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
+            replyMsg := sm.CreateDataMessage( 5, 2, false, sm.CreateBinaryNode(  byte(ACKC5_OK) ) , msg.SessionID() , msg.SystemBytes(),msg.SourceHost())
+            ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+            act := Evt{ cmd : "send" , ctx : ctx }
             hm.oChan <- act
         }
     }
 
     if(msg.StreamCode() == 6){
         if(msg.FunctionCode() == 1){
-            act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 2, false, sm.CreateBinaryNode(  byte(ACKC6_OK) ) , msg.SessionID() , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
+            replyMsg := sm.CreateDataMessage( 6, 2, false, sm.CreateBinaryNode(  byte(ACKC6_OK) ) , msg.SessionID() , msg.SystemBytes(),msg.SourceHost())
+            ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+            act := Evt{ cmd : "send" , ctx : ctx }
             hm.oChan <- act
         }
         if(msg.FunctionCode() == 11){
-            act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 6, 12, false, sm.CreateBinaryNode( byte(ACKC6_OK) ) , msg.SessionID() , msg.SystemBytes(),msg.SourceHost()),ts : time.Now().Unix()}
+            replyMsg := sm.CreateDataMessage( 6, 12, false, sm.CreateBinaryNode( byte(ACKC6_OK) ) , msg.SessionID() , msg.SystemBytes(),msg.SourceHost())
+            ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+            act := Evt{ cmd : "send" , ctx : ctx }
             hm.oChan <- act
         }
     }
@@ -193,8 +195,10 @@ func (hm *HOSTMODULE)processEvt(evt Evt){
         hm.restartS1F13()
         return
     }
-    msg := evt.msg.(*sm.DataMessage)
-    hm.processMsg(msg)
+    if(evt.cmd == "recv"){
+        msg := evt.ctx.(RecvCtx).msg.(*sm.DataMessage)
+        hm.processMsg(msg)
+    }
 }
 
 func (hm *HOSTMODULE)restartS1F13() {
@@ -222,8 +226,8 @@ func (hm *HOSTMODULE)stateRun(){
     for {
         select {
             case evt := <-hm.iChan:
-                if(evt.msg != nil){
-                    hm.log.Printf("Host Get : %s\n",evt.msg.(sm.HSMSMessage).ToSml());
+                if(evt.ctx != nil){
+                    hm.log.Printf("Host Get : %s\n",evt.ctx.(RecvCtx).msg.(sm.HSMSMessage).ToSml());
                 }
                 hm.processEvt(evt)
             case <-hm.timer_S1F13.C:

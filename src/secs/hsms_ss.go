@@ -7,20 +7,13 @@ import (
     sm "secs/secs_message"
 )
 
-type WaitItem struct {
-    ts  int64
-    evtChan chan Evt
-    evt Evt
-}
-
-
 type HSMS_SS struct{
     BaseComponent
     ts * Transport
     connectState string
     sysByte    uint32
     deviceID int
-    waitQueue map[uint32]WaitItem
+    waitQueue map[uint32]SendCtx
     timer_T7 *time.Timer
 }
 
@@ -28,7 +21,7 @@ func CreateHSMS_SS(mode string,ts * Transport, deviceID int, log *logger.Logger)
     o := HSMS_SS{ BaseComponent : CreateBaseComponent(log),
                   connectState : "NOTSELECTED",
                   sysByte    : 0,
-                  waitQueue : make(map[uint32]WaitItem),
+                  waitQueue : make(map[uint32]SendCtx),
                   deviceID : deviceID,
                   ts : ts }
     o.wg.Add(1)
@@ -45,19 +38,27 @@ func (ss *HSMS_SS)incSysByte(){
     return
 }
 
+func (ss *HSMS_SS)GenericControlCB(e error)(byte){
+    ss.log.Printf("GenericControlCB : T6 timeout!\n");
+    ss.detachTransport();
+    return 0
+}
+
 func (ss *HSMS_SS)sendLinkTestReq(){
     ss.log.Printf("sendLinkTestReq()\n");
-    act := Evt{ cmd : "send" , msg : sm.CreateControlMessageReq(sm.TypeLinktestReq,ss.sysByte),ts : time.Now().Unix() }
-    alarmEvt := Evt{ cmd : "T6_TIMEOUT" , msg : act.msg ,ts : time.Now().Unix() }
-    ss.waitQueue[ss.sysByte] = WaitItem { evt : alarmEvt,ts : act.ts + (T6/1000) , evtChan : ss.iChan }
+    msg := sm.CreateControlMessageReq(sm.TypeLinktestReq,ss.sysByte)
+    ctx := SendCtx{ msg : msg , cb : ss.GenericControlCB , timeout : time.Now().Unix() + (T6/1000) }
+    act := Evt{ cmd : "send" , ctx : ctx }
+    ss.waitQueue[ss.sysByte] = ctx
     ss.incSysByte()
     ss.ts.iChan <- act
 }
 
 func (ss *HSMS_SS)sendSelectReq(){
-    act := Evt{ cmd : "send", msg : sm.CreateControlMessageReq(sm.TypeSelectReq, ss.sysByte),ts : time.Now().Unix() }
-    alarmEvt := Evt{ cmd : "T6_TIMEOUT" , msg : act.msg  ,ts : time.Now().Unix() }
-    ss.waitQueue[ss.sysByte] = WaitItem { evt : alarmEvt ,ts : act.ts + (T6/1000) , evtChan : ss.iChan}
+    msg := sm.CreateControlMessageReq(sm.TypeSelectReq, ss.sysByte)
+    ctx := SendCtx{ msg : msg , cb : ss.GenericControlCB , timeout : time.Now().Unix() + (T6/1000) }
+    act := Evt{ cmd : "send" , ctx : ctx }
+    ss.waitQueue[ss.sysByte] = ctx
     ss.incSysByte()
     ss.ts.iChan <- act
     return
@@ -68,20 +69,26 @@ func (ss *HSMS_SS)sendRejectReq(msg sm.HSMSMessage){
     systembytes := msg.SystemBytes();
     sessionid := uint16((rawbytes[0]<<8) | rawbytes[1])
     /* 4 is in not select */
-    act := Evt{ cmd : "send" , msg : sm.CreateControlMessageRejectData( sessionid , rawbytes[5] ,systembytes),ts : time.Now().Unix() }
+    replyMsg := sm.CreateControlMessageRejectData( sessionid , rawbytes[5] ,systembytes)
+    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     ss.ts.iChan <- act
 }
 
 
 
 func (ss *HSMS_SS)sendSelectRsp(msg sm.HSMSMessage){
-    act := Evt{ cmd : "send" , msg : sm.CreateControlMessageRsp(msg,0) ,ts : time.Now().Unix() }
+    replyMsg := sm.CreateControlMessageRsp(msg,0)
+    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     ss.ts.iChan <- act
     return
 }
 
 func (ss *HSMS_SS)sendLinkTestRsp(msg sm.HSMSMessage){
-    act := Evt{ cmd : "send" , msg : sm.CreateControlMessageRsp(msg),ts : time.Now().Unix() }
+    replyMsg := sm.CreateControlMessageRsp(msg)
+    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     ss.ts.iChan <- act
     return
 }
@@ -98,7 +105,7 @@ func (ss *HSMS_SS)processEvt(evt Evt){
     }
 
     if(evt.cmd == "recv"){
-        ss.processMsg(evt.msg.(sm.HSMSMessage))
+        ss.processMsg(evt.ctx.(RecvCtx).msg.(sm.HSMSMessage))
         return
     }
 
@@ -111,7 +118,8 @@ func (ss *HSMS_SS)sendS9FX(msg *sm.DataMessage,f int){
         bin[i] = raw[i+4]
     }
     errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , ss.deviceID , ss.sysByte , msg.SourceHost() )
-    act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
+    ctx := SendCtx{ msg : errmsg , cb : nil , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     ss.incSysByte()
     ss.iChan <- act
     return
@@ -135,11 +143,11 @@ func (ss *HSMS_SS)processMsg(msg sm.HSMSMessage){
             ss.sendSelectRsp(msg)
             ss.connectState = "SELECTED"
             ss.stopT7()
-            ss.oChan <- Evt{ cmd : "NOTIFY_SELECTED" , msg : nil  }
+            ss.oChan <- Evt{ cmd : "NOTIFY_SELECTED" , ctx : nil  }
         } else if(msg.MsgType() == sm.TypeSelectRsp){
             if( msg.EncodeBytes()[4 + 3] == 0 ){
                 ss.connectState = "SELECTED"
-                ss.oChan <- Evt{ cmd : "NOTIFY_SELECTED" , msg : nil  }
+                ss.oChan <- Evt{ cmd : "NOTIFY_SELECTED" , ctx : nil  }
             } else {
                 ss.log.Printf("Select rejected & quit\n");
             }
@@ -171,8 +179,8 @@ func (ss *HSMS_SS)processMsg(msg sm.HSMSMessage){
             ss.sendS9FX(msg.(*sm.DataMessage),1)
             return
         }
-
-        ss.oChan <- Evt{ cmd : "recv", msg : msg,ts : time.Now().Unix() }
+        ctx := RecvCtx{msg : msg}
+        ss.oChan <- Evt{ cmd : "recv", ctx : ctx }
         return
     }
 }
@@ -190,39 +198,32 @@ func (ss *HSMS_SS)stopT7() {
 
 func (ss *HSMS_SS )handleInput( evt Evt ){
 
+   /* TODO : change to callback
     if(evt.cmd == "T3_TIMEOUT"){
         ss.log.Printf("T3 timeout , Sendback S9F9\n");
-        ss.sendS9FX(evt.msg.(*sm.DataMessage),9)
+        ss.sendS9FX(evt.ctx.(RecvCtx).msg.(*sm.DataMessage),9)
         return
-    }
-    if(evt.cmd == "T6_TIMEOUT"){
-        ss.log.Printf("T6 timeout!\n");
-        ss.detachTransport();
-        return
-    }
+    }*/ 
 
     // determine it is primary message, and append systembytes
     // and put in waitQ
-
-    if(evt.msg.(*sm.DataMessage).WaitBit()){
-        evt.ts = time.Now().Unix()
-        evt.msg = evt.msg.(*sm.DataMessage).SetSystemBytes( ss.sysByte ).SetSessionID(ss.deviceID)
-        if(evt.waitAlarm == nil){
-            alarmEvt := Evt{ cmd : "T3_TIMEOUT" , msg : evt.msg ,ts : time.Now().Unix() }
-            ss.waitQueue[ss.sysByte] = WaitItem {  evt : alarmEvt, ts : evt.ts + (T3/1000) , evtChan : ss.iChan }
+    if(evt.cmd == "send"){
+        ctx := evt.ctx.(SendCtx)
+        if(evt.ctx.(SendCtx).msg.(*sm.DataMessage).WaitBit()){
+            ctx.msg = evt.ctx.(SendCtx).msg.(*sm.DataMessage).SetSystemBytes( ss.sysByte ).SetSessionID(ss.deviceID)
+            ss.waitQueue[ss.sysByte] = evt.ctx.(SendCtx)
+            ss.incSysByte()
         } else {
-            ss.waitQueue[ss.sysByte] = evt.waitAlarm.(WaitItem)
+            ctx.msg = evt.ctx.(SendCtx).msg.(*sm.DataMessage).SetSessionID(ss.deviceID)
         }
-        ss.incSysByte()
-    } else {
-        evt.msg = evt.msg.(*sm.DataMessage).SetSessionID(ss.deviceID)
+        evt.ctx = ctx
+        ss.ts.iChan <- evt
     }
-    ss.ts.iChan <- evt
 }
 
 func (ss *HSMS_SS )detachTransport(){
     ss.log.Printf("Notify Event HSMS_SS_EXIT\n");
-    ss.oChan <-Evt{ cmd : "HSMS_SS_EXIT" , msg : nil , ts : time.Now().Unix() }
+    ss.oChan <-Evt{ cmd : "HSMS_SS_EXIT" , ctx : nil }
 }
 
 func (ss *HSMS_SS )stateRun(mode string){
@@ -253,7 +254,7 @@ func (ss *HSMS_SS )stateRun(mode string){
                 ss.log.Printf("T7 comes,Check if selected \n")
                 if(ss.connectState != "SELECTED"){
                     ss.log.Printf("NOT Selected Error T7_TIMEOUT -> EXIT\n")
-                    ss.oChan <-Evt{ cmd : "disconnect" , msg : nil }
+                    ss.oChan <-Evt{ cmd : "disconnect" , ctx : nil }
                     ss.ctrlChan <- "quit"
                     return
                 } else {
@@ -261,8 +262,9 @@ func (ss *HSMS_SS )stateRun(mode string){
                 }
             case <-waitAct_ticker.C:
                 for k , v := range ss.waitQueue {
-                    if( time.Now().Unix() > v.ts ){
-                        v.evtChan <- v.evt
+                    if( time.Now().Unix() > v.timeout ){
+                        //v.evtChan <- v.evt
+                        v.cb(nil)
                         delete(ss.waitQueue,k)
                     }
                 }

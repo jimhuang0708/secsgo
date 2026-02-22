@@ -18,11 +18,16 @@ type ALARMMODULE struct{
     BaseModule
 }
 
+
 func CreateALARMMODULE( log *logger.Logger) *ALARMMODULE {
     o := ALARMMODULE{ BaseModule : CreateBaseModule(log) }
     o.wg.Add(1)
     go o.stateRun()
     return &o
+}
+
+func (am * ALARMMODULE) GenericCB(e error)(byte){
+    return 0
 }
 
 func (am * ALARMMODULE) PutEvt(e Evt) {
@@ -34,8 +39,8 @@ func (am * ALARMMODULE)sendS5F1(id uint64){
     alids[0] = id
     rootNode := data.GetAlarmsLst(alids)
     node , _ := rootNode.(*sm.ListNode).Get(0)
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 5, 1, true,  node , -1 , 0 , "ALL"),
-                ts : time.Now().Unix() }
+    ctx := SendCtx{ msg : sm.CreateDataMessage( 5, 1, true,  node , -1 , 0 , "ALL") , cb : am.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    act := Evt{ cmd : "send" , ctx : ctx }
     am.log.Printf("send report\n")
     am.oChan <- act
 }
@@ -43,8 +48,8 @@ func (am * ALARMMODULE)sendS5F1(id uint64){
 func (am * ALARMMODULE)trigEvt(e uint32){
     p := make(map[string]interface{})
     p["evtid"] = e
-    p["dvctx"] = make(map[uint32]interface{})
-    am.oChan <- Evt{ cmd : "TRIG_EVENT" , msg : p ,ts : time.Now().Unix()  }
+    p["dvctx"] = make(map[uint32]interface{}) //TODO : change strcture later
+    am.oChan <- Evt{ cmd : "TRIG_EVENT" , ctx : p  }
     return
 }
 
@@ -90,9 +95,8 @@ func (am * ALARMMODULE)handleS5F3(msg *sm.DataMessage){
         alid = alidNode.Values().([]uint64)[0]
     }
     ret := ACKC5(data.SetAlarmEnable(alid,aled))
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 5, 4, false, 
-                                     sm.CreateBinaryNode( byte(ret) ) ,
-                                     -1 , msg.SystemBytes() , msg.SourceHost() ),ts : time.Now().Unix()}
+    ctx := SendCtx{ msg : sm.CreateDataMessage( 5, 4, false, sm.CreateBinaryNode( byte(ret) ) , -1 , msg.SystemBytes() , msg.SourceHost()) , cb : am.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    act := Evt{ cmd : "send" , ctx : ctx }
     am.oChan <- act
 }
 
@@ -105,9 +109,8 @@ func (am * ALARMMODULE)handleS5F5(msg *sm.DataMessage){
     }
     alids := alidNode.Values().([]uint64)
     rootNode := data.GetAlarmsLst(alids)
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 5, 6, false, 
-                                     rootNode ,
-                                     -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+    ctx := SendCtx{ msg :  sm.CreateDataMessage( 5, 6, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost()) , cb : am.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    act := Evt{ cmd : "send" , ctx : ctx }
     am.oChan <- act
 }
 
@@ -131,11 +134,13 @@ func (am * ALARMMODULE)processMsg(msg *sm.DataMessage)(bool){
 
 func (am * ALARMMODULE)processEvt(evt Evt){
     if(evt.cmd == "executefn"){
-        fn := evt.msg.(func())
+        fn := evt.ctx.(func())
         fn()
         return
     }
-    am.processMsg(evt.msg.(*sm.DataMessage))
+    if(evt.cmd == "recv"){
+        am.processMsg(evt.ctx.(RecvCtx).msg.(*sm.DataMessage))
+    }
 }
 
 

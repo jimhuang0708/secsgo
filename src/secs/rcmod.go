@@ -2,7 +2,7 @@ package secs
 
 import (
     "encoding/json"
-    "time"
+    //"time"
     "strconv"
     "secs/logger"
     sm "secs/secs_message"
@@ -41,7 +41,7 @@ func (rcm * RCMODULE) PutEvt(e Evt) {
 func (rcm * RCMODULE)TellUI(text string){
     uievt := &UIEvt{ EvtType : "S2F41" , Source : "RCMODULE" , Data : text }
     jsonData, _ := json.Marshal(uievt)
-    rcm.oChan <- Evt{ cmd : "uievent" ,msg : string(jsonData)  }
+    rcm.oChan <- Evt{ cmd : "uievent" ,ctx : string(jsonData)  }
 }
 
 func (rcm * RCMODULE)handleS2F41(msg *sm.DataMessage){
@@ -120,10 +120,9 @@ func (rcm * RCMODULE)handleS2F41(msg *sm.DataMessage){
     }
     remotecmdstr = remotecmdstr + " )"
     rcm.TellUI(remotecmdstr)
-
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2,42, false,
-                                     sm.CreateListNode(sm.CreateBinaryNode( byte(HCACK_OK) )  , sm.CreateListNode()) ,
-                                     -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+    replyMsg := sm.CreateDataMessage(2,42, false, sm.CreateListNode(sm.CreateBinaryNode( byte(HCACK_OK) ) , sm.CreateListNode()) , -1 , msg.SystemBytes() , msg.SourceHost())
+    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     rcm.oChan <- act
 }
 
@@ -147,8 +146,10 @@ func (rcm * RCMODULE)processMsg(msg *sm.DataMessage)(bool){
 }
 
 func (rcm * RCMODULE)processEvt(evt Evt){
-    msg := evt.msg.(*sm.DataMessage)
-    rcm.processMsg(msg)
+    if(evt.cmd == "recv"){
+        msg := evt.ctx.(RecvCtx).msg.(*sm.DataMessage)
+        rcm.processMsg(msg)
+    }
 }
 
 func (rcm * RCMODULE)stateRun(){

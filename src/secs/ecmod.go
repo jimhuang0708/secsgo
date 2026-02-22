@@ -1,7 +1,7 @@
 package secs
 
 import (
-    "time"
+    //"time"
     "secs/data"
     "secs/logger"
     "errors"
@@ -35,7 +35,7 @@ func (em * EQCONSTMODULE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
     p := make(map[string]interface{})
     p["evtid"] = e
     p["dvctx"] = dvCtx
-    em.oChan <- Evt{ cmd : "TRIG_EVENT" , msg : p ,ts : time.Now().Unix()  }
+    em.oChan <- Evt{ cmd : "TRIG_EVENT" , ctx : p  }
     return
 }
 
@@ -64,8 +64,9 @@ func (em * EQCONSTMODULE)handleS2F13(msg *sm.DataMessage){
     }
     rootNode := data.GetEC(ecLst)
     em.log.Printf("rootNode : %v \n",rootNode);
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 14, false,  rootNode  ,
-                  -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+    replyMsg :=  sm.CreateDataMessage( 2, 14, false,  rootNode , -1 , msg.SystemBytes() , msg.SourceHost())
+    ctx := SendCtx{ msg : replyMsg , cb : nil  , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     em.oChan <- act
 
 }
@@ -123,8 +124,9 @@ func (em * EQCONSTMODULE)handleS2F15(msg *sm.DataMessage){
         return
     }
     em.log.Printf("ret : %v \n",ret);
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 2, 16, false,  sm.CreateBinaryNode( byte( ret) )  ,
-                  -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+    replyMsg := sm.CreateDataMessage( 2, 16, false,  sm.CreateBinaryNode( byte( ret) ) , -1 , msg.SystemBytes() , msg.SourceHost())
+    ctx := SendCtx{ msg : replyMsg , cb : nil  , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     em.oChan <- act
 }
 
@@ -153,8 +155,9 @@ func (em * EQCONSTMODULE)handleS2F29(msg *sm.DataMessage){
     }
     rootNode := data.GetECName(ecLst)
     em.log.Printf("rootNode : %v \n",rootNode);
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage(2, 30, false, rootNode  ,
-                  -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+    replyMsg := sm.CreateDataMessage(2, 30, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost())
+    ctx := SendCtx{ msg : replyMsg , cb : nil  , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     em.oChan <- act
 
 }
@@ -176,13 +179,14 @@ func (em * EQCONSTMODULE)processMsg(msg *sm.DataMessage)(bool){
 
 func (em * EQCONSTMODULE)processEvt(evt Evt){
     if(evt.cmd == "executefn"){
-        fn := evt.msg.(func())
+        fn := evt.ctx.(func())
         fn()
         return
     }
-
-    msg := evt.msg.(*sm.DataMessage)
-    em.processMsg(msg)
+    if(evt.cmd == "recv"){
+        msg := evt.ctx.(RecvCtx).msg.(*sm.DataMessage)
+        em.processMsg(msg)
+    }
 }
 
 

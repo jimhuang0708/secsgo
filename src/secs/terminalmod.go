@@ -27,18 +27,21 @@ func (tm * TERMINALMODULE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
     p := make(map[string]interface{})
     p["evtid"] = e
     p["dvctx"] = dvCtx
-    tm.oChan <- Evt{ cmd : "TRIG_EVENT" , msg : p ,ts : time.Now().Unix()  }
+    tm.oChan <- Evt{ cmd : "TRIG_EVENT" , ctx : p }
     return
+}
+
+func (tm * TERMINALMODULE)GenericCB(e error)(byte){
+    return 0
 }
 
 func (tm * TERMINALMODULE)sendS10F1(text string){
     tidNode := sm.CreateBinaryNode( byte(0) ) 
     txtNode := sm.CreateASCIINode(text)
     rootNode :=  sm.CreateListNode(tidNode,txtNode)
-    msg := sm.CreateDataMessage(10, 1, true,
-                                  rootNode,
-                                  -1,0 , "ALL")
-    act := Evt{ cmd : "send" , msg : msg,ts : time.Now().Unix() }
+    msg := sm.CreateDataMessage(10, 1, true, rootNode, -1,0 , "ALL")
+    ctx := SendCtx{ msg : msg , cb : tm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    act := Evt{ cmd : "send" , ctx : ctx }
     tm.oChan <- act
     return
 }
@@ -78,10 +81,9 @@ func (tm * TERMINALMODULE)handleS10F3(msg *sm.DataMessage){
     text := textNodce.Values().(string)
     tm.TellUI(text)
     tm.log.Printf("Get message from host : \n %s\n",text);
-
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 10,4, false,
-                                     sm.CreateBinaryNode( byte(ACKC10_DISPLAY) )   ,
-                                     -1 , msg.SystemBytes() ,msg.SourceHost()),ts : time.Now().Unix()}
+    replyMsg :=  sm.CreateDataMessage( 10,4, false, sm.CreateBinaryNode( byte(ACKC10_DISPLAY) ) , -1 , msg.SystemBytes() ,msg.SourceHost())
+    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     tm.oChan <- act
 }
 
@@ -94,7 +96,7 @@ func (tm * TERMINALMODULE)sendRecognizeEvent(){
 func (tm * TERMINALMODULE)TellUI(text string){
     uievt := &UIEvt{ EvtType : "S10F3" , Source : "TERMINALMODULE" , Data : text }
     jsonData, _ := json.Marshal(uievt)
-    tm.oChan <- Evt{ cmd : "uievent" ,msg : string(jsonData)  }
+    tm.oChan <- Evt{ cmd : "uievent" ,ctx : string(jsonData)  }
 }
 
 
@@ -114,12 +116,14 @@ func (tm * TERMINALMODULE)processMsg(msg *sm.DataMessage)(bool){
 
 func (tm * TERMINALMODULE)processEvt(evt Evt){
     if(evt.cmd == "executefn"){
-        fn := evt.msg.(func())
+        fn := evt.ctx.(func())
         fn()
         return
     }
-    msg := evt.msg.(*sm.DataMessage)
-    tm.processMsg(msg)
+    if(evt.cmd == "recv"){
+        msg := evt.ctx.(RecvCtx).msg.(*sm.DataMessage)
+        tm.processMsg(msg)
+   }
 }
 
 func (tm * TERMINALMODULE)stateRun(){

@@ -47,7 +47,7 @@ func (cs * CTRLSTATE)attachSession( s *COMMUNICATESTATE ){
 func (cs * CTRLSTATE)TellUI(){
     uievt := &UIEvt{ EvtType : "CtrlChange" , Source : "CtrlState" , Data : cs.ctrl_fsm.state.Minor.String() + "@" + cs.ctrl_fsm.state.Major.String() }
     jsonData, _ := json.Marshal(uievt)
-    cs.oChan <- Evt{ cmd : "uievent" ,msg : string(jsonData)  }
+    cs.oChan <- Evt{ cmd : "uievent" ,ctx : string(jsonData)  }
 }
 
 
@@ -55,7 +55,7 @@ func (cs * CTRLSTATE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
     p := make(map[string]interface{})
     p["evtid"] = e
     p["dvctx"] = dvCtx
-    cs.oChan <- Evt{ cmd : "TRIG_EVENT" , msg : p ,ts : time.Now().Unix()  }
+    cs.oChan <- Evt{ cmd : "TRIG_EVENT" ,ctx : p  }
     return
 }
 
@@ -225,17 +225,22 @@ func (cs *CTRLSTATE)sendS9FX(msg *sm.DataMessage,f int){
         bin[i] = raw[i+4]
     }
     errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , -1 ,0,msg.SourceHost() )
-    act := Evt{ cmd : "send" , msg : errmsg, ts : time.Now().Unix() }
+    ctx := SendCtx{ msg : errmsg , cb : nil , timeout : 0 }
+    act := Evt{ cmd : "send" , ctx : ctx }
     cs.session[msg.SourceHost()].iChan <- act
     return
 }
 
+func (cs * CTRLSTATE)GenericCB(e error)(byte){
+    return 0
+}
+
 /*send by host & equipment */
 func (cs * CTRLSTATE)sendS1F1(){
-    evt := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 1, true, sm.CreateEmptyElementType(), -1 , 0 , "ALL" ),
-                ts : time.Now().Unix() }
+    rmsg := sm.CreateDataMessage( 1, 1, true, sm.CreateEmptyElementType(), -1 , 0 , "ALL" )
+    ctx := SendCtx{ msg : rmsg , cb : cs.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    evt := Evt{ cmd : "send" , ctx : ctx }
     cs.log.Printf("ask Host online Permission\n")
-
     for _, comm := range cs.session {
         comm.iChan<-evt
     }
@@ -264,8 +269,9 @@ func (cs * CTRLSTATE)handleS1F17(msg *sm.DataMessage){
 
 /* send by Equipment only */
 func (cs * CTRLSTATE)sendS1F16(msg *sm.DataMessage){
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 16, false,
-                sm.CreateBinaryNode( byte(OFLACK_OK) ) , -1 , msg.SystemBytes() , msg.SourceHost() ),ts : time.Now().Unix()}
+    rmsg := sm.CreateDataMessage( 1, 16, false, sm.CreateBinaryNode( byte(OFLACK_OK) ) , -1 , msg.SystemBytes() , msg.SourceHost() )
+    ctx := SendCtx{ msg : rmsg , cb : cs.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    act := Evt{ cmd : "send" , ctx : ctx }
     cs.session[msg.SourceHost()].iChan <- act
     cs.log.Printf("do request offline\n")
     return
@@ -273,17 +279,18 @@ func (cs * CTRLSTATE)sendS1F16(msg *sm.DataMessage){
 
 /* send by Equipment only */
 func (cs * CTRLSTATE)sendS1F18(result ONLACK,msg *sm.DataMessage){
-    act := Evt{ cmd : "send" , msg : sm.CreateDataMessage( 1, 18, false,
-                sm.CreateBinaryNode( byte(result) ) , -1 , msg.SystemBytes() , msg.SourceHost()),ts : time.Now().Unix()}
+    rmsg := sm.CreateDataMessage( 1, 18, false, sm.CreateBinaryNode( byte(result) ) , -1 , msg.SystemBytes() , msg.SourceHost())
+    ctx := SendCtx{ msg : rmsg , cb : cs.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    act := Evt{ cmd : "send" , ctx : ctx }
     cs.session[msg.SourceHost()].iChan <- act
     cs.log.Printf("do request online\n")
 }
 
 
 func (cs * CTRLSTATE)sendStopTransaction(msg *sm.DataMessage) {
-    errmsg := sm.CreateDataMessage( msg.StreamCode() ,
-                                     0 ,false, sm.CreateEmptyElementType() , -1 , msg.SystemBytes() , msg.SourceHost() )
-    act := Evt{ cmd : "send" , msg : errmsg ,ts : time.Now().Unix() }
+    errmsg := sm.CreateDataMessage( msg.StreamCode() ,  0 ,false, sm.CreateEmptyElementType() , -1 , msg.SystemBytes() , msg.SourceHost() )
+    ctx := SendCtx{ msg : errmsg , cb : cs.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    act := Evt{ cmd : "send" , ctx : ctx }
     cs.session[ msg.SourceHost()].iChan <- act
 }
 
@@ -391,10 +398,12 @@ func (cs *CTRLSTATE)processEvt(evt Evt ,sessionID string){
     }
 
     if(evt.cmd == "recv"){
-        dm := evt.msg.(*sm.DataMessage)
+        ctx := evt.ctx.(RecvCtx)
+        dm := ctx.msg.(*sm.DataMessage)
         //cs.log.Printf("----------> got %+v from session %s\n", dm.ToSml(), sessionID)
-        evt.msg = dm.SetSourceHost(sessionID)
-        msg := evt.msg.(*sm.DataMessage)
+        ctx.msg = dm.SetSourceHost(sessionID)
+        msg := ctx.msg.(*sm.DataMessage)
+        evt.ctx = ctx
         if(!cs.processMsg(msg)){
             cs.oChan <- evt
         }
@@ -403,7 +412,7 @@ func (cs *CTRLSTATE)processEvt(evt Evt ,sessionID string){
 }
 
 func (cs *CTRLSTATE) IsCtrlStateChangEvt(evt Evt) (bool){
-    msg := evt.msg.(*sm.DataMessage)
+    msg := evt.ctx.(SendCtx).msg.(*sm.DataMessage)
     if( msg.StreamCode() == 6){
         if(msg.FunctionCode() == 11 ){
             item , err := msg.Get()
@@ -455,7 +464,7 @@ func (cs *CTRLSTATE)SetCommunicate(enable bool) {
         fn := func() {
             s.OP_SetComEnabled(enable)
         }
-        s.iChan <- Evt{ cmd : "executefn" , msg : fn }
+        s.iChan <- Evt{ cmd : "executefn" , ctx : fn }
     }
 }
 
@@ -468,7 +477,7 @@ func (cs *CTRLSTATE)ProcessEvt(evt Evt){
             cs.log.Printf("State is offline,don't send anything back\n");
             return
         }
-        sourceHost := evt.msg.(*sm.DataMessage).SourceHost()
+        sourceHost := evt.ctx.(SendCtx).msg.(*sm.DataMessage).SourceHost()
         cs.log.Printf("send back source host [%s]\n",sourceHost);
         if( sourceHost == "ALL"){
             for _, comm := range cs.session {
@@ -480,7 +489,7 @@ func (cs *CTRLSTATE)ProcessEvt(evt Evt){
         return
     }
     if(evt.cmd == "executefn"){
-        fn := evt.msg.(func())
+        fn := evt.ctx.(func())
         fn()
         return
     }

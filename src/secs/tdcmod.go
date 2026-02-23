@@ -5,6 +5,7 @@ import (
     "time"
     "secs/data"
     "secs/logger"
+    "errors"
     sm "secs/secs_message"
 )
 
@@ -50,7 +51,16 @@ func (tm * TDCMODULE) PutEvt(e Evt) {
     tm.iChan <- e
 }
 
-func  (tm * TDCMODULE)GenericCB(e error)(byte){
+func (tm * TDCMODULE) GenericCB(err error,s *SendCtx,r * RecvCtx)(int){
+    if(err != nil ){
+        if(errors.Is(err,ErrTimeout)){
+            tm.log.Printf("TDCMODULE Timeout %v\n",s);
+        } else {
+            tm.log.Printf("TDCMODULE Unknown Error %v\n",err);
+        }
+    } else {
+        tm.log.Printf("TDCMODULE get ack %v\n",r);
+    }
     return 0
 }
 
@@ -62,7 +72,7 @@ func (tm * TDCMODULE)sendS6F1(samples []interface{},job * TDCJOB ){
     sampleNode :=  sm.CreateListNode(samples...)
     rootNode := sm.CreateListNode(tridNode,lenNode,timeNode,sampleNode)
     msg := sm.CreateDataMessage( 6, 1, true, rootNode, -1,0, "ALL")
-    ctx := SendCtx{ msg : msg , cb : tm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    ctx := &SendCtx{ msg : msg , cb : tm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
     act := Evt{ cmd : "send" , ctx : ctx }
     tm.oChan <- act
     return
@@ -129,7 +139,7 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
     if( totsmp == 0 ){
         tm.removeTrace(trid)
         replyMsg := sm.CreateDataMessage( 2, 24, false, sm.CreateBinaryNode( byte(TIAACK_OK) ) , -1 , msg.SystemBytes() , msg.SourceHost())
-        ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+        ctx := &SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
         act := Evt{ cmd : "send" , ctx : ctx }
         tm.oChan <- act
         return
@@ -149,7 +159,7 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
             svidLst = append(svidLst , svID)
         } else {
             replyMsg :=  sm.CreateDataMessage( 2, 24, false, sm.CreateBinaryNode( byte(TIAACK_UNKNOWN_SVID) ) , -1 , msg.SystemBytes() , msg.SourceHost())
-            ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+            ctx := &SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
             act := Evt{ cmd : "send" , ctx : ctx }
             tm.oChan <- act
             return
@@ -169,7 +179,7 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
 
     tm.log.Printf("%v %v %v %v %v %d\n",trid,dsper,totsmp,repgsz,svidLst,second_cnt)
     replyMsg := sm.CreateDataMessage( 2, 24, false, sm.CreateBinaryNode( byte(TIAACK_OK) ) , -1 , msg.SystemBytes(),msg.SourceHost())
-    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    ctx := &SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     tm.oChan <- act
 }
@@ -193,7 +203,7 @@ func (tm * TDCMODULE)processMsg(msg *sm.DataMessage)(bool){
 
 func (tm * TDCMODULE)processEvt(evt Evt){
     if(evt.cmd == "recv"){
-        msg := evt.ctx.(RecvCtx).msg.(*sm.DataMessage)
+        msg := evt.ctx.(*RecvCtx).msg.(*sm.DataMessage)
         tm.processMsg(msg)
     }
 }

@@ -24,7 +24,7 @@ const EstablishCommunicationsTimeout = 10000 //send S1F13 and wait S1F14
 
 type SendCtx struct {
     msg interface{}
-    cb func(error)(byte)
+    cb func(error,*SendCtx,*RecvCtx)(int)
     timeout int64
 }
 
@@ -169,7 +169,7 @@ func (ec *EquipmentContext)stateTrig(evt Evt){
         if(ec.dispatchHSMSDataMsg(evt)){
             return
         }
-        ec.sendUnknownError(evt.ctx.(RecvCtx).msg.(*sm.DataMessage))
+        ec.sendUnknownError(evt.ctx.(*RecvCtx).msg.(*sm.DataMessage))
     } else if(evt.cmd == "uievent"){
         if( ec.UIEvtChan != nil ){
             ec.processUIEvt(evt.ctx.(string))

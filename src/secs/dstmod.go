@@ -7,6 +7,7 @@ import (
     "secs/logger"
     "os"
     "io"
+    "errors"
     sm "secs/secs_message"
 )
 
@@ -75,13 +76,23 @@ func (dstm * DSTMODULE) openSeek(dsName string,ckPnt int64)(*os.File,ACKC13){
     return file , ACKC13OK
 }
 
-func (dstm * DSTMODULE)GenericCB(e error)(byte){
+func (dstm * DSTMODULE) GenericCB(err error,s *SendCtx,r * RecvCtx)(int){
+    if(err != nil ){
+        if(errors.Is(err,ErrTimeout)){
+            dstm.log.Printf("DSTMODULE Timeout %v\n",s);
+        } else {
+            dstm.log.Printf("DSTMODULE Unknown Error %v\n",err);
+        }
+    } else {
+        dstm.log.Printf("DSTMODULE get ack %v\n",r);
+    }
+
     return 0
 }
 
 func (dstm * DSTMODULE)sendS13F1(dsName string){
     msg :=  sm.CreateDataMessage( 13 , 1 , true , sm.CreateASCIINode(dsName) , -1 , 0 , "ALL" )
-    ctx := SendCtx{ msg : msg , cb : dstm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    ctx := &SendCtx{ msg : msg , cb : dstm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
     act := Evt{ cmd : "send" , ctx : ctx }
     dstm.oChan <- act
 }
@@ -111,7 +122,7 @@ func (dstm * DSTMODULE)handleS13F1(msg *sm.DataMessage){
     }
     rootNode := sm.CreateListNode( sm.CreateASCIINode(dsName),sm.CreateBinaryNode( byte(ack) ) );
     replyMsg := sm.CreateDataMessage( 13, 2, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost() )
-    ctx := SendCtx{ msg : replyMsg , cb : dstm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    ctx := &SendCtx{ msg : replyMsg , cb : dstm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
     act := Evt{ cmd : "send" , ctx : ctx }
     dstm.oChan <- act
 
@@ -147,7 +158,7 @@ func (dstm * DSTMODULE)handleS13F2(msg *sm.DataMessage){
 func (dstm * DSTMODULE)sendS13F3(handle uint , dsName string , ckpnt uint){
     rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) , sm.CreateASCIINode(dsName),sm.CreateUintNode( 4 , ckpnt ) );
     msg :=  sm.CreateDataMessage( 13 , 3 , true , rootNode , -1 , 0 , "ALL" )
-    ctx := SendCtx{ msg : msg , cb : dstm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    ctx := &SendCtx{ msg : msg , cb : dstm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
     act := Evt{ cmd : "send" , ctx : ctx }
     dstm.oChan <- act
 }
@@ -184,7 +195,7 @@ func (dstm * DSTMODULE)handleS13F3(msg *sm.DataMessage){
     }
     rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) , sm.CreateASCIINode(dsName),sm.CreateBinaryNode( byte(ack) ) , sm.CreateUintNode(1,RTYPE) , sm.CreateUintNode(4,RECLEN) );
     replyMsg := sm.CreateDataMessage( 13, 4, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost() )
-    ctx := SendCtx{ msg : replyMsg , cb : dstm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    ctx := &SendCtx{ msg : replyMsg , cb : dstm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
     act := Evt{ cmd : "send" , ctx : ctx }
     dstm.oChan <- act
 }
@@ -227,7 +238,7 @@ func (dstm * DSTMODULE)handleS13F4(msg *sm.DataMessage){
 func (dstm * DSTMODULE)sendS13F5(handle uint,readlen uint){
     rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) , sm.CreateUintNode( 4 , readlen ) );
     msg :=  sm.CreateDataMessage( 13 , 5 , true , rootNode , -1 , 0 , "ALL" )
-    ctx := SendCtx{ msg : msg , cb : dstm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    ctx := &SendCtx{ msg : msg , cb : dstm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
     act := Evt{ cmd : "send" , ctx : ctx }
     dstm.oChan <- act
 }
@@ -268,7 +279,7 @@ func (dstm * DSTMODULE)handleS13F5(msg *sm.DataMessage){
     }
     rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) , sm.CreateBinaryNode( byte(ack) ) , sm.CreateUintNode(4,ckPnt) , filDataLstNode );
     replyMsg := sm.CreateDataMessage( 13, 6, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost() )
-    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    ctx := &SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     dstm.oChan <- act
 }
@@ -312,7 +323,7 @@ func (dstm * DSTMODULE)handleS13F6(msg *sm.DataMessage){
 func (dstm * DSTMODULE)sendS13F7(handle uint){
     rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) );
     msg :=  sm.CreateDataMessage( 13 , 7 , true , rootNode , -1 , 0 , "ALL" )
-    ctx := SendCtx{ msg : msg , cb : dstm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    ctx := &SendCtx{ msg : msg , cb : dstm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
     act := Evt{ cmd : "send" , ctx : ctx }
     dstm.oChan <- act
 }
@@ -337,7 +348,7 @@ func (dstm * DSTMODULE)handleS13F7(msg *sm.DataMessage){
     }
     rootNode := sm.CreateListNode( sm.CreateUintNode(4,handle) , sm.CreateBinaryNode( byte(ack) ) );
     replyMsg := sm.CreateDataMessage( 13, 8, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost() )
-    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    ctx := &SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     dstm.oChan <- act
 }
@@ -369,7 +380,7 @@ func (dstm * DSTMODULE)sendS13F9(handle uint){
         delete(SEND_MAP, k )
     }
     msg :=  sm.CreateDataMessage( 13 , 9 , true , sm.CreateEmptyElementType()  , -1 , 0 , "ALL" )
-    ctx := SendCtx{ msg : msg , cb : dstm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    ctx := &SendCtx{ msg : msg , cb : dstm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
     act := Evt{ cmd : "send" , ctx : ctx }
     dstm.oChan <- act
 }
@@ -384,7 +395,7 @@ func (dstm * DSTMODULE)handleS13F9(msg *sm.DataMessage){
         delete(SEND_MAP, k )
     }
     replyMsg :=  sm.CreateDataMessage( 13 , 10 , true , sm.CreateEmptyElementType()  , -1 , 0 , "ALL" )
-    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    ctx := &SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     dstm.oChan <- act
 }
@@ -442,7 +453,7 @@ func (dstm * DSTMODULE)processEvt(evt Evt){
         return
     }
     if(evt.cmd == "recv"){
-        msg := evt.ctx.(RecvCtx).msg.(*sm.DataMessage)
+        msg := evt.ctx.(*RecvCtx).msg.(*sm.DataMessage)
         dstm.processMsg(msg)
     }
 }

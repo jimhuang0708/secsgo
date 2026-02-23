@@ -121,7 +121,7 @@ func (rcm * RCMODULE)handleS2F41(msg *sm.DataMessage){
     remotecmdstr = remotecmdstr + " )"
     rcm.TellUI(remotecmdstr)
     replyMsg := sm.CreateDataMessage(2,42, false, sm.CreateListNode(sm.CreateBinaryNode( byte(HCACK_OK) ) , sm.CreateListNode()) , -1 , msg.SystemBytes() , msg.SourceHost())
-    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    ctx := &SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     rcm.oChan <- act
 }
@@ -147,7 +147,7 @@ func (rcm * RCMODULE)processMsg(msg *sm.DataMessage)(bool){
 
 func (rcm * RCMODULE)processEvt(evt Evt){
     if(evt.cmd == "recv"){
-        msg := evt.ctx.(RecvCtx).msg.(*sm.DataMessage)
+        msg := evt.ctx.(*RecvCtx).msg.(*sm.DataMessage)
         rcm.processMsg(msg)
     }
 }

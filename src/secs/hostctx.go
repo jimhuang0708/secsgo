@@ -6,6 +6,7 @@ import (
     "time"
     "secs/data"
     "secs/logger"
+    "errors"
     sm "secs/secs_message"
 )
 
@@ -85,13 +86,24 @@ func (hc *HostContext)SendMsg(e Evt){
     }
 }
 
-func (hc *HostContext)GenericCB(e error)(byte){
-    return 0;
+
+func (hc *HostContext) GenericCB(err error,s *SendCtx,r * RecvCtx)(int){
+    if(err != nil ){
+        if(errors.Is(err,ErrTimeout)){
+            hc.log.Printf("HostContext Timeout %v\n",s);
+        } else {
+            hc.log.Printf("HostContext Unknown Error %v\n",err);
+        }
+    } else {
+        hc.log.Printf("HostContext get ack %v\n",r);
+    }
+    return 0
 }
+
 
 func (hc *HostContext)sendSXFY(stream int , function int , node sm.ElementType) {
     msg := sm.CreateDataMessage( stream, function , true , node , hc.deviceID , 0 , "ALL" )
-    ctx := SendCtx{ msg : msg , cb : hc.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    ctx := &SendCtx{ msg : msg , cb : hc.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
     act := Evt{ cmd : "send" , ctx : ctx }
     hc.hsms_ss.iChan <- act
     return
@@ -132,14 +144,14 @@ func (hc *HostContext)processEvt(evt Evt){
         uievt := &UIEvt{ EvtType : "disconnect" , Source : "Transport" , Data : nil }
         jsonData, _ := json.Marshal(uievt)
         hc.processUIEvt(string(jsonData))
-        hc.Stop()
+        hc.ctrlChan <- "quit" //interal goroutine , don't use hc.Stop()
     } else if( evt.cmd == "recv" ) {
         //hc.hostModule.iChan <- evt
         hc.regProcessModule();
         if(hc.dispatchHSMSDataMsg(evt)){
             return
         }
-        hc.sendUnknownError(evt.ctx.(RecvCtx).msg.(*sm.DataMessage))
+        hc.sendUnknownError(evt.ctx.(*RecvCtx).msg.(*sm.DataMessage))
     }  else {
         if(evt.cmd == "READERROR" || evt.cmd == "T8_TIMEOUT" || evt.cmd == "WRITEERROR"){
             hc.log.Printf("Error | Event : %s",evt.cmd)

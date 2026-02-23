@@ -336,10 +336,10 @@ func (f *CtrlFSM) Emit(ev CtrlEvent) error {
     case EvOperatorOfflineSwitch:
         if from.Major == MajorOnline {
             apply(ControlState{Major: MajorOffline, Minor: SubEquipmentOffline}, 6)
-        } else if from.Major == MajorOffline {
-            return f.invalid(from, ev, fmt.Errorf("%w: operator OFF-LINE only meaningful from ONLINE", ErrInvalidTransition))
+        } else if from.Major == MajorOffline &&  from.Minor == SubHostOffline {
+            apply(ControlState{Major: MajorOffline, Minor: SubEquipmentOffline}, 12)
         } else {
-            return f.invalid(from, ev, fmt.Errorf("%w: operator OFF-LINE invalid from UNDEFINED", ErrInvalidTransition))
+            return f.invalid(from, ev, fmt.Errorf("%w: operator OFF-LINE invalid ", ErrInvalidTransition))
         }
 
     // #8 LOCAL + operator sets REMOTE => REMOTE

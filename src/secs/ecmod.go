@@ -65,7 +65,7 @@ func (em * EQCONSTMODULE)handleS2F13(msg *sm.DataMessage){
     rootNode := data.GetEC(ecLst)
     em.log.Printf("rootNode : %v \n",rootNode);
     replyMsg :=  sm.CreateDataMessage( 2, 14, false,  rootNode , -1 , msg.SystemBytes() , msg.SourceHost())
-    ctx := SendCtx{ msg : replyMsg , cb : nil  , timeout : 0 }
+    ctx := &SendCtx{ msg : replyMsg , cb : nil  , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     em.oChan <- act
 
@@ -125,7 +125,7 @@ func (em * EQCONSTMODULE)handleS2F15(msg *sm.DataMessage){
     }
     em.log.Printf("ret : %v \n",ret);
     replyMsg := sm.CreateDataMessage( 2, 16, false,  sm.CreateBinaryNode( byte( ret) ) , -1 , msg.SystemBytes() , msg.SourceHost())
-    ctx := SendCtx{ msg : replyMsg , cb : nil  , timeout : 0 }
+    ctx := &SendCtx{ msg : replyMsg , cb : nil  , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     em.oChan <- act
 }
@@ -156,7 +156,7 @@ func (em * EQCONSTMODULE)handleS2F29(msg *sm.DataMessage){
     rootNode := data.GetECName(ecLst)
     em.log.Printf("rootNode : %v \n",rootNode);
     replyMsg := sm.CreateDataMessage(2, 30, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost())
-    ctx := SendCtx{ msg : replyMsg , cb : nil  , timeout : 0 }
+    ctx := &SendCtx{ msg : replyMsg , cb : nil  , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     em.oChan <- act
 
@@ -184,7 +184,7 @@ func (em * EQCONSTMODULE)processEvt(evt Evt){
         return
     }
     if(evt.cmd == "recv"){
-        msg := evt.ctx.(RecvCtx).msg.(*sm.DataMessage)
+        msg := evt.ctx.(*RecvCtx).msg.(*sm.DataMessage)
         em.processMsg(msg)
     }
 }

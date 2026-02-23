@@ -5,6 +5,7 @@ import (
     "time"
     "secs/data"
     "secs/logger"
+    "errors"
     sm "secs/secs_message"
 )
 
@@ -31,7 +32,16 @@ func (tm * TERMINALMODULE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
     return
 }
 
-func (tm * TERMINALMODULE)GenericCB(e error)(byte){
+func (tm * TERMINALMODULE) GenericCB(err error,s *SendCtx,r * RecvCtx)(int){
+    if(err != nil ){
+        if(errors.Is(err,ErrTimeout)){
+            tm.log.Printf("TERMINALMODULE Timeout %v\n",s);
+        } else {
+            tm.log.Printf("TERMINALMODULE Unknown Error %v\n",err);
+        }
+    } else {
+        tm.log.Printf("TERMINALMODULE get ack %v\n",r);
+    }
     return 0
 }
 
@@ -40,7 +50,7 @@ func (tm * TERMINALMODULE)sendS10F1(text string){
     txtNode := sm.CreateASCIINode(text)
     rootNode :=  sm.CreateListNode(tidNode,txtNode)
     msg := sm.CreateDataMessage(10, 1, true, rootNode, -1,0 , "ALL")
-    ctx := SendCtx{ msg : msg , cb : tm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    ctx := &SendCtx{ msg : msg , cb : tm.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
     act := Evt{ cmd : "send" , ctx : ctx }
     tm.oChan <- act
     return
@@ -82,7 +92,7 @@ func (tm * TERMINALMODULE)handleS10F3(msg *sm.DataMessage){
     tm.TellUI(text)
     tm.log.Printf("Get message from host : \n %s\n",text);
     replyMsg :=  sm.CreateDataMessage( 10,4, false, sm.CreateBinaryNode( byte(ACKC10_DISPLAY) ) , -1 , msg.SystemBytes() ,msg.SourceHost())
-    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    ctx := &SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     tm.oChan <- act
 }
@@ -121,7 +131,7 @@ func (tm * TERMINALMODULE)processEvt(evt Evt){
         return
     }
     if(evt.cmd == "recv"){
-        msg := evt.ctx.(RecvCtx).msg.(*sm.DataMessage)
+        msg := evt.ctx.(*RecvCtx).msg.(*sm.DataMessage)
         tm.processMsg(msg)
    }
 }

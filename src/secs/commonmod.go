@@ -194,7 +194,7 @@ func (cm * COMMONMODULE)handleS1F3(msg *sm.DataMessage){
     }
     rootNode := data.GetSVElementTypeLst(svidLst)
     cm.log.Printf("svLst : %v\n",rootNode);
-    ctx := SendCtx{ msg : sm.CreateDataMessage( 1, 4, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost() ) , cb : nil , timeout : 0 }
+    ctx := &SendCtx{ msg : sm.CreateDataMessage( 1, 4, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost() ) , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     cm.oChan <- act
 }
@@ -219,7 +219,7 @@ func (cm * COMMONMODULE)handleS1F11(msg *sm.DataMessage){
     }
     rootNode := data.GetSVNameLst(svidLst)
     cm.log.Printf("svLst : %v\n",rootNode);
-    ctx := SendCtx{ msg : sm.CreateDataMessage(1, 12, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost()) , cb : nil , timeout : 0 }
+    ctx := &SendCtx{ msg : sm.CreateDataMessage(1, 12, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost()) , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     cm.oChan <- act
 }
@@ -229,7 +229,7 @@ func (cm * COMMONMODULE)handleS2F17(msg *sm.DataMessage){
     t:= time.Now()
     timestr , _ := FormatTime( 1 , t )
     timeNode := sm.CreateASCIINode(timestr)
-    ctx := SendCtx{ msg : sm.CreateDataMessage(2,18, false, timeNode , -1 , msg.SystemBytes() , msg.SourceHost()) , cb : nil , timeout :0 }
+    ctx := &SendCtx{ msg : sm.CreateDataMessage(2,18, false, timeNode , -1 , msg.SystemBytes() , msg.SourceHost()) , cb : nil , timeout :0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     cm.oChan <- act
 }
@@ -247,7 +247,7 @@ func (cm * COMMONMODULE)handleS2F31(msg *sm.DataMessage){
         errCode = TIACK_NOTDONE
     }
     ack := sm.CreateBinaryNode( byte(errCode) )
-    ctx := SendCtx{ msg : sm.CreateDataMessage(2,32, false, ack , -1 , msg.SystemBytes() , msg.SourceHost()) , cb : nil , timeout : 0 }
+    ctx := &SendCtx{ msg : sm.CreateDataMessage(2,32, false, ack , -1 , msg.SystemBytes() , msg.SourceHost()) , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     cm.oChan <- act
 
@@ -266,7 +266,7 @@ func (cm * COMMONMODULE)processMsg(msg *sm.DataMessage)(bool){
 
             var node sm.ElementType
             node = sm.CreateListNode( sm.CreateASCIINode("HMITaker") ,sm.CreateASCIINode("1.0") )
-            ctx := SendCtx{ msg :  sm.CreateDataMessage( 1, 2, false, node , -1 , msg.SystemBytes() , msg.SourceHost()) , cb : nil , timeout : 0 }
+            ctx := &SendCtx{ msg :  sm.CreateDataMessage( 1, 2, false, node , -1 , msg.SystemBytes() , msg.SourceHost()) , cb : nil , timeout : 0 }
             act := Evt{ cmd : "send" , ctx : ctx }
             cm.log.Printf("do On-Line Identification\n")
             cm.oChan <- act
@@ -293,7 +293,7 @@ func (cm * COMMONMODULE)processMsg(msg *sm.DataMessage)(bool){
 
 func (cm * COMMONMODULE)processEvt(evt Evt){
     if(evt.cmd == "recv"){
-        msg := evt.ctx.(RecvCtx).msg.(*sm.DataMessage)
+        msg := evt.ctx.(*RecvCtx).msg.(*sm.DataMessage)
         cm.processMsg(msg)
     }
 }

@@ -108,7 +108,7 @@ func (t *Transport)handleRead() {
         ret , msg := t.ReadMsg()
         if(ret == "READOK"){
             if(msg != nil){
-                ctx := RecvCtx{ msg : msg }
+                ctx := &RecvCtx{ msg : msg }
                 t.oChan <- Evt{ cmd : "recv" ,ctx : ctx}
             }
         } else {
@@ -128,8 +128,8 @@ func (t *Transport)handleSend() {
         select {
             case act := <-t.iChan:
                 if(act.cmd == "send"){
-                    t.log.Printf("Put %s\n", act.ctx.(SendCtx).msg.(sm.HSMSMessage).ToSml() )
-                    ret := t.SendAct(act.ctx.(SendCtx).msg.(sm.HSMSMessage))
+                    t.log.Printf("Put %s\n", act.ctx.(*SendCtx).msg.(sm.HSMSMessage).ToSml() )
+                    ret := t.SendAct(act.ctx.(*SendCtx).msg.(sm.HSMSMessage))
                     if (ret == "WRITEERROR") {
                         t.log.Println("send error:", ret)
                         return

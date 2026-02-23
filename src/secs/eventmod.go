@@ -4,6 +4,7 @@ import (
     "time"
     "secs/data"
     "secs/logger"
+    "errors"
     sm "secs/secs_message"
 )
 type DRACK byte
@@ -56,7 +57,7 @@ func (em * EVENTMODULE) PutEvt(e Evt) {
 func (em * EVENTMODULE)sendS1F24(msg *sm.DataMessage,evtLst []uint32){
     node := data.GetEventNameList(evtLst)
     replyMsg := sm.CreateDataMessage( 1, 24, false, node , -1 , msg.SystemBytes() , msg.SourceHost())
-    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    ctx := &SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     em.oChan <- act
 }
@@ -77,7 +78,7 @@ func (em * EVENTMODULE)sendS2F34(msg *sm.DataMessage,result string){
     }
 
     if(replyMsg != nil){
-        ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+        ctx := &SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
         act := Evt{ cmd : "send" , ctx : ctx }
         em.oChan <- act
     }
@@ -105,7 +106,7 @@ func (em * EVENTMODULE)sendS2F36(msg *sm.DataMessage,result string){
     }
 
     if(replyMsg != nil){
-        ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+        ctx := &SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
         act := Evt{ cmd : "send" , ctx : ctx }
         em.oChan <- act
     }
@@ -123,20 +124,29 @@ func (em * EVENTMODULE)sendS2F38(msg *sm.DataMessage,result string){
     }
 
     if(replyMsg != nil){
-        ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+        ctx := &SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
         act := Evt{ cmd : "send" , ctx : ctx }
         em.oChan <- act
     }
     return
 }
 
-func (em * EVENTMODULE)GenericCB(e error)(byte){
+func (em * EVENTMODULE) GenericCB(err error,s *SendCtx,r * RecvCtx)(int){
+    if(err != nil ){
+        if(errors.Is(err,ErrTimeout)){
+            em.log.Printf("EVENTMODULE Timeout %v\n",s);
+        } else {
+            em.log.Printf("EVENTMODULE Unknown Error %v\n",err);
+        }
+    } else {
+        em.log.Printf("EVENTMODULE get ack %v\n",r);
+    }
     return 0
 }
 
 func (em * EVENTMODULE)sendS6F11(node sm.ElementType){
     msg := sm.CreateDataMessage( 6, 11, true, node ,-1 , 0 , "ALL")
-    ctx := SendCtx{ msg : msg , cb : em.GenericCB , timeout :  time.Now().Unix() + (T3/1000) }
+    ctx := &SendCtx{ msg : msg , cb : em.GenericCB , timeout :  time.Now().Unix() + (T3/1000) }
     act := Evt{ cmd : "send" , ctx : ctx }
     em.log.Printf("send report\n")
     em.oChan <- act
@@ -402,7 +412,7 @@ func (em * EVENTMODULE)handleS6F15(msg *sm.DataMessage){
         em.log.Printf("evtID %d not found\n",evtID);
         replyMsg =  sm.CreateDataMessage(6, 16, false, sm.CreateListNode() , -1 , msg.SystemBytes() , msg.SourceHost())
     }
-    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    ctx := &SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     em.oChan <- act
 }
@@ -425,7 +435,7 @@ func (em * EVENTMODULE)handleS6F19(msg *sm.DataMessage){
         em.log.Printf("rptID %d not found\n",rptID);
         replyMsg = sm.CreateDataMessage( 6, 20, false, sm.CreateListNode() , -1 , msg.SystemBytes() , msg.SourceHost())
     }
-    ctx := SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
+    ctx := &SendCtx{ msg : replyMsg , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     em.oChan <- act
 }
@@ -492,7 +502,7 @@ func (em * EVENTMODULE)processEvt(evt Evt){
         return;
     }
     if(evt.cmd == "recv"){
-        msg := evt.ctx.(RecvCtx).msg.(*sm.DataMessage)
+        msg := evt.ctx.(*RecvCtx).msg.(*sm.DataMessage)
         em.processMsg(msg)
     }
 }

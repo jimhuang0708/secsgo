@@ -5,6 +5,7 @@ import (
     "time"
     "secs/data"
     "secs/logger"
+    "errors"
     sm "secs/secs_message"
 )
 
@@ -26,7 +27,16 @@ func CreateALARMMODULE( log *logger.Logger) *ALARMMODULE {
     return &o
 }
 
-func (am * ALARMMODULE) GenericCB(e error)(byte){
+func (am * ALARMMODULE) GenericCB(err error,s *SendCtx,r * RecvCtx)(int){
+    if(err != nil ){
+        if(errors.Is(err,ErrTimeout)){
+            am.log.Printf("ALARMMODULE Timeout %v\n",s);
+        } else {
+             am.log.Printf("ALARMMODULE Unknown Error %v\n",err);
+        }
+    } else {
+        am.log.Printf("ALARMMODULE get ack %v\n",r);
+    }
     return 0
 }
 
@@ -39,7 +49,7 @@ func (am * ALARMMODULE)sendS5F1(id uint64){
     alids[0] = id
     rootNode := data.GetAlarmsLst(alids)
     node , _ := rootNode.(*sm.ListNode).Get(0)
-    ctx := SendCtx{ msg : sm.CreateDataMessage( 5, 1, true,  node , -1 , 0 , "ALL") , cb : am.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    ctx := &SendCtx{ msg : sm.CreateDataMessage( 5, 1, true,  node , -1 , 0 , "ALL") , cb : am.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
     act := Evt{ cmd : "send" , ctx : ctx }
     am.log.Printf("send report\n")
     am.oChan <- act
@@ -95,7 +105,7 @@ func (am * ALARMMODULE)handleS5F3(msg *sm.DataMessage){
         alid = alidNode.Values().([]uint64)[0]
     }
     ret := ACKC5(data.SetAlarmEnable(alid,aled))
-    ctx := SendCtx{ msg : sm.CreateDataMessage( 5, 4, false, sm.CreateBinaryNode( byte(ret) ) , -1 , msg.SystemBytes() , msg.SourceHost()) , cb : am.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    ctx := &SendCtx{ msg : sm.CreateDataMessage( 5, 4, false, sm.CreateBinaryNode( byte(ret) ) , -1 , msg.SystemBytes() , msg.SourceHost()) , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     am.oChan <- act
 }
@@ -109,7 +119,7 @@ func (am * ALARMMODULE)handleS5F5(msg *sm.DataMessage){
     }
     alids := alidNode.Values().([]uint64)
     rootNode := data.GetAlarmsLst(alids)
-    ctx := SendCtx{ msg :  sm.CreateDataMessage( 5, 6, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost()) , cb : am.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    ctx := &SendCtx{ msg :  sm.CreateDataMessage( 5, 6, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost()) , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     am.oChan <- act
 }
@@ -139,7 +149,7 @@ func (am * ALARMMODULE)processEvt(evt Evt){
         return
     }
     if(evt.cmd == "recv"){
-        am.processMsg(evt.ctx.(RecvCtx).msg.(*sm.DataMessage))
+        am.processMsg(evt.ctx.(*RecvCtx).msg.(*sm.DataMessage))
     }
 }
 

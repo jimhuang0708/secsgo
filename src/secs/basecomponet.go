@@ -48,7 +48,7 @@ func (bm * BaseModule)sendS9FX(msg *sm.DataMessage,f int){
         bin[i] = raw[i+4]
     }
     errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , -1 ,0 , msg.SourceHost() )
-    ctx := SendCtx{ msg : errmsg , cb : nil , timeout : 0 }
+    ctx := &SendCtx{ msg : errmsg , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     bm.oChan <- act
     return

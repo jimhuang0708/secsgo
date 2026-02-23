@@ -5,6 +5,7 @@ import (
     "time"
     "secs/data"
     "secs/logger"
+    "errors"
     sm "secs/secs_message"
 )
 
@@ -225,20 +226,29 @@ func (cs *CTRLSTATE)sendS9FX(msg *sm.DataMessage,f int){
         bin[i] = raw[i+4]
     }
     errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , -1 ,0,msg.SourceHost() )
-    ctx := SendCtx{ msg : errmsg , cb : nil , timeout : 0 }
+    ctx := &SendCtx{ msg : errmsg , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     cs.session[msg.SourceHost()].iChan <- act
     return
 }
 
-func (cs * CTRLSTATE)GenericCB(e error)(byte){
+func (cs * CTRLSTATE) GenericCB(err error,s *SendCtx,r * RecvCtx)(int){
+    if(err != nil ){
+        if(errors.Is(err,ErrTimeout)){
+            cs.log.Printf("CTRLSTATE Timeout %v\n",s);
+        } else {
+            cs.log.Printf("CTRLSTATE Unknown Error %v\n",err);
+        }
+    } else {
+        cs.log.Printf("CTRLSTATE get ack %v\n",r);
+    }
     return 0
 }
 
 /*send by host & equipment */
 func (cs * CTRLSTATE)sendS1F1(){
     rmsg := sm.CreateDataMessage( 1, 1, true, sm.CreateEmptyElementType(), -1 , 0 , "ALL" )
-    ctx := SendCtx{ msg : rmsg , cb : cs.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    ctx := &SendCtx{ msg : rmsg , cb : cs.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
     evt := Evt{ cmd : "send" , ctx : ctx }
     cs.log.Printf("ask Host online Permission\n")
     for _, comm := range cs.session {
@@ -270,7 +280,7 @@ func (cs * CTRLSTATE)handleS1F17(msg *sm.DataMessage){
 /* send by Equipment only */
 func (cs * CTRLSTATE)sendS1F16(msg *sm.DataMessage){
     rmsg := sm.CreateDataMessage( 1, 16, false, sm.CreateBinaryNode( byte(OFLACK_OK) ) , -1 , msg.SystemBytes() , msg.SourceHost() )
-    ctx := SendCtx{ msg : rmsg , cb : cs.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    ctx := &SendCtx{ msg : rmsg , cb : cs.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
     act := Evt{ cmd : "send" , ctx : ctx }
     cs.session[msg.SourceHost()].iChan <- act
     cs.log.Printf("do request offline\n")
@@ -280,7 +290,7 @@ func (cs * CTRLSTATE)sendS1F16(msg *sm.DataMessage){
 /* send by Equipment only */
 func (cs * CTRLSTATE)sendS1F18(result ONLACK,msg *sm.DataMessage){
     rmsg := sm.CreateDataMessage( 1, 18, false, sm.CreateBinaryNode( byte(result) ) , -1 , msg.SystemBytes() , msg.SourceHost())
-    ctx := SendCtx{ msg : rmsg , cb : cs.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    ctx := &SendCtx{ msg : rmsg , cb : cs.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
     act := Evt{ cmd : "send" , ctx : ctx }
     cs.session[msg.SourceHost()].iChan <- act
     cs.log.Printf("do request online\n")
@@ -289,7 +299,7 @@ func (cs * CTRLSTATE)sendS1F18(result ONLACK,msg *sm.DataMessage){
 
 func (cs * CTRLSTATE)sendStopTransaction(msg *sm.DataMessage) {
     errmsg := sm.CreateDataMessage( msg.StreamCode() ,  0 ,false, sm.CreateEmptyElementType() , -1 , msg.SystemBytes() , msg.SourceHost() )
-    ctx := SendCtx{ msg : errmsg , cb : cs.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
+    ctx := &SendCtx{ msg : errmsg , cb : cs.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
     act := Evt{ cmd : "send" , ctx : ctx }
     cs.session[ msg.SourceHost()].iChan <- act
 }
@@ -398,7 +408,7 @@ func (cs *CTRLSTATE)processEvt(evt Evt ,sessionID string){
     }
 
     if(evt.cmd == "recv"){
-        ctx := evt.ctx.(RecvCtx)
+        ctx := evt.ctx.(*RecvCtx)
         dm := ctx.msg.(*sm.DataMessage)
         //cs.log.Printf("----------> got %+v from session %s\n", dm.ToSml(), sessionID)
         ctx.msg = dm.SetSourceHost(sessionID)
@@ -412,7 +422,7 @@ func (cs *CTRLSTATE)processEvt(evt Evt ,sessionID string){
 }
 
 func (cs *CTRLSTATE) IsCtrlStateChangEvt(evt Evt) (bool){
-    msg := evt.ctx.(SendCtx).msg.(*sm.DataMessage)
+    msg := evt.ctx.(*SendCtx).msg.(*sm.DataMessage)
     if( msg.StreamCode() == 6){
         if(msg.FunctionCode() == 11 ){
             item , err := msg.Get()
@@ -477,7 +487,7 @@ func (cs *CTRLSTATE)ProcessEvt(evt Evt){
             cs.log.Printf("State is offline,don't send anything back\n");
             return
         }
-        sourceHost := evt.ctx.(SendCtx).msg.(*sm.DataMessage).SourceHost()
+        sourceHost := evt.ctx.(*SendCtx).msg.(*sm.DataMessage).SourceHost()
         cs.log.Printf("send back source host [%s]\n",sourceHost);
         if( sourceHost == "ALL"){
             for _, comm := range cs.session {

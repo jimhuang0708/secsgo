@@ -7,6 +7,7 @@ import (
     "fmt"
     "time"
     "secs/logger"
+    //"errors"
     sm "secs/secs_message"
 )
 /* spec
@@ -120,19 +121,24 @@ func (cs *COMMUNICATESTATE)handleS1F13(msg *sm.DataMessage){
     return
 }
 
-func (cs *COMMUNICATESTATE)SendS1F13CB(err error)(byte){
-    fn := func(){
-        if(err != nil){
-           cs.iChan <- Evt{ cmd : "WAITS1F14_TIMEOUT" , ctx : nil  }
+func (cs *COMMUNICATESTATE)SendS1F13CB(err error,s *SendCtx,r * RecvCtx)(int){
+    if(err != nil){
+        fn := func (){
+            //if(errors.Is(err, ErrTimeout)){
+            cs.log.Printf("SendS1F13CB Timeout : Resend S1F13 \n");
+            cs.comfsm.Emit(CommFSMEvent{EvConnTransactionFail,nil})
+            //}
         }
+        cs.iChan <- Evt{ cmd : "executefn" , ctx : fn }
+    } else {
+        cs.log.Printf("SendS1F13CB get ack\n");
     }
-    cs.iChan <- Evt{ cmd : "executefn" , ctx : fn }
     return 0
 }
 
 func (cs *COMMUNICATESTATE)SendS1F13(){
     msg := sm.CreateDataMessage( 1, 13, true,sm.CreateListNode( sm.CreateASCIINode("HMITaker") , sm.CreateASCIINode("1.0")),-1,0, "ALL")
-    ctx := SendCtx{ msg : msg , cb : cs.SendS1F13CB , timeout : time.Now().Unix() + (EstablishCommunicationsTimeout/1000) }
+    ctx := &SendCtx{ msg : msg , cb : cs.SendS1F13CB , timeout : time.Now().Unix() + (EstablishCommunicationsTimeout/1000) }
     act := Evt{ cmd : "send" , ctx : ctx }
     cs.hsms_ss.iChan <- act
     return
@@ -141,7 +147,7 @@ func (cs *COMMUNICATESTATE)SendS1F13(){
 func (cs *COMMUNICATESTATE)SendS1F14_CommAck0(msg *sm.DataMessage){
     rmsg := sm.CreateDataMessage(1, 14, false,sm.CreateListNode ( sm.CreateBinaryNode( byte(COMMACK_OK) ) , sm.CreateListNode( sm.CreateASCIINode("HMITaker") ,
                                  sm.CreateASCIINode("1.0"))), -1 , msg.SystemBytes(), msg.SourceHost() )
-    ctx := SendCtx{ msg : rmsg , cb : nil , timeout : 0 }
+    ctx := &SendCtx{ msg : rmsg , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     cs.hsms_ss.iChan <- act
     return
@@ -175,7 +181,7 @@ func (cs *COMMUNICATESTATE)sendS9FX(msg *sm.DataMessage,f int){
         bin[i] = raw[i+4]
     }
     errmsg := sm.CreateDataMessage( 9, f ,false, sm.CreateBinaryNode( bin... ) , -1 , 0 , msg.SourceHost() )
-    ctx := SendCtx{ msg : errmsg , cb : nil , timeout : 0 }
+    ctx := &SendCtx{ msg : errmsg , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     cs.hsms_ss.iChan <- act
     return
@@ -192,7 +198,7 @@ func (cs *COMMUNICATESTATE)processMsg(msg *sm.DataMessage)(bool){
             return false
         }
     }
-    ctx := RecvCtx{ msg : msg }
+    ctx := &RecvCtx{ msg : msg }
     cs.oChan <- Evt{ cmd : "recv" , ctx : ctx  }
     return true
 }
@@ -218,7 +224,7 @@ func (cs *COMMUNICATESTATE)processEvt(evt Evt){
     }
 
     if( evt.cmd == "recv" && cs.comfsm.major.String() == "ENABLED" ){
-        msg := evt.ctx.(RecvCtx).msg.(*sm.DataMessage)
+        msg := evt.ctx.(*RecvCtx).msg.(*sm.DataMessage)
         cs.processMsg(msg)
     } else {
         cs.log.Printf("Communicate state is DISABLED %v| discard %v\n",evt,cs.comfsm.major.String())
@@ -232,11 +238,6 @@ func (cs *COMMUNICATESTATE)getState()(string){
 
 
 func (cs *COMMUNICATESTATE )handleInput(evt Evt){
-    if(evt.cmd == "WAITS1F14_TIMEOUT"){
-        cs.log.Printf("Resend S1F13\n");
-        cs.comfsm.Emit(CommFSMEvent{EvConnTransactionFail,nil})
-        return
-    }
     if(evt.cmd == "executefn"){
         fn := evt.ctx.(func())
         fn()

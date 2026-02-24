@@ -25,9 +25,7 @@ func (tm * TERMINALMODULE) PutEvt(e Evt) {
 }
 
 func (tm * TERMINALMODULE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
-    p := make(map[string]interface{})
-    p["evtid"] = e
-    p["dvctx"] = dvCtx
+    p := &TrigerEvtCtx{ evtid : e , dvctx : dvCtx  }
     tm.oChan <- Evt{ cmd : "TRIG_EVENT" , ctx : p }
     return
 }

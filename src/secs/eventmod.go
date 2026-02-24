@@ -482,9 +482,9 @@ func (em * EVENTMODULE)processMsg(msg *sm.DataMessage)(bool){
 }
 
 func (em * EVENTMODULE)buildEventReport(evt Evt){
-    paraemeter := evt.ctx.(map[string]interface{})
-    evtID := paraemeter["evtid"].(uint32)
-    dvCtx := paraemeter["dvctx"].(map[uint32]interface{})
+    paraemeter := evt.ctx.(*TrigerEvtCtx)
+    evtID := paraemeter.evtid
+    dvCtx := paraemeter.dvctx
     rootNode := data.GetEventReport(evtID ,dvCtx )
     //em.log.Printf("rootNode : %v\n",rootNode);
     if(rootNode != nil){

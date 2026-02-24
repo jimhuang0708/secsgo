@@ -53,9 +53,7 @@ func (cs * CTRLSTATE)TellUI(){
 
 
 func (cs * CTRLSTATE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
-    p := make(map[string]interface{})
-    p["evtid"] = e
-    p["dvctx"] = dvCtx
+    p := &TrigerEvtCtx{ evtid : e , dvctx : dvCtx  }
     cs.oChan <- Evt{ cmd : "TRIG_EVENT" ,ctx : p  }
     return
 }

@@ -32,9 +32,7 @@ func (em * EQCONSTMODULE) PutEvt(e Evt) {
 }
 
 func (em * EQCONSTMODULE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
-    p := make(map[string]interface{})
-    p["evtid"] = e
-    p["dvctx"] = dvCtx
+    p := &TrigerEvtCtx{ evtid : e , dvctx : dvCtx  }
     em.oChan <- Evt{ cmd : "TRIG_EVENT" , ctx : p  }
     return
 }

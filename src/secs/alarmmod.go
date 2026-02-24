@@ -56,9 +56,8 @@ func (am * ALARMMODULE)sendS5F1(id uint64){
 }
 
 func (am * ALARMMODULE)trigEvt(e uint32){
-    p := make(map[string]interface{})
-    p["evtid"] = e
-    p["dvctx"] = make(map[uint32]interface{}) //TODO : change strcture later
+    dvCtx := make(map[uint32]interface{}) //TODO : change strcture later
+    p := &TrigerEvtCtx{ evtid : e , dvctx : dvCtx  }
     am.oChan <- Evt{ cmd : "TRIG_EVENT" , ctx : p  }
     return
 }

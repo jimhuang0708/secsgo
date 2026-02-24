@@ -353,9 +353,7 @@ func (lm * LIMITMONITORMODULE)handleS2F47(msg *sm.DataMessage){
 }
 
 func (lm * LIMITMONITORMODULE)trigEvt(e uint32,dvCtx map[uint32]interface{}){
-    p := make( map[string]interface{} )
-    p["evtid"] = e
-    p["dvctx"] = dvCtx
+    p := &TrigerEvtCtx{ evtid : e , dvctx : dvCtx  }
     lm.oChan <- Evt{ cmd : "TRIG_EVENT" , ctx : p }
     return
 }

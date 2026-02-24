@@ -23,18 +23,18 @@ const LNKTEST_DUR = 60000//linktest.req timing
 const EstablishCommunicationsTimeout = 10000 //send S1F13 and wait S1F14
 
 type SendCtx struct {
-    msg interface{}
+    msg sm.HSMSMessage
     cb func(error,*SendCtx,*RecvCtx)(int)
     timeout int64
 }
 
 type RecvCtx struct {
-    msg interface{}
+    msg sm.HSMSMessage
 }
 
 type TrigerEvtCtx struct{
     evtid uint32
-    drvctx map[uint32]interface{}
+    dvctx map[uint32]interface{}
 }
 
 type Evt struct{

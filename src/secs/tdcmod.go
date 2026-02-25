@@ -132,7 +132,7 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
     }
 
     trid := uint32(tridNode.Values().([]uint64)[0])
-    dsper := dsperNode.Values().(string)
+    dsper := string(dsperNode.Values().([]byte))
     totsmp := uint32(totsmpNode.Values().([]uint64)[0])
     repgsz := uint32(repgszNode.Values().([]uint64)[0])
     svidLst := make([]uint32,0)

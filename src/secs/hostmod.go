@@ -88,7 +88,7 @@ func (hm * HOSTMODULE)handleS10F1(msg *sm.DataMessage){
         return ;
     }
 
-    text := textNodce.Values().(string)
+    text := string(textNodce.Values().([]byte))
     hm.TellUI(text)
     hm.log.Printf("Get message from Equipment : \n %s\n",text);
 

@@ -104,7 +104,7 @@ func (dstm * DSTMODULE)handleS13F1(msg *sm.DataMessage){
         dstm.sendS9FX(msg, 7)
         return ;
     }
-    dsName := item.Values().(string)
+    dsName := string(item.Values().([]byte))
     dstm.log.Printf("dsname : %v\n",dsName);
     ack := ACKC13OK
     // TODO: check if dataset exit or permission granted
@@ -141,7 +141,7 @@ func (dstm * DSTMODULE)handleS13F2(msg *sm.DataMessage){
         return ;
     }
     dsNameNode , err := item.(*sm.ListNode).Get(0)
-    dsName := dsNameNode.Values().(string)
+    dsName := string(dsNameNode.Values().([]byte))
     ackNode , err :=  item.(*sm.ListNode).Get(1)
     ack := ackNode.Values().([]byte)[0]
     dstm.log.Printf("handleS13F2 : %s | ack : %d \n",dsName,ack);
@@ -174,7 +174,7 @@ func (dstm * DSTMODULE)handleS13F3(msg *sm.DataMessage){
     handleNode , err := item.(*sm.ListNode).Get(0)
     handle := handleNode.Values().([]uint64)[0]
     dsNameNode , err := item.(*sm.ListNode).Get(1)
-    dsName := dsNameNode.Values().(string)
+    dsName := string(dsNameNode.Values().([]byte))
     ckPntNode  , err := item.(*sm.ListNode).Get(2)
     ckPnt := ckPntNode.Values().([]uint64)[0]
     dstm.log.Printf("handle : %d | dsname : %s | ckPnt : %d\n",handle,dsName,ckPnt);
@@ -210,7 +210,7 @@ func (dstm * DSTMODULE)handleS13F4(msg *sm.DataMessage){
     handleNode , err := item.(*sm.ListNode).Get(0)
     handle := handleNode.Values().([]uint64)[0]
     dsNameNode , err := item.(*sm.ListNode).Get(1)
-    dsName := dsNameNode.Values().(string)
+    dsName := string(dsNameNode.Values().([]byte))
     ackNode , err :=  item.(*sm.ListNode).Get(2)
     ack := ackNode.Values().([]byte)[0]
     rtypeNode , err := item.(*sm.ListNode).Get(3)

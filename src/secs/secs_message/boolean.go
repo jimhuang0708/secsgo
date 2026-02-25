@@ -6,22 +6,25 @@ import (
 )
 
 type BooleanNode struct {
-    values []bool
-    symbol string
+    Node
 }
 
 func (node *BooleanNode) Clone() (ElementType) {
-    nodeValues := make([]bool,  len(node.values))
-    copy(nodeValues,node.values)
-    return &BooleanNode{nodeValues, node.symbol }
+    nodeValues := make([]interface{},  len(node.NodeValues))
+    copy(nodeValues,node.NodeValues)
+    return &BooleanNode{Node{ NodeValues : nodeValues, NodeType : node.NodeType} }
 }
 
 func (node *BooleanNode) Values() interface{} {
-    return node.values
+    out := make([]bool, len(node.NodeValues))
+    for i, v := range node.NodeValues {
+        out[i] = v.(bool)
+    }
+    return out
 }
 
 func (node *BooleanNode) Type() string {
-    return node.symbol
+    return node.NodeType
 }
 
 func (node *BooleanNode) Code() byte {
@@ -33,10 +36,7 @@ func CreateBooleanNode(values ...interface{}) ElementType {
         panic("boolean datalength too long\n")
     }
 
-    var (
-        nodeValues    []bool         = make([]bool, 0, len(values))
-    )
-
+    nodeValues := make([]interface{}, 0, len(values))
     for _ , value := range values {
         if v, ok := value.(bool); ok {
             nodeValues = append(nodeValues, v)
@@ -44,16 +44,16 @@ func CreateBooleanNode(values ...interface{}) ElementType {
 	    panic("Convert to bool failed")
 	}
     }
-    node := &BooleanNode{nodeValues,  "BOOLEAN"}
+    node := &BooleanNode{Node{ NodeValues : nodeValues, NodeType : "BOOLEAN"}}
     return node
 }
 
 func (node *BooleanNode) Size() int {
-    return len(node.values)
+    return len(node.NodeValues)
 }
 
 func (node *BooleanNode) DataLength() int {
-    return len(node.values)
+    return len(node.NodeValues)
 }
 
 func (node *BooleanNode) EncodeBytes() []byte {
@@ -62,8 +62,8 @@ func (node *BooleanNode) EncodeBytes() []byte {
         return []byte{}
     }
 
-    for _, value := range node.values {
-        if value {
+    for _, value := range node.NodeValues {
+        if value.(bool) {
             result = append(result, 1)
         } else {
             result = append(result, 0)
@@ -77,8 +77,8 @@ func (node *BooleanNode) ToSml() string {
         return "<BOOLEAN[0]>"
     }
     values := make([]string, 0, node.Size())
-    for _, value := range node.values {
-        if value {
+    for _, value := range node.NodeValues {
+        if value.(bool) {
             values = append(values, "T")
         } else {
             values = append(values, "F")

@@ -7,22 +7,25 @@ import (
 )
 
 type BinaryNode struct {
-    values    []byte
-    symbol string
+    Node
 }
 
 func (node *BinaryNode) Clone() (ElementType) {
-    nodeValues := make([]byte,  len(node.values))
-    copy(nodeValues,node.values)
-    return &BinaryNode{ nodeValues , node.symbol}
+    nodeValues := make([]interface{},  len(node.NodeValues))
+    copy(nodeValues,node.NodeValues)
+    return &BinaryNode{ Node{ NodeValues : nodeValues , NodeType :node.NodeType}}
 }
 
 func (node *BinaryNode) Values() interface{} {
-    return node.values
+    out := make([]byte, len(node.NodeValues))
+    for i, v := range node.NodeValues {
+        out[i] = v.(byte)
+    }
+    return out
 }
 
 func (node *BinaryNode) Type() string {
-    return node.symbol
+    return node.NodeType
 }
 
 func (node *BinaryNode) Code() byte {
@@ -33,20 +36,20 @@ func CreateBinaryNode(values ...byte) ElementType {
     if len(values) > MAX_BYTE_SIZE {
         panic("datalength too long\n")
     }
-    var nodeValues []byte =  make([]byte, 0, len(values))
+    nodeValues :=  make([]interface{}, 0, len(values))
     for _ , value := range values {
         nodeValues = append(nodeValues,value)
     }
-    node := &BinaryNode{nodeValues,  "B"}
+    node := &BinaryNode{ Node{ NodeValues :nodeValues,  NodeType : "B"}}
     return node
 }
 
 func (node *BinaryNode) Size() int {
-    return len(node.values)
+    return len(node.NodeValues)
 }
 
 func (node *BinaryNode) DataLength() int {
-    return len(node.values)
+    return len(node.NodeValues)
 }
 
 func (node *BinaryNode) EncodeBytes() []byte {
@@ -54,8 +57,8 @@ func (node *BinaryNode) EncodeBytes() []byte {
     if err != nil {
         return []byte{}
     }
-    for _, value := range node.values {
-        result = append(result, byte(value))
+    for _, value := range node.NodeValues {
+        result = append(result, value.(byte))
     }
     return result
 }
@@ -65,8 +68,8 @@ func (node *BinaryNode) ToSml() string {
         return "<B[0]>"
     }
     values := make([]string, 0, node.Size())
-    for _, value := range node.values {
-        str := "0b" + strconv.FormatInt(int64(value), 2)
+    for _, value := range node.NodeValues {
+        str := "0b" + strconv.FormatInt(int64(value.(byte)), 2)
         values = append(values, str)
     }
     return fmt.Sprintf("<B[%d] %v>", node.Size(), strings.Join(values, " "))

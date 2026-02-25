@@ -63,7 +63,7 @@ func (rcm * RCMODULE)handleS2F41(msg *sm.DataMessage){
         rcm.sendS9FX(msg, 7)
         return ;
     }
-    rcmd :=  rcmdNode.Values().(string)
+    rcmd := string(rcmdNode.Values().([]byte))
     rcm.log.Printf("Get Remote command: %s\n",rcmd)
     remotecmdstr := rcmd + "( "
     for i := 0 ; i < parametersNode.Size() ; i++ {
@@ -85,10 +85,10 @@ func (rcm * RCMODULE)handleS2F41(msg *sm.DataMessage){
             rcm.sendS9FX(msg, 7)
             return ;
         }
-        cpname := cpnameNode.Values().(string)
+        cpname := string(cpnameNode.Values().([]byte))
         /* cpval is scalar , not array */
         if( cpvalNode.Type() == "A" ){
-            cpval := cpvalNode.Values().(string)
+            cpval := string(cpvalNode.Values().([]byte))
             remotecmdstr = remotecmdstr + cpname + " : " + cpval + " , "
         } else if( cpvalNode.Type() == "B" ){
             cpval := cpvalNode.Values().([]byte)

@@ -9,37 +9,40 @@ import (
 )
 
 type UintNode struct {
-    byteSize  int
-    values    []uint64
-    symbol string
+    Node
 }
 
 func(node *UintNode) Clone() (ElementType) {
-    nodeValues := make([]uint64,  len(node.values))
-    copy(nodeValues,node.values)
-    return &UintNode{node.byteSize, nodeValues, node.symbol }
+    nodeValues := make([]interface{},  len(node.NodeValues))
+    copy(nodeValues,node.NodeValues)
+    return &UintNode{ Node : Node{ NodeType : node.NodeType , NodeValues : nodeValues }  }
+
 }
 
 
 func (node *UintNode) Values() interface{} {
-    return node.values
+    out := make([]uint64, len(node.NodeValues))
+    for i, v := range node.NodeValues {
+        out[i] = v.(uint64)
+    }
+    return out
 }
 
 func (node *UintNode) Type() string {
-    return node.symbol
+    return node.NodeType
 }
 
 func (node *UintNode) Code() byte {
-    if(node.symbol == "U1"){
+    if(node.NodeType == "U1"){
         return 0o51
-    } else if(node.symbol == "U2"){
+    } else if(node.NodeType == "U2"){
         return 0o52
-    } else if(node.symbol == "U4"){
+    } else if(node.NodeType == "U4"){
         return 0o54
-    } else if(node.symbol == "U8"){
+    } else if(node.NodeType == "U8"){
         return 0o50
     } else {
-        log.Printf("Error unknown uint symbol %s\n",node.symbol);
+        log.Printf("Error unknown uint symbol %s\n",node.NodeType);
         return 0
     }
 }
@@ -49,7 +52,7 @@ func CreateUintNode(byteSize int, values ...interface{}) ElementType {
         panic("uint datalength too long")
     }
 
-    nodeValues := make([]uint64, 0, len(values))
+    nodeValues := make([]interface{}, 0, len(values))
 
     for _, v := range values {
         uv, ok := convertToUint64(v)
@@ -59,11 +62,7 @@ func CreateUintNode(byteSize int, values ...interface{}) ElementType {
         nodeValues = append(nodeValues, uv)
     }
 
-    node := &UintNode{
-        byteSize: byteSize,
-        values:   nodeValues,
-        symbol: fmt.Sprintf("U%d", byteSize),
-    }
+    node := &UintNode{ Node : Node{ NodeType : fmt.Sprintf("U%d", byteSize) , NodeValues : nodeValues } }
     return node
 }
 
@@ -97,11 +96,27 @@ func convertToUint64(v interface{}) (uint64, bool) {
 }
 
 func (node *UintNode) Size() int {
-    return len(node.values)
+    return len(node.NodeValues)
 }
 
+func (node *UintNode) ByteSize() int {
+    if(node.NodeType == "U1"){
+        return 1
+    } else if(node.NodeType == "U2"){
+        return 2
+    } else if(node.NodeType == "U4"){
+        return 4
+    } else if(node.NodeType == "U8"){
+        return 8
+    } else {
+        log.Printf("Error unknown uint symbol %s\n",node.NodeType);
+        return 0
+    }
+}
+
+
 func (node *UintNode) DataLength() int {
-    return node.byteSize * node.Size()
+    return node.ByteSize() * node.Size()
 }
 
 func (node *UintNode) EncodeBytes() []byte {
@@ -109,23 +124,24 @@ func (node *UintNode) EncodeBytes() []byte {
     if err != nil {
         return nil
     }
-    result := make([]byte, 0, len(header)+len(node.values)*node.byteSize)
+    result := make([]byte, 0, len(header)+len(node.NodeValues)*node.ByteSize())
     result = append(result, header...)
     var tmp [8]byte
-    for _, v := range node.values {
-        binary.BigEndian.PutUint64(tmp[:], uint64(v))
-        result = append(result, tmp[8 - node.byteSize:8]...)
+    for _, v := range node.NodeValues {
+        binary.BigEndian.PutUint64(tmp[:], uint64(v.(uint64)))
+        result = append(result, tmp[8 - node.ByteSize():8]...)
     }
     return result
 }
 
 func (node *UintNode) ToSml() string {
     if node.Size() == 0 {
-        return fmt.Sprintf("<%s[0]>", node.symbol)
+        return fmt.Sprintf("<%s[0]>", node.NodeType)
     }
     values := make([]string, 0, node.Size())
-    for _, v := range node.values {
-        values = append(values, strconv.FormatUint(v, 10))
+    for _, v := range node.NodeValues {
+        values = append(values, strconv.FormatUint(v.(uint64), 10))
     }
-    return fmt.Sprintf("<%s[%d] %v>", node.symbol , node.Size(), strings.Join(values, " "))
+    return fmt.Sprintf("<%s[%d] %v>", node.NodeType , node.Size(), strings.Join(values, " "))
 }
+

@@ -241,7 +241,7 @@ func (cm * COMMONMODULE)handleS2F31(msg *sm.DataMessage){
         cm.sendS9FX(msg, 7)
         return ;
     }
-    timestr :=  item.Values().(string)
+    timestr := string(item.Values().([]byte))
     errCode := TIACK_OK
     if(err != SyncTime(timestr)){
         errCode = TIACK_NOTDONE

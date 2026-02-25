@@ -105,7 +105,7 @@ func converToFloat64(n sm.ElementType)(bool,[]float64){
 
     if(n.Type() == "A"){
         return false,nil
-        //str := n.Values().(string)
+        //str := string(n.Values().([]byte))
         //for _ ,c := range  str{
         //    ret = append(ret, byte(c))
         //}

@@ -86,7 +86,7 @@ func (tm * TERMINALMODULE)handleS10F3(msg *sm.DataMessage){
         return ;
     }
 
-    text := textNodce.Values().(string)
+    text := string(textNodce.Values().([]byte))
     tm.TellUI(text)
     tm.log.Printf("Get message from host : \n %s\n",text);
     replyMsg :=  sm.CreateDataMessage( 10,4, false, sm.CreateBinaryNode( byte(ACKC10_DISPLAY) ) , -1 , msg.SystemBytes() ,msg.SourceHost())

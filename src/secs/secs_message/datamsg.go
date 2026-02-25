@@ -109,6 +109,20 @@ func (node *DataMessage) SetSessionID( sessionID int) *DataMessage {
     return message
 }
 
+func (node *DataMessage) Clone() *DataMessage {
+    message := &DataMessage{
+        stream:      node.stream,
+        function:    node.function,
+        waitBit:     node.waitBit,
+        dataItem:    node.dataItem,
+        sessionID:   node.sessionID,
+        systemBytes: node.systemBytes,
+        sourceHost : node.sourceHost,
+    }
+    return message
+}
+
+
 
 func (node *DataMessage) Header() string {
     header := fmt.Sprintf("S%dF%d", node.stream, node.function)

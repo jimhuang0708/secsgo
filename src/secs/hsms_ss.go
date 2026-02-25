@@ -139,15 +139,10 @@ func (ss *HSMS_SS)processMsg(msg sm.HSMSMessage){
         v.cb(nil,v,&RecvCtx{msg : msg})
         delete(ss.waitQueue, msg.SystemBytes() )
     }
-
-
-
     if(msg.MsgType() == sm.TypeSeparateReq){
         ss.detachTransport();
         return
     }
-
-
     if(ss.connectState == "NOTSELECTED"){
         if(msg.MsgType() == sm.TypeSelectReq){
             ss.sendSelectRsp(msg)
@@ -191,6 +186,7 @@ func (ss *HSMS_SS)processMsg(msg sm.HSMSMessage){
         }
         ctx := &RecvCtx{msg : msg}
         ss.oChan <- Evt{ cmd : "recv", ctx : ctx }
+        //msg.(*sm.DataMessage).Clone() //TODO : notify this to ui
         return
     }
 }

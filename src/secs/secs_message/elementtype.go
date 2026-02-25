@@ -6,6 +6,13 @@ import (
 
 const MAX_BYTE_SIZE = 1<<24 - 1
 
+type Node struct {
+    NodeType   string       `json:"type"`              // "U4", "A", "L", "B", "F4", ...
+//    NodeValue  string       `json:"value,omitempty"`   // A-type
+    NodeValues []interface{}    `json:"values,omitempty"`  // numeric type , bool ,byte
+}
+
+
 type ElementType interface {
     Code() byte
     Size() int
@@ -42,6 +49,11 @@ func CreateEmptyElementType() ElementType {
 func (node emptyElementType) Size() int {
     return 0
 }
+
+func (node emptyElementType) ByteSize() int {
+    return 0
+}
+
 
 func (node emptyElementType) DataLength() int {
     return 0

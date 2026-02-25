@@ -6,20 +6,25 @@ import (
 )
 
 type ASCIINode struct {
-    value  string
-    symbol string
+    Node
 }
 
 func (node *ASCIINode) Clone() (ElementType) {
-    return  &ASCIINode{value: node.value, symbol: node.symbol}
+    nodeValues := make([]interface{},  len(node.NodeValues))
+    copy(nodeValues,node.NodeValues)
+    return  &ASCIINode{ Node{NodeValues : node.NodeValues, NodeType: node.NodeType}}
 }
 
 func (node *ASCIINode) Values() interface{} {
-    return node.value
+    out := make([]byte, len(node.NodeValues))
+    for i, v := range node.NodeValues {
+        out[i] = v.(byte)
+    }
+    return out
 }
 
 func (node *ASCIINode) Type() string {
-    return node.symbol
+    return node.NodeType
 }
 
 func (node *ASCIINode) Code() byte {
@@ -31,16 +36,20 @@ func CreateASCIINode(str string) ElementType {
     if  len(str) > MAX_BYTE_SIZE {
         panic("string length too long")
     }
-    node := &ASCIINode{value: str, symbol: "A"}
+    result := make([]interface{}, 0, len(str))
+    for i := 0; i < len(str); i++ {
+	result = append(result, interface{}(str[i]))
+    }
+    node := &ASCIINode{ Node{NodeValues : result , NodeType: "A"}}
     return node
 }
 
 func (node *ASCIINode) Size() int {
-    return len(node.value)
+    return len(node.NodeValues)
 }
 
 func (node *ASCIINode) DataLength() int {
-    return len(node.value)
+    return len(node.NodeValues)
 }
 
 func (node *ASCIINode) EncodeBytes() []byte {
@@ -50,26 +59,26 @@ func (node *ASCIINode) EncodeBytes() []byte {
         return []byte{}
     }
 
-    for _, ch := range node.value {
-        result = append(result, byte(ch))
+    for _, ch := range node.NodeValues {
+        result = append(result, ch.(byte))
     }
 
     return result
 }
 
 func (node *ASCIINode) ToSml() string {
-    if node.value == "" {
+    if len(node.NodeValues) == 0 {
         return "<A[0]>"
     }
     var sb strings.Builder
     inPrintable := false
-    for _, ch := range node.value {
-        if isPrintableASCII(ch) {
+    for _, ch := range node.NodeValues {
+        if isPrintableASCII(rune(ch.(byte))) {
             if !inPrintable {
                 inPrintable = true
                 sb.WriteString(` "`)
             }
-            sb.WriteRune(ch)
+            sb.WriteRune(rune(ch.(byte)))
             continue
         }
         // non-printable

@@ -104,7 +104,13 @@ func (dstm * DSTMODULE)handleS13F1(msg *sm.DataMessage){
         dstm.sendS9FX(msg, 7)
         return ;
     }
-    dsName := string(item.Values().([]byte))
+    /////
+    out := make([]byte, len(item.Values()))
+    for i, v := range item.Values() {
+        out[i] = v.(byte)
+    }
+    dsName := string(out)
+    /////
     dstm.log.Printf("dsname : %v\n",dsName);
     ack := ACKC13OK
     // TODO: check if dataset exit or permission granted
@@ -141,9 +147,15 @@ func (dstm * DSTMODULE)handleS13F2(msg *sm.DataMessage){
         return ;
     }
     dsNameNode , err := item.(*sm.ListNode).Get(0)
-    dsName := string(dsNameNode.Values().([]byte))
+    ////
+    out := make([]byte, len(dsNameNode.Values()))
+    for i, v := range dsNameNode.Values() {
+        out[i] = v.(byte)
+    }
+    dsName := string(out)
+    ////
     ackNode , err :=  item.(*sm.ListNode).Get(1)
-    ack := ackNode.Values().([]byte)[0]
+    ack := ackNode.Values()[0].(byte)
     dstm.log.Printf("handleS13F2 : %s | ack : %d \n",dsName,ack);
     if(ACKC13(ack) != ACKC13OK){
         dstm.log.Printf("handleS13F2 error : %d\n",ack);
@@ -172,11 +184,17 @@ func (dstm * DSTMODULE)handleS13F3(msg *sm.DataMessage){
         return ;
     }
     handleNode , err := item.(*sm.ListNode).Get(0)
-    handle := handleNode.Values().([]uint64)[0]
+    handle := handleNode.Values()[0].(uint64)
     dsNameNode , err := item.(*sm.ListNode).Get(1)
-    dsName := string(dsNameNode.Values().([]byte))
+    ////
+    out := make([]byte, len(dsNameNode.Values()))
+    for i, v := range dsNameNode.Values() {
+        out[i] = v.(byte)
+    }
+    dsName := string(out)
+    ////
     ckPntNode  , err := item.(*sm.ListNode).Get(2)
-    ckPnt := ckPntNode.Values().([]uint64)[0]
+    ckPnt := ckPntNode.Values()[0].(uint64)
     dstm.log.Printf("handle : %d | dsname : %s | ckPnt : %d\n",handle,dsName,ckPnt);
     RTYPE := 0   //0 : stream | 1 : discrete ,support stream only
     RECLEN := 0  //record length
@@ -208,15 +226,21 @@ func (dstm * DSTMODULE)handleS13F4(msg *sm.DataMessage){
         return ;
     }
     handleNode , err := item.(*sm.ListNode).Get(0)
-    handle := handleNode.Values().([]uint64)[0]
+    handle := handleNode.Values()[0].(uint64)
     dsNameNode , err := item.(*sm.ListNode).Get(1)
-    dsName := string(dsNameNode.Values().([]byte))
+    ////
+    out := make([]byte, len(dsNameNode.Values()))
+    for i, v := range dsNameNode.Values() {
+        out[i] = v.(byte)
+    }
+    dsName := string(out)
+    ////
     ackNode , err :=  item.(*sm.ListNode).Get(2)
-    ack := ackNode.Values().([]byte)[0]
+    ack := ackNode.Values()[0].(byte)
     rtypeNode , err := item.(*sm.ListNode).Get(3)
-    rtype := rtypeNode.Values().([]uint64)[0]
+    rtype := rtypeNode.Values()[0].(uint64)
     recLenNode , err := item.(*sm.ListNode).Get(4)
-    recLen := recLenNode.Values().([]uint64)[0]
+    recLen := recLenNode.Values()[0].(uint64)
     dstm.log.Printf("handle : %d | dsname : %s | ack : %d | rtype : %d | recLen : %d\n",handle,dsName,ack,rtype,recLen);
     if(ACKC13(ack) != ACKC13OK){
         dstm.log.Printf("handleS13F4 error : %d\n",ack);
@@ -251,9 +275,9 @@ func (dstm * DSTMODULE)handleS13F5(msg *sm.DataMessage){
         return ;
     }
     handleNode , err := item.(*sm.ListNode).Get(0)
-    handle := handleNode.Values().([]uint64)[0]
+    handle := handleNode.Values()[0].(uint64)
     readLenNode , err := item.(*sm.ListNode).Get(1)
-    readLen := readLenNode.Values().([]uint64)[0]
+    readLen := readLenNode.Values()[0].(uint64)
     dstm.log.Printf("handle : %d | readLen : %d\n",handle,readLen);
     ack := ACKC13OK
     ckPnt := int64(0)
@@ -292,16 +316,22 @@ func (dstm * DSTMODULE)handleS13F6(msg *sm.DataMessage){
         return ;
     }
     handleNode , err := item.(*sm.ListNode).Get(0)
-    handle := handleNode.Values().([]uint64)[0]
+    handle := handleNode.Values()[0].(uint64)
     ackNode , err :=  item.(*sm.ListNode).Get(1)
-    ack := ackNode.Values().([]byte)[0]
+    ack := ackNode.Values()[0].(byte)
     ckPntNode  , err := item.(*sm.ListNode).Get(2)
-    ckPnt := ckPntNode.Values().([]uint64)[0]
+    ckPnt := ckPntNode.Values()[0].(uint64)
     if entry, ok := RECV_MAP[uint(handle)]; ok {
         if(ACKC13(ack) == ACKC13OK){
             filDataLstNode , _ := item.(*sm.ListNode).Get(3)
             filDataNode , _ := filDataLstNode.(*sm.ListNode).Get(0)
-            filData := filDataNode.Values().([]byte)
+            ////
+            out := make([]byte, len(filDataNode.Values()))
+            for i, v := range filDataNode.Values() {
+                out[i] = v.(byte)
+            }
+            filData := out
+            ///
             entry.file.Write(filData)
             entry.ckPnt = uint(ckPnt)
             entry.state = "IDLE"
@@ -336,7 +366,7 @@ func (dstm * DSTMODULE)handleS13F7(msg *sm.DataMessage){
         return ;
     }
     handleNode , err := item.(*sm.ListNode).Get(0)
-    handle := handleNode.Values().([]uint64)[0]
+    handle := handleNode.Values()[0].(uint64)
     ack := ACKC13OK
     if sendds , found := SEND_MAP[uint(handle)]; found {
         dstm.log.Printf("Close Handle found\n")
@@ -361,9 +391,9 @@ func (dstm * DSTMODULE)handleS13F8(msg *sm.DataMessage){
         return ;
     }
     handleNode , err := item.(*sm.ListNode).Get(0)
-    handle := handleNode.Values().([]uint64)[0]
+    handle := handleNode.Values()[0].(uint64)
     ackNode , err :=  item.(*sm.ListNode).Get(1)
-    ack := ackNode.Values().([]byte)[0]
+    ack := ackNode.Values()[0].(byte)
     dstm.log.Printf("handle : %d | ack : %d ",handle,ack);
     return
 }

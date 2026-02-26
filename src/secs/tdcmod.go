@@ -131,10 +131,16 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
         doErr();return;
     }
 
-    trid := uint32(tridNode.Values().([]uint64)[0])
-    dsper := string(dsperNode.Values().([]byte))
-    totsmp := uint32(totsmpNode.Values().([]uint64)[0])
-    repgsz := uint32(repgszNode.Values().([]uint64)[0])
+    trid := uint32(tridNode.Values()[0].(uint64))
+    ///
+    out := make([]byte, len(dsperNode.Values()))
+    for i, v := range dsperNode.Values() {
+        out[i] = v.(byte)
+    }
+    dsper := string(out)
+    ////
+    totsmp := uint32(totsmpNode.Values()[0].(uint64))
+    repgsz := uint32(repgszNode.Values()[0].(uint64))
     svidLst := make([]uint32,0)
     if( totsmp == 0 ){
         tm.removeTrace(trid)
@@ -152,7 +158,7 @@ func (tm * TDCMODULE)handleS2F23(msg *sm.DataMessage){
         if(svNode.Type() != "U4" || err != nil){
             doErr();return;
         }
-        svID := uint32(svNode.Values().([]uint64)[0]);
+        svID := uint32(svNode.Values()[0].(uint64));
         exist := data.IsVidExist(svID)
         tm.log.Printf("exist %v %v\n",exist,svID);
         if(exist){

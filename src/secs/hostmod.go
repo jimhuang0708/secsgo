@@ -55,8 +55,8 @@ func (hm *HOSTMODULE)handleS1F14(msg *sm.DataMessage){
     if(err != nil){
     }
     v := node.Values()
-    if( len(v.([]byte)) == 1 && v.([]byte)[0] == 0){
-        if( v.([]byte)[0] == 0) {//accept
+    if( len(v) == 1 && v[0].(byte) == 0){
+        if( v[0].(byte) == 0) {//accept
             hm.log.Printf("HOST Enter COMMUNICATE STATE | Local initiated\n")
             hm.stopS1F13()
             return;
@@ -87,8 +87,13 @@ func (hm * HOSTMODULE)handleS10F1(msg *sm.DataMessage){
         hm.sendS9FX(msg, 7)
         return ;
     }
-
-    text := string(textNodce.Values().([]byte))
+    /////
+    out := make([]byte, len(textNodce.Values()))
+    for i, v := range textNodce.Values() {
+        out[i] = v.(byte)
+    }
+    text := string(out)
+    ////
     hm.TellUI(text)
     hm.log.Printf("Get message from Equipment : \n %s\n",text);
 

@@ -189,7 +189,7 @@ func (cm * COMMONMODULE)handleS1F3(msg *sm.DataMessage){
             cm.sendS9FX(msg, 7)
             return;
         }
-        svID := uint32(svNode.Values().([]uint64)[0]);
+        svID := uint32(svNode.Values()[0].(uint64));
         svidLst = append(svidLst , svID)
     }
     rootNode := data.GetSVElementTypeLst(svidLst)
@@ -214,7 +214,7 @@ func (cm * COMMONMODULE)handleS1F11(msg *sm.DataMessage){
             cm.sendS9FX(msg, 7)
             return;
         }
-        svID := uint32(svNode.Values().([]uint64)[0]);
+        svID := uint32(svNode.Values()[0].(uint64));
         svidLst = append(svidLst , svID)
     }
     rootNode := data.GetSVNameLst(svidLst)
@@ -241,7 +241,13 @@ func (cm * COMMONMODULE)handleS2F31(msg *sm.DataMessage){
         cm.sendS9FX(msg, 7)
         return ;
     }
-    timestr := string(item.Values().([]byte))
+    ////
+    out := make([]byte, len(item.Values()))
+    for i, v := range item.Values() {
+        out[i] = v.(byte)
+    }
+    timestr := string(out)
+    ////
     errCode := TIACK_OK
     if(err != SyncTime(timestr)){
         errCode = TIACK_NOTDONE

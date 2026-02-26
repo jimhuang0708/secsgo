@@ -61,7 +61,7 @@ func (tm * TERMINALMODULE)handleS10F2(msg *sm.DataMessage){
         tm.sendS9FX(msg, 7)
         return ;
     }
-    v := item.Values().([]uint8)[0]
+    v := item.Values()[0].(uint8)
     tm.log.Printf("S10F2 ack code : %v\n",v);
 
 }
@@ -85,8 +85,13 @@ func (tm * TERMINALMODULE)handleS10F3(msg *sm.DataMessage){
         tm.sendS9FX(msg, 7)
         return ;
     }
-
-    text := string(textNodce.Values().([]byte))
+    ///
+    out := make([]byte, len(textNodce.Values()))
+    for i, v := range textNodce.Values() {
+        out[i] = v.(byte)
+    }
+    text := string(out)
+    ///
     tm.TellUI(text)
     tm.log.Printf("Get message from host : \n %s\n",text);
     replyMsg :=  sm.CreateDataMessage( 10,4, false, sm.CreateBinaryNode( byte(ACKC10_DISPLAY) ) , -1 , msg.SystemBytes() ,msg.SourceHost())

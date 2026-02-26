@@ -63,7 +63,13 @@ func (rcm * RCMODULE)handleS2F41(msg *sm.DataMessage){
         rcm.sendS9FX(msg, 7)
         return ;
     }
-    rcmd := string(rcmdNode.Values().([]byte))
+    ///
+    out := make([]byte, len(rcmdNode.Values()))
+    for i, v := range rcmdNode.Values() {
+        out[i] = v.(byte)
+    }
+    rcmd := string(out)
+    ///
     rcm.log.Printf("Get Remote command: %s\n",rcmd)
     remotecmdstr := rcmd + "( "
     for i := 0 ; i < parametersNode.Size() ; i++ {
@@ -85,33 +91,45 @@ func (rcm * RCMODULE)handleS2F41(msg *sm.DataMessage){
             rcm.sendS9FX(msg, 7)
             return ;
         }
-        cpname := string(cpnameNode.Values().([]byte))
+        ///
+        out := make([]byte, len(cpnameNode.Values()))
+        for i, v := range cpnameNode.Values() {
+            out[i] = v.(byte)
+        }
+        cpname := string(out)
+        ///
         /* cpval is scalar , not array */
         if( cpvalNode.Type() == "A" ){
-            cpval := string(cpvalNode.Values().([]byte))
+            ////
+            out := make([]byte, len(cpvalNode.Values()))
+            for i, v := range cpvalNode.Values() {
+                out[i] = v.(byte)
+            }
+            cpval := string(out)
+            /////
             remotecmdstr = remotecmdstr + cpname + " : " + cpval + " , "
         } else if( cpvalNode.Type() == "B" ){
-            cpval := cpvalNode.Values().([]byte)
+            cpval := cpvalNode.Values()
             s := ""
             for j := 0 ; j < len(cpval) ; j++ {
-                s = s + strconv.FormatUint(uint64(cpval[j]), 10)
+                s = s + strconv.FormatUint(uint64(cpval[j].(byte)), 10)
             }
             remotecmdstr = remotecmdstr + cpname + " : " + s + " , "
         } else if( cpvalNode.Type() == "BOOLEAN"){
-            cpval := cpvalNode.Values().([]bool)
-            s := strconv.FormatBool(cpval[0])
+            cpval := cpvalNode.Values()
+            s := strconv.FormatBool(cpval[0].(bool))
             remotecmdstr = remotecmdstr + cpname + " : " + s + " , "
         } else if( cpvalNode.Type() == "U1" || cpvalNode.Type() == "U2" || cpvalNode.Type() == "U4" || cpvalNode.Type() == "U8"){
-            cpval := cpvalNode.Values().([]uint64)
-            s := strconv.FormatUint(uint64(cpval[0]), 10)
+            cpval := cpvalNode.Values()
+            s := strconv.FormatUint(uint64(cpval[0].(uint64)), 10)
             remotecmdstr = remotecmdstr + cpname + " : " + s + " , "
         } else if( cpvalNode.Type() == "I1" || cpvalNode.Type() == "I2" || cpvalNode.Type() == "I4" || cpvalNode.Type() == "I8"){
-            cpval := cpvalNode.Values().([]int64)
-            s := strconv.FormatUint(uint64(cpval[0]), 10)
+            cpval := cpvalNode.Values()
+            s := strconv.FormatUint(uint64(cpval[0].(int64)), 10)
             remotecmdstr = remotecmdstr + cpname + " : " + s + " , "
         } else if( cpvalNode.Type() == "F4" || cpvalNode.Type() == "F8"){
-            cpval := cpvalNode.Values().([]float64)
-            s := strconv.FormatFloat(cpval[0], 'f', 2, 64)
+            cpval := cpvalNode.Values()
+            s := strconv.FormatFloat(cpval[0].(float64), 'f', 2, 64)
             remotecmdstr = remotecmdstr + cpname + " : " + s + " , "
         } else {
             remotecmdstr = remotecmdstr + cpname + " : notparsenow , "

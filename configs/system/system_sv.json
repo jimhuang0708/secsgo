@@ -1,12 +1,12 @@
 {
-"syssv": [
+"variable": [
     {
       "name": "MDLN",
       "units": "",
       "id": 1,
       "nodevalue": {
         "type": "A",
-        "value": "SecsGo"
+        "values": ["S" ,"e" , "c" , "s" , "G" , "o"]
       }
     },
     {
@@ -15,7 +15,7 @@
       "id": 2,
       "nodevalue": {
         "type": "A",
-        "value": "Ver. 0.1"
+        "values": ["V" , "e" , "r" , "." , "0" , "." , "1"]
       }
     },
     {

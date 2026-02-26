@@ -61,10 +61,10 @@ func convertToInt64(v interface{}) (int64, bool) {
     }
 }
 
-func (node *IntNode) Values() interface{} {
-    out := make([]int64, len(node.NodeValues))
+func (node *IntNode) Values() []any {
+    out := make([]any, len(node.NodeValues))
     for i, v := range node.NodeValues {
-        out[i] = v.(int64)
+        out[i] = v
     }
     return out
 }

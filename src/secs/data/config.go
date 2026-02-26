@@ -1,16 +1,15 @@
 package data
 
 import (
-    "fmt"
+    //"fmt"
     "reflect"
     //"encoding/json"
     //"encoding/hex"
     //"os"
-    "strconv"
-
+    //"strconv"
     "github.com/spf13/viper"
     //seclog "secs/logger"
-    sm "secs/secs_message"
+    //sm "secs/secs_message"
 )
 
 type DEFAULT_STATE struct{
@@ -33,17 +32,17 @@ func getType(v interface{})(string){
 var G_STATE DEFAULT_STATE
 
 
-func LoadConfig() {
+func LoadConfigViper() {
     viper.AddConfigPath("./configs")
     viper.SetConfigName("config") // Register config file name (no extension)
     viper.SetConfigType("json")   // Look for specific type
     viper.ReadInConfig()
     viper.AddConfigPath("./configs/system")
-    viper.SetConfigName("system_sv.json")
-    viper.MergeInConfig()
-    viper.SetConfigName("system_dv.json")
-    viper.MergeInConfig()
-    viper.SetConfigName("system_ec.json")
+//    viper.SetConfigName("system_sv.json")
+//    viper.MergeInConfig()
+//    viper.SetConfigName("system_dv.json")
+//    viper.MergeInConfig()
+//    viper.SetConfigName("system_ec.json")
     viper.MergeInConfig()
     viper.SetConfigName("system_evt.json")
     viper.MergeInConfig()
@@ -54,11 +53,11 @@ func LoadConfig() {
 
     // Merge optional custom overrides/extensions
     viper.AddConfigPath("./configs/custom")
-    viper.SetConfigName("custom_sv.json")
-    viper.MergeInConfig()
-    viper.SetConfigName("custom_dv.json")
-    viper.MergeInConfig()
-    viper.SetConfigName("custom_ec.json")
+//    viper.SetConfigName("custom_sv.json")
+//    viper.MergeInConfig()
+//    viper.SetConfigName("custom_dv.json")
+//    viper.MergeInConfig()
+//    viper.SetConfigName("custom_ec.json")
     viper.MergeInConfig()
     viper.SetConfigName("custom_evt.json")
     viper.MergeInConfig()
@@ -73,23 +72,6 @@ func LoadConfig() {
     G_STATE.DEFAULT_ACCEPT_CTRLSUBSTATE = viper.Get("DEFAULT_ACCEPT_CTRLSUBSTATE").(string)
     G_STATE.DEFAULT_COMSTATE = viper.GetInt("DEFAULT_COMSTATE")
  
-}
-
-
-
-// ----------------------------
-// Shared basic structure
-// ----------------------------
-
-type BaseItem struct {
-    Name     string      `json:"name"`
-    Units    *string     `json:"units"`
-    ID       int         `json:"id"`
-    Desc     string      `json:"desc,omitempty"`
-    Node     *NodeValue  `json:"nodevalue"`            // formerly "sml"
-    Max      *NodeValue  `json:"max,omitempty"`
-    Min      *NodeValue  `json:"min,omitempty"`
-    LimitEvt *int        `json:"limitevt,omitempty"`
 }
 
 // ----------------------------
@@ -117,37 +99,11 @@ type ReportItem struct {
     VID  []int  `json:"vid"`
 }
 
-// ----------------------------
-// Whole config
-// ----------------------------
-
-type SecsConfig struct {
-    SysSV    []BaseItem   `json:"syssv"`
-    SysDV    []BaseItem   `json:"sysdv"`
-    SysEC    []BaseItem   `json:"sysec"`
-    SysEvt   []EventItem  `json:"sysevt"`
-    SysAlarm []AlarmItem  `json:"sysalarm"`
-    SysRpt   []ReportItem `json:"sysrpt"`
-}
-
-/*func LoadConfig2(path string) (*SecsConfig, error) {
-    raw, err := os.ReadFile(path)
-    if err != nil {
-        return nil, fmt.Errorf("read config: %w", err)
-    }
-
-    var cfg SecsConfig
-    if err := json.Unmarshal(raw, &cfg); err != nil {
-        return nil, fmt.Errorf("json unmarshal: %w", err)
-    }
-    log.Printf("%v\n",cfg);
-    return &cfg, nil
-}*/
 
 
-func (n *NodeValue) EncodeSecs() (sm.ElementType, error) {
-
-    // helper: convert []float64 → []interface{}
+//func (n *sm.Node) EncodeSecs() (sm.ElementType, error) {
+//return nil,nil
+/*
     toInterfaces := func(vals []float64) []interface{} {
         out := make([]interface{}, len(vals))
         for i, v := range vals {
@@ -254,4 +210,5 @@ func (n *NodeValue) EncodeSecs() (sm.ElementType, error) {
     }
 
     return nil, fmt.Errorf("invalid data type: %s", n.Type)
-}
+*/
+//}

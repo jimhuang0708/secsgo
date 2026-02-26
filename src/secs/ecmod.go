@@ -57,7 +57,7 @@ func (em * EQCONSTMODULE)handleS2F13(msg *sm.DataMessage){
             em.sendS9FX(msg, 7)
             return;
         }
-        ecID := uint32(ecNode.Values().([]uint64)[0])
+        ecID := uint32(ecNode.Values()[0].(uint64))
         ecLst = append(ecLst,ecID)
     }
     rootNode := data.GetEC(ecLst)
@@ -83,7 +83,7 @@ func (em * EQCONSTMODULE)SetECS(node sm.ElementType,trig bool)(error,byte){
         if(ecIDNode.Type() != "U4" || ecIDNode.Size() != 1  || err != nil ){
             return errors.New("wrong type") , 0 ;
         }
-        ecID := uint32(ecIDNode.Values().([]uint64)[0])
+        ecID := uint32(ecIDNode.Values()[0].(uint64))
         ecValueNode , err := ecNode.(*sm.ListNode).Get(1)
         ecs[ecID] = ecValueNode
 
@@ -148,7 +148,7 @@ func (em * EQCONSTMODULE)handleS2F29(msg *sm.DataMessage){
             em.sendS9FX(msg, 7)
             return;
         }
-        ecID := uint32(ecNode.Values().([]uint64)[0])
+        ecID := uint32(ecNode.Values()[0].(uint64))
         ecLst = append(ecLst,ecID)
     }
     rootNode := data.GetECName(ecLst)

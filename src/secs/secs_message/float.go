@@ -21,8 +21,12 @@ func(node *FloatNode) Clone() (ElementType){
     return &FloatNode{node.byteSize, nodeValues, node.symbol}
 }
 
-func (node *FloatNode) Values() interface{} {
-    return node.values
+func (node *FloatNode) Values() []any {
+    out := make([]any, len(node.values))
+    for i, v := range node.values {
+        out[i] = v
+    }
+    return out
 }
 
 func (node *FloatNode) Type() string {

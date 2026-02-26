@@ -20,10 +20,10 @@ func(node *UintNode) Clone() (ElementType) {
 }
 
 
-func (node *UintNode) Values() interface{} {
-    out := make([]uint64, len(node.NodeValues))
+func (node *UintNode) Values() []any {
+    out := make([]any, len(node.NodeValues))
     for i, v := range node.NodeValues {
-        out[i] = v.(uint64)
+        out[i] = v
     }
     return out
 }

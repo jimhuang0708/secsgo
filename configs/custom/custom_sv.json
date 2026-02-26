@@ -1,22 +1,22 @@
 {
-"customsv": [
+"variable": [
     {
       "name": "TEST",
       "units": "?",
       "id": 1005,
       "nodevalue": {
         "type": "L",
-        "items": [
+        "values": [
           {
             "type": "L",
-            "items": []
+            "values": []
           },
           {
             "type": "L",
-            "items": [
+            "values": [
               {
                 "type": "A",
-                "value": "This is test string"
+                "values": ["T" , "h" , "i" , "s" , " ", "i" , "s" , " " , "t" , "e" , "s" , "t" , " " , "s" , "t" , "r" , "i" , "n" ,"g"]
               },
               {
                 "type": "U8",
@@ -24,7 +24,7 @@
               },
               {
                 "type": "B",
-                "bytes": "0A0B"
+                "values": [ 10 , 11 , 12 ]
               },
               {
                 "type": "F4",
@@ -32,7 +32,7 @@
               },
               {
                 "type" : "BOOLEAN",
-                "bools" : [true,false]
+                "values" : [true,false]
               }
 
             ]
@@ -47,7 +47,7 @@
       "nodevalue": {
         "type": "U4",
         "values": [
-          50
+          51
         ]
       },
       "limitevt": 1307,

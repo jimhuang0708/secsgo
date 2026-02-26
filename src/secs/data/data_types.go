@@ -1,20 +1,8 @@
 package data
 
 import "sync"
+import "encoding/json"
 import sm "secs/secs_message"
-// ----------------------------
-// SECS-II JSON Node structure
-// ----------------------------
-
-type NodeValue struct {
-    Type   string       `json:"type"`              // "U4", "A", "L", "B", "F4", ...
-    Value  string       `json:"value,omitempty"`   // A-type
-    Values []float64    `json:"values,omitempty"`  // numeric type
-    Bools  []bool       `json:"bools,omitempty"`   // BOOLEAN
-    Bytes  string       `json:"bytes,omitempty"`   // B-type
-    Items  []*NodeValue `json:"items,omitempty"`   // L-type
-}
-
 // ----------------------------
 // Command / data structures
 // ----------------------------
@@ -64,21 +52,23 @@ type SECSALARM struct {
 /*
    "JIS" not supported
 */
-
+type SECSVARIABLE_WIRE struct {
+    Raw json.RawMessage `json:"nodevalue"`
+}
 type SECSVARIABLE struct { // status/data variable
-    id    uint32
-    name  string
-    units string
-    value sm.ElementType
+    Id    uint32          `json:"id"`
+    Name  string          `json:"name"`
+    Units string          `json:"units"`
+    Value sm.Node         `json:"nodevalue"`
     /*
        Equipment const variable
        Equipment const variable list format is not allowed
     */
 
-    defv     interface{} // for ec only
-    min      interface{} // for ec only
-    max      interface{} // for ec only
-    limitEvt interface{} // could be nil
+    Defv     sm.Node
+    Min      sm.Node  `json:"min"`// for ec only
+    Max      sm.Node  `json:"max"`// for ec only
+    LimitEvt uint32  `json:"limitevt"`// could be nil
 }
 
 type VidElementResult struct {

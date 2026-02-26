@@ -68,28 +68,28 @@ func (lm * LIMITMONITORMODULE) PutEvt(e Evt) {
 func converToFloat64(n sm.ElementType)(bool,[]float64){
     ret := make ([]float64,0)
     if(n.Type() == "U1" || n.Type() == "U2" || n.Type() == "U4" || n.Type() == "U8"){
-        lst := n.Values().([]uint64)
+        lst := n.Values()
         for _ ,v := range  lst{
-            ret = append(ret , float64(v))
+            ret = append(ret , float64(v.(uint64)))
         }
 
     }
     if(n.Type() == "I1" || n.Type() == "I2" || n.Type() == "I4" || n.Type() == "I8"){
-        lst := n.Values().([]int64)
+        lst := n.Values()
         for _ ,v := range  lst{
-            ret = append(ret , float64(v))
+            ret = append(ret , float64(v.(int64)))
         }
     }
     if(n.Type() == "F4" || n.Type() == "F8"){
-        lst := n.Values().([]float64)
+        lst := n.Values()
         for _ ,v := range  lst{
-            ret = append(ret , float64(v))
+            ret = append(ret , float64(v.(float64)))
         }
     }
     if(n.Type() == "BOOLEAN"){
-        lst := n.Values().([]bool)
+        lst := n.Values()
         for _ ,v := range  lst{
-            if v == true {
+            if v.(bool) == true {
                 ret = append(ret , float64(1))
             } else {
                 ret = append(ret , float64(0))
@@ -97,9 +97,9 @@ func converToFloat64(n sm.ElementType)(bool,[]float64){
         }
     }
     if(n.Type() == "B"){
-        lst := n.Values().([]int)
+        lst := n.Values()
         for _ ,v := range  lst{
-            ret = append(ret , float64(v))
+            ret = append(ret , float64(v.(int)))
         }
     }
 
@@ -190,7 +190,7 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
             return ;
         }
 
-        vid := vidNode.Values().([]uint64)[0]
+        vid := vidNode.Values()[0].(uint64)
         ok , _ , maxNode , minNode , _ , _ := data.GetVidElementType( uint32(vid) )
         if(!ok ){
             lm.log.Printf("Error | vid : %d not exist\n ",vid);
@@ -235,7 +235,7 @@ func (lm * LIMITMONITORMODULE)handleS2F45(msg *sm.DataMessage){
                 return ;
             }
 
-            lmtid := lmtidNode.Values().([]uint8)[0]
+            lmtid := lmtidNode.Values()[0].(uint8)
             lm.log.Printf("lmtid : %d\n",lmtid);
 
             boundNode , err := lmtNode.(*sm.ListNode).Get(1);
@@ -326,7 +326,7 @@ func (lm * LIMITMONITORMODULE)handleS2F47(msg *sm.DataMessage){
             lm.sendS9FX(msg, 7)
             return ;
         }
-        vid := vidNode.Values().([]uint64)[0]
+        vid := vidNode.Values()[0].(uint64)
         lm.log.Printf("vid %d\n",vid);
         ok , _ , maxNode , minNode , _  , unit:= data.GetVidElementType( uint32(vid) )
         if(!ok ){
@@ -373,7 +373,6 @@ func (lm * LIMITMONITORMODULE)doMonitor(){
             //lm.log.Printf("bound  %d %v %v\n",limitid, v1.upper , v1.lower)
             _ , upperbound := converToFloat64( v1.upper.(sm.ElementType) )
             _ , lowerbound := converToFloat64( v1.lower.(sm.ElementType) )
-
             if( value_now[0] > upperbound[0] && v1.state != "ABOVELIMIT" ){
                 lm.log.Printf("Evt ABOVE upperbound vid : %d | limitid : %d | upperdb : %f | lowerdb : %f | value : %f \n",k,limitid,upperbound[0],lowerbound[0],value_now[0]);
                 v1.state = "ABOVELIMIT"
@@ -399,6 +398,7 @@ func (lm * LIMITMONITORMODULE)doMonitor(){
             }
         }
     }
+
 }
 
 func (lm * LIMITMONITORMODULE)processMsg(msg *sm.DataMessage)(bool){

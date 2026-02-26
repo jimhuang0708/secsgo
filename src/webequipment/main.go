@@ -281,7 +281,6 @@ func main() {
     eqLog = logger.New(l)
     /* init data module */
     data.SetLogger(eqLog.With("Component", "DATA"));
-    data.LoadConfig();
     data.InitSECSData();
     //data.ModuleStop()
     router := gin.Default()

@@ -431,13 +431,13 @@ func (cs *CTRLSTATE) IsCtrlStateChangEvt(evt Evt) (bool){
             if(evtIDNode.Type() != "U4" || err != nil ){
                 return false
             }
-            evtID := uint32(evtIDNode.Values().([]uint64)[0])
+            evtID := uint32(evtIDNode.Values()[0].(uint64) )
             evtTarget := data.GetEvtByName("CONTROL_STATE_OFFLINE" , "CONTROL_STATE_LOCAL" ,"CONTROL_STATE_REMOTE")
 
 
             if(evtID == evtTarget[0] || evtID == evtTarget[1] || evtID == evtTarget[2]){
                 _ , codeNode , _  , _  , _ , _ := data.GetVidElementType(3)
-                code := int(codeNode.(sm.ElementType).Values().([]uint64)[0])
+                code := int(codeNode.(sm.ElementType).Values()[0].(uint64))
                 cs.log.Printf("IsCtrlStateChangEvt detect statecode : %d\n" , code);
                 cs.TellUI()
                 return true

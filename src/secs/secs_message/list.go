@@ -22,10 +22,10 @@ func (node *ListNode) Clone() (ElementType) {
 }
 
 
-func (node *ListNode) Values() interface{} {
-    out := make([]ElementType, len(node.NodeValues))
+func (node *ListNode) Values() []any {
+    out := make([]any, len(node.NodeValues))
     for i, v := range node.NodeValues {
-        out[i] = v.(ElementType)
+        out[i] = v
     }
     return out
 }

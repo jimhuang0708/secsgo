@@ -15,10 +15,10 @@ func (node *BooleanNode) Clone() (ElementType) {
     return &BooleanNode{Node{ NodeValues : nodeValues, NodeType : node.NodeType} }
 }
 
-func (node *BooleanNode) Values() interface{} {
-    out := make([]bool, len(node.NodeValues))
+func (node *BooleanNode) Values() []any {
+    out := make([]any, len(node.NodeValues))
     for i, v := range node.NodeValues {
-        out[i] = v.(bool)
+        out[i] = v
     }
     return out
 }

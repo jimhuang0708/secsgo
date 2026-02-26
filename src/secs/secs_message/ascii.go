@@ -15,10 +15,10 @@ func (node *ASCIINode) Clone() (ElementType) {
     return  &ASCIINode{ Node{NodeValues : node.NodeValues, NodeType: node.NodeType}}
 }
 
-func (node *ASCIINode) Values() interface{} {
-    out := make([]byte, len(node.NodeValues))
+func (node *ASCIINode) Values() []any {
+    out := make([]any, len(node.NodeValues))
     for i, v := range node.NodeValues {
-        out[i] = v.(byte)
+        out[i] = v
     }
     return out
 }

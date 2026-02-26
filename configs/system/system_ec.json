@@ -1,5 +1,5 @@
 {
-"sysec": [
+"variable": [
     {
       "name": "INIT_COMM_STATE",
       "units": "",

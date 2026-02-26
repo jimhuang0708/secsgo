@@ -1,5 +1,5 @@
 {
-"sysdv": [
+"variable": [
     {
       "name": "ECID_CHANGED",
       "units": "",
@@ -89,7 +89,7 @@
       "id": 109,
       "nodevalue": {
         "type": "A",
-        "value": ""
+        "values": []
       }
     }
   ]

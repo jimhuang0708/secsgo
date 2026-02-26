@@ -98,10 +98,10 @@ func (am * ALARMMODULE)handleS5F3(msg *sm.DataMessage){
         am.sendS9FX(msg, 7)
         return ;
     }
-    aled := aledNode.Values().([]uint8)[0]
+    aled := aledNode.Values()[0].(uint8)
     alid := uint64(0xFFFFFFFFFFFFFFFF)
     if(alidNode.Size() > 0){
-        alid = alidNode.Values().([]uint64)[0]
+        alid = alidNode.Values()[0].(uint64)
     }
     ret := ACKC5(data.SetAlarmEnable(alid,aled))
     ctx := &SendCtx{ msg : sm.CreateDataMessage( 5, 4, false, sm.CreateBinaryNode( byte(ret) ) , -1 , msg.SystemBytes() , msg.SourceHost()) , cb : nil , timeout : 0 }
@@ -116,8 +116,14 @@ func (am * ALARMMODULE)handleS5F5(msg *sm.DataMessage){
         am.sendS9FX(msg, 7)
         return ;
     }
-    alids := alidNode.Values().([]uint64)
-    rootNode := data.GetAlarmsLst(alids)
+    //
+    alids := alidNode.Values()
+    out := make([]uint64, len(alids))
+    for i, v := range alids {
+        out[i] = v.(uint64)
+    }
+    //
+    rootNode := data.GetAlarmsLst(out)
     ctx := &SendCtx{ msg :  sm.CreateDataMessage( 5, 6, false, rootNode , -1 , msg.SystemBytes() , msg.SourceHost()) , cb : nil , timeout : 0 }
     act := Evt{ cmd : "send" , ctx : ctx }
     am.oChan <- act

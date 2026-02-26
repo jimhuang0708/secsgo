@@ -1,11 +1,13 @@
 package data
 
 import (
+    "fmt"
+    "os"
     "strconv"
     "sync"
-
     "github.com/spf13/viper"
     "secs/logger"
+    "encoding/json"
     sm "secs/secs_message"
 )
 
@@ -49,7 +51,128 @@ func CloneElementType(obj any) sm.ElementType {
     return itemNode.Clone()
 }
 
+
+type VariableRoot struct {
+    Variable []*SECSVARIABLE `json:"variable"`
+}
+
+func (sd *SECS_DATA)LoadSVConfig() (error) {
+    raw, err := os.ReadFile("configs/custom/custom_sv.json")
+    if err != nil {
+        return  fmt.Errorf("read config: %w", err)
+    }
+    var cfg VariableRoot
+    if err := json.Unmarshal(raw, &cfg); err != nil {
+        return  fmt.Errorf("json unmarshal: %v", err)
+    }
+
+    for i := 0; i < len( cfg.Variable ); i++ {
+        log.Printf("customsv : %v \n", cfg.Variable[i])
+        v := cfg.Variable[i]
+        sd.svs[cfg.Variable[i].Id] = &SECSVARIABLE{Id : v.Id , Name: v.Name, Units: v.Units, Value: v.Value.Clone(), LimitEvt: v.LimitEvt, Max: v.Max.Clone(), Min: v.Min.Clone()}
+    }
+    raw, err = os.ReadFile("configs/system/system_sv.json")
+    if err != nil {
+        return  fmt.Errorf("read config: %w", err)
+    }
+    if err := json.Unmarshal(raw, &cfg); err != nil {
+        return  fmt.Errorf("json unmarshal: %v", err)
+    }
+
+    for i := 0; i < len( cfg.Variable ); i++ {
+        log.Printf("systemsv : %v\n", cfg.Variable[i])
+        v := cfg.Variable[i]
+        sd.svs[cfg.Variable[i].Id] = &SECSVARIABLE{Id : v.Id , Name: v.Name, Units: v.Units, Value: v.Value.Clone(), LimitEvt: v.LimitEvt, Max: v.Max.Clone(), Min: v.Min.Clone()}
+    }
+    return nil
+}
+
+func (sd *SECS_DATA)LoadDVConfig() (error) {
+    raw, err := os.ReadFile("configs/custom/custom_dv.json")
+    if err != nil {
+        return  fmt.Errorf("read config: %w", err)
+    }
+    var cfg VariableRoot
+    if err := json.Unmarshal(raw, &cfg); err != nil {
+        return  fmt.Errorf("json unmarshal: %v", err)
+    }
+
+    for i := 0; i < len( cfg.Variable ); i++ {
+        log.Printf("customdv : %v\n", cfg.Variable[i])
+        v := cfg.Variable[i]
+        sd.dvs[cfg.Variable[i].Id] = &SECSVARIABLE{Id : v.Id , Name: v.Name, Units: v.Units, Value: v.Value.Clone(), LimitEvt: v.LimitEvt, Max: v.Max.Clone(), Min: v.Min.Clone()}
+    }
+
+    raw, err = os.ReadFile("configs/system/system_dv.json")
+    if err != nil {
+        return  fmt.Errorf("read config: %w", err)
+    }
+    if err := json.Unmarshal(raw, &cfg); err != nil {
+        return  fmt.Errorf("json unmarshal: %v", err)
+    }
+
+    for i := 0; i < len( cfg.Variable ); i++ {
+        log.Printf("systemdv : %v\n", cfg.Variable[i])
+        v := cfg.Variable[i]
+        sd.dvs[cfg.Variable[i].Id] = &SECSVARIABLE{Id : v.Id , Name: v.Name, Units: v.Units, Value: v.Value.Clone(), LimitEvt: v.LimitEvt, Max: v.Max.Clone(), Min: v.Min.Clone()}
+    }
+    return nil
+}
+
+func (sd *SECS_DATA)LoadECConfig() (error) {
+    raw, err := os.ReadFile("configs/custom/custom_ec.json")
+    if err != nil {
+        return  fmt.Errorf("read config: %w", err)
+    }
+    var cfg VariableRoot
+    if err := json.Unmarshal(raw, &cfg); err != nil {
+        return  fmt.Errorf("json unmarshal: %v", err)
+    }
+
+    for i := 0; i < len( cfg.Variable ); i++ {
+        log.Printf("customec : %v\n", cfg.Variable[i])
+        v := cfg.Variable[i]
+        sd.ecs[cfg.Variable[i].Id] = &SECSVARIABLE{Id : v.Id , Name: v.Name, Units: v.Units, Value: v.Value.Clone(), Defv : v.Value.Clone() ,LimitEvt: v.LimitEvt, Max: v.Max.Clone(), Min: v.Min.Clone()}
+    }
+
+    raw, err = os.ReadFile("configs/system/system_ec.json")
+    if err != nil {
+        return  fmt.Errorf("read config: %w", err)
+    }
+    if err := json.Unmarshal(raw, &cfg); err != nil {
+        return  fmt.Errorf("json unmarshal: %v", err)
+    }
+
+    for i := 0; i < len( cfg.Variable ); i++ {
+        log.Printf("systemec : %v\n", cfg.Variable[i])
+        v := cfg.Variable[i]
+        sd.ecs[cfg.Variable[i].Id] = &SECSVARIABLE{Id : v.Id , Name: v.Name, Units: v.Units, Value: v.Value.Clone(), Defv: v.Value.Clone(), LimitEvt: v.LimitEvt, Max: v.Max.Clone(), Min: v.Min.Clone()}
+    }
+    return nil
+}
+
+
+
+func (sd *SECS_DATA)LoadConfig() (error) {
+    err := sd.LoadSVConfig()
+    if(err != nil){
+        return err
+    }
+    err = sd.LoadDVConfig()
+    if(err != nil){
+        return err
+    }
+    err = sd.LoadECConfig()
+    if(err != nil){
+        return err
+    }
+
+    return nil
+}
+
+
 func (sd *SECS_DATA) moduleLoadData() {
+
     rpts := viper.Get("sysrpt")
     for i := 0; i < len(rpts.([]interface{})); i++ {
         idx := "sysrpt." + strconv.Itoa(i)
@@ -115,7 +238,7 @@ func (sd *SECS_DATA) moduleLoadData() {
         sd.evt[temp_ce.id] = temp_ce
     }
 
-
+/*
     vids := viper.Get("syssv")
     for i := 0; i < len(vids.([]interface{})); i++ {
         idx := "syssv." + strconv.Itoa(i)
@@ -278,7 +401,7 @@ func (sd *SECS_DATA) moduleLoadData() {
         temp_ec := &SECSVARIABLE{id: id, name: name, units: units, min: min, max: max, defv: value, value: value, limitEvt: nil}
         sd.ecs[temp_ec.id] = temp_ec
     }
-
+*/
     alarms := viper.Get("sysalarm")
     for i := 0; i < len(alarms.([]interface{})); i++ {
         idx := "sysalarm." + strconv.Itoa(i)
@@ -303,9 +426,8 @@ func (sd *SECS_DATA) moduleLoadData() {
         log.Printf("customalarm : %v\n", temp_alarm)
         sd.alarm[temp_alarm.id] = temp_alarm
     }
-
-
     log.Printf("%v \n", gData)
+
 }
 
 // 單純呼叫 closure
@@ -329,6 +451,8 @@ func (sd *SECS_DATA) moduleStop() {
 
 func (sd *SECS_DATA) moduleRun() {
     defer sd.wg.Done()
+    sd.LoadConfig()
+    LoadConfigViper()
     sd.moduleLoadData()
     sd.run = "run"
     for sd.run == "run" {

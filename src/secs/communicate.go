@@ -96,7 +96,7 @@ func (cs *COMMUNICATESTATE)handleS1F14(msg *sm.DataMessage){
     }
 
     v := node0.Values()
-    if( COMMACK(v.([]byte)[0]) == COMMACK_OK){ //accept
+    if( COMMACK(v[0].(byte)) == COMMACK_OK){ //accept
         cs.log.Printf("Enter COMMUNICATE STATE | Local initiated\n")
         cs.comfsm.Emit(CommFSMEvent{EvRecvExpectedS1F14_CommAck0 , nil})
         return;

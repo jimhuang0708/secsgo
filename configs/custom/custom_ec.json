@@ -1,5 +1,5 @@
 {
-"customec": [
+"variable": [
     {
       "name": "CUSTOM_EQ_CONST1",
       "units": "myunits",
@@ -79,15 +79,15 @@
       "desc": "",
       "nodevalue": {
         "type": "A",
-        "value": "here is default value,but you can set later"
+        "values": ["h" , "e" , "r" , "e" , " " , "i", "s" , " " , "d" , "e" , "f" , "a" , "u" , "l" , "t" , " " , "v" , "a" , "l" , "u" , "e" , "," , "b" , "u" , "t" , " " , "y" , "o" , "u" , " " , "c" , "a" , "n" , " " , "s" , "e" , "t" , " " , "l" , "a" , "t" , "e" , "r"]
       },
       "max": {
         "type": "A",
-        "value": "maxvalue"
+        "values": "maxvalue"
       },
       "min": {
         "type": "A",
-        "value": "minvalue"
+        "values": "minvalue"
       }
     }
   ]

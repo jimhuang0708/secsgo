@@ -167,7 +167,7 @@ func (em * EVENTMODULE)handleS1F23(msg *sm.DataMessage){
             em.sendS9FX(msg,7)
             return;
         }
-        evtID := uint32(child.Values().([]uint64)[0])
+        evtID := uint32(child.Values()[0].(uint64))
         if(!data.IsEvtExist(evtID)){
             em.log.Printf("Error S1F23 Event %d not exist\n",evtID);
         } else {
@@ -216,7 +216,7 @@ func (em * EVENTMODULE)handleS2F33(msg *sm.DataMessage){
             em.sendS9FX(msg,7)
             return
         }
-        rptID := uint32(grandChild1.Values().([]uint64)[0]);
+        rptID := uint32(grandChild1.Values()[0].(uint64));
         if _ , ok := markProcessRpt[rptID]; ok  {//duplicate rpt id
             em.sendS2F34(msg, "duprpt");
             return
@@ -242,13 +242,13 @@ func (em * EVENTMODULE)handleS2F33(msg *sm.DataMessage){
                     em.sendS9FX(msg,7)
                     return
                 }
-                if( !data.IsVidExist( uint32(n.Values().([]uint64)[0]) )){
-                    em.log.Printf("vid %d not exit\n", uint32(n.Values().([]uint64)[0]) )
+                if( !data.IsVidExist( uint32(n.Values()[0].(uint64)) )){
+                    em.log.Printf("vid %d not exit\n", uint32(n.Values()[0].(uint64)) )
                     em.sendS2F34(msg, "novid");
                     return
                 }
-                vids = append(vids,uint32(n.Values().([]uint64)[0]) )
-                em.log.Printf("\tVID : %v \n", uint32(n.Values().([]uint64)[0]))
+                vids = append(vids,uint32(n.Values()[0].(uint64)) )
+                em.log.Printf("\tVID : %v \n", uint32(n.Values()[0].(uint64)))
             }
             data.CreateReport( rptID ,vids...)
             markProcessRpt[rptID] = true
@@ -294,7 +294,7 @@ func (em * EVENTMODULE)handleS2F35(msg *sm.DataMessage){
             em.sendS9FX(msg,7)
             return
         }
-        ceID := uint32(grandChild1.Values().([]uint64)[0]);
+        ceID := uint32(grandChild1.Values()[0].(uint64));
         if _ , ok := markProcessEvt[ceID]; ok  {//duplicate event id
             em.sendS2F36(msg,"dupevt")
             return
@@ -317,8 +317,8 @@ func (em * EVENTMODULE)handleS2F35(msg *sm.DataMessage){
                 em.sendS9FX(msg,7)
                 return
             }
-            rids = append(rids,uint32(n.Values().([]uint64)[0]))
-            em.log.Printf("\trptID : %v \n", uint32(n.Values().([]uint64)[0]))
+            rids = append(rids,uint32(n.Values()[0].(uint64)))
+            em.log.Printf("\trptID : %v \n", uint32(n.Values()[0].(uint64)))
         }
         ret := data.SetEvtRptLink( ceID ,rids...)
         if(ret != "ok"){
@@ -346,7 +346,7 @@ func (em * EVENTMODULE)handleS2F37(msg *sm.DataMessage){
         return ;
     }
     act := false
-    if( node.Values().([]bool)[0] == true) {
+    if( node.Values()[0].(bool) == true) {
         act = true
     } else {
         act = false
@@ -366,7 +366,7 @@ func (em * EVENTMODULE)handleS2F37(msg *sm.DataMessage){
             em.sendS9FX(msg,7)
             return
         }
-        if(!data.EnableEvent(act, uint32(child.Values().([]uint64)[0])) ){
+        if(!data.EnableEvent(act, uint32(child.Values()[0].(uint64))) ){
             accept = false
             break
         }
@@ -401,7 +401,7 @@ func (em * EVENTMODULE)handleS6F15(msg *sm.DataMessage){
         em.sendS9FX(msg,7)
         return ;
     }
-    evtID := uint32(node.Values().([]uint64)[0])
+    evtID := uint32(node.Values()[0].(uint64))
     em.log.Printf("evtID %d\n",evtID);
     rootNode := data.GetEventReport(evtID , nil )
     //em.log.Printf("rootNode : %v\n",rootNode);
@@ -424,7 +424,7 @@ func (em * EVENTMODULE)handleS6F19(msg *sm.DataMessage){
         em.sendS9FX(msg,7)
         return ;
     }
-    rptID := uint32(node.Values().([]uint64)[0])
+    rptID := uint32(node.Values()[0].(uint64))
     em.log.Printf("rptID %d\n",rptID);
     rootNode := data.GetRptReport( rptID )
     //em.log.Printf("rootNode : %v\n",rootNode);

@@ -16,10 +16,10 @@ func (node *BinaryNode) Clone() (ElementType) {
     return &BinaryNode{ Node{ NodeValues : nodeValues , NodeType :node.NodeType}}
 }
 
-func (node *BinaryNode) Values() interface{} {
-    out := make([]byte, len(node.NodeValues))
+func (node *BinaryNode) Values() []any {
+    out := make([]any, len(node.NodeValues))
     for i, v := range node.NodeValues {
-        out[i] = v.(byte)
+        out[i] = v
     }
     return out
 }

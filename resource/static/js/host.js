@@ -147,26 +147,26 @@ function bindEvents() {
     });
 
     document.getElementById("s1f3").addEventListener("click", function () {
-        dataitem = { "type": "L", "items": [] }
+        dataitem = { "type": "L", "values": [] }
         let vidList = document.getElementById("s1f3_param").value.split(",")
         for(let i = 0 ; i < vidList.length ; i++){
             if( vidList[i] == "" ){
                 break;
             }
-            dataitem.items.push( { "type" : "U4" ,  "values" : [ parseInt(vidList[i],10) ]  })
+            dataitem.values.push( { "type" : "U4" ,  "values" : [ parseInt(vidList[i],10) ]  })
         }
         cmd = { "stream" : 1 , "function" : 3 , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd))
     });
 
     document.getElementById("s1f11").addEventListener("click", function () {
-        dataitem = { "type": "L", "items": [] }
+        dataitem = { "type": "L", "values": [] }
         let vidList = document.getElementById("s1f11_param").value.split(",")
         for(let i = 0 ; i < vidList.length ; i++){
             if( vidList[i] == "" ){
                 break;
             }
-            dataitem.items.push( { "type" : "U4" ,  "values" : [ parseInt(vidList[i],10) ]  })
+            dataitem.values.push( { "type" : "U4" ,  "values" : [ parseInt(vidList[i],10) ]  })
         }
 
         cmd = { "stream" : 1 , "function" : 11 , "dataitem" : dataitem }
@@ -175,13 +175,13 @@ function bindEvents() {
 
 
     document.getElementById("s2f13").addEventListener("click", function () {
-        dataitem = { "type": "L", "items": [] }
+        dataitem = { "type": "L", "values": [] }
         let vidList = document.getElementById("s2f13_param").value.split(",")
         for(let i = 0 ; i < vidList.length ; i++){
             if( vidList[i] == "" ){
                 break;
             }
-            dataitem.items.push( { "type" : "U4" ,  "values" : [ parseInt(vidList[i],10) ]  })
+            dataitem.values.push( { "type" : "U4" ,  "values" : [ parseInt(vidList[i],10) ]  })
         }
 
         cmd = { "stream" : 2 , "function" : 13 , "dataitem" : dataitem }
@@ -189,7 +189,7 @@ function bindEvents() {
     });
 
     document.getElementById("s2f15").addEventListener("click", function () {
-        dataitem = { "type": "L", "items": [] }
+        dataitem = { "type": "L", "values": [] }
         let pairList = document.getElementById("s2f15_param").value.split(",")
         for(let i = 0 ; i < pairList.length ; i++){
             if( pairList[i] == "" ){
@@ -197,20 +197,20 @@ function bindEvents() {
                 return;
             }
             let pair = pairList[i].split("=")
-            dataitem.items.push( { "type" : "L", "items" :[ { "type" : "U4" , "values" : [   parseInt(pair[0],10) ] } , { "type" : "U4" , "values" : [   parseInt(pair[1],10) ] } ] } )
+            dataitem.values.push( { "type" : "L", "values" :[ { "type" : "U4" , "values" : [   parseInt(pair[0],10) ] } , { "type" : "U4" , "values" : [   parseInt(pair[1],10) ] } ] } )
         }
         cmd = { "stream" : 2 , "function" : 15 , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd))
     });
 
     document.getElementById("s2f29").addEventListener("click", function () {
-        dataitem = { "type": "L", "items": [ ]  }
+        dataitem = { "type": "L", "values": [ ]  }
         let vidList = document.getElementById("s2f29_param").value.split(",")
         for(let i = 0 ; i < vidList.length ; i++){
             if( vidList[i] == "" ){
                 break;
             }
-            dataitem.items.push( { "type" : "U4" ,  "values" : [ parseInt(vidList[i],10) ]  })
+            dataitem.values.push( { "type" : "U4" ,  "values" : [ parseInt(vidList[i],10) ]  })
         }
 
         cmd = { "stream" : 2 , "function" : 29 , "dataitem" : dataitem }
@@ -221,7 +221,7 @@ function bindEvents() {
 
     document.getElementById("s10f3").addEventListener("click", function () {
         textcontent = document.getElementById("sendtextcontent").value
-        dataitem = { "type": "L", "items": [  { "type": "B", "bytes": "00" }, { "type": "A", "value": textcontent } ] }
+        dataitem = { "type": "L", "values": [  { "type": "B", "values": [0] }, { "type": "A", "values": [...textcontent] } ] }
         cmd = { "stream" : 10 , "function" : 3 , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd))
     });
@@ -236,7 +236,7 @@ function bindEvents() {
 
         dataitem =  {
             "type": "L",
-            "items": [
+            "values": [
                 {
                     "type": "U4",
                     "values": [
@@ -245,10 +245,10 @@ function bindEvents() {
                 },
                 {
                     "type": "L",
-                    "items": [
+                    "values": [
                         {
                             "type": "L",
-                            "items": [
+                            "values": [
                                 {
                                     "type": "U4",
                                     "values": [
@@ -257,7 +257,7 @@ function bindEvents() {
                                 },
                                 {
                                     "type": "L",
-                                    "items": []
+                                    "values": []
                                 }
                             ]
                         }
@@ -266,7 +266,7 @@ function bindEvents() {
             ]
         }
         for (let j = 0 ; j < defrptvidlst.length;j++){
-            dataitem.items[1].items[0].items[1].items.push( { "type" : "U4" , "values" : [ parseInt(defrptvidlst[j],10) ] })
+            dataitem.values[1].values[0].values[1].values.push( { "type" : "U4" , "values" : [ parseInt(defrptvidlst[j],10) ] })
         }
         cmd = { "stream" : 2 , "function" : 33 , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd))
@@ -277,7 +277,7 @@ function bindEvents() {
         let linkrptid = parseInt( document.getElementById("linkrptid").value  ,10)
         dataitem = {
             "type": "L",
-            "items": [
+            "values": [
                 {
                     "type": "U4",
                     "values": [
@@ -286,10 +286,10 @@ function bindEvents() {
                 },
                 {
                     "type": "L",
-                    "items": [
+                    "values": [
                         {
                             "type": "L",
-                            "items": [
+                            "values": [
                                 {
                                     "type": "U4",
                                     "values": [
@@ -298,7 +298,7 @@ function bindEvents() {
                                 },
                                 {
                                     "type": "L",
-                                    "items": [
+                                    "values": [
                                         {
                                             "type": "U4",
                                             "values": [
@@ -322,27 +322,27 @@ function bindEvents() {
     document.getElementById("s2f41").addEventListener("click", function () {
         dataitem = {
             "type": "L",
-            "items": [    {   "type": "A", "value": "HostCallFunctionA" },
+            "values": [    {   "type": "A", "values": [..."HostCallFunctionA"] },
                           {
                               "type": "L",
-                              "items":    [
+                              "values":    [
                                               {
                                                    "type": "L",
-                                                   "items": [
-                                                               {  "type": "A", "value": "Parameter1" },
-                                                               {  "type": "A", "value": "Value1" } ]
+                                                   "values": [
+                                                               {  "type": "A", "values": [..."Parameter1"] },
+                                                               {  "type": "A", "values": [..."Value1"] } ]
                                               },
                                               {
                                                   "type": "L",
-                                                  "items": [
-                                                               { "type": "A", "value": "Parameter2" },
-                                                               { "type": "A", "value": "Value2" } ]
+                                                  "values": [
+                                                               { "type": "A", "values": [..."Parameter2"] },
+                                                               { "type": "A", "values": [..."Value2"] } ]
                                               },
                                               {
                                                   "type": "L",
-                                                  "items": [
-                                                                { "type": "A", "value": "Parameter3" },
-                                                                { "type": "A", "value": "Value3" }  ]
+                                                  "values": [
+                                                                { "type": "A", "values": [..."Parameter3"] },
+                                                                { "type": "A", "values": [..."Value3"] }  ]
                                               }
 
                                           ]
@@ -356,7 +356,7 @@ function bindEvents() {
     document.getElementById("s2f45").addEventListener("click", function () {
         dataitem = {
                 "type": "L",
-                "items": [
+                "values": [
                     {
                         "type": "U4",
                         "values": [
@@ -365,10 +365,10 @@ function bindEvents() {
                     },
                     {
                         "type": "L",
-                        "items": [
+                        "values": [
                             {
                                 "type": "L",
-                                "items": [
+                                "values": [
                                     {
                                         "type": "U4",
                                         "values": [
@@ -377,17 +377,17 @@ function bindEvents() {
                                     },
                                     {
                                         "type": "L",
-                                        "items": [
+                                        "values": [
                                             {
                                                 "type": "L",
-                                                "items": [
+                                                "values": [
                                                     {
                                                         "type": "B",
-                                                        "bytes": "00"
+                                                        "values": [0]
                                                     },
                                                     {
                                                         "type": "L",
-                                                        "items": [
+                                                        "values": [
                                                             {
                                                                 "type": "U4",
                                                                 "values": [
@@ -418,7 +418,7 @@ function bindEvents() {
 
 
     document.getElementById("s2f47").addEventListener("click", function () {
-        dataitem = { "type": "L", "items": [
+        dataitem = { "type": "L", "values": [
                                                { "type" : "U4" , "values" : [ 1006 ]  },
                                                { "type" : "U4" , "values" : [ 1007 ]  },
                                            ]
@@ -432,25 +432,25 @@ function bindEvents() {
     document.getElementById("s2f23").addEventListener("click", function () {
         dataitem = {
             "type": "L",
-            "items": [ ]
+            "values": [ ]
         }
         let trid = document.getElementById("s2f23_trid").value
-        dataitem.items.push( { "type" : "U4" ,  "values" : [ parseInt(trid,10) ] } )
+        dataitem.values.push( { "type" : "U4" ,  "values" : [ parseInt(trid,10) ] } )
         let dsper = document.getElementById("s2f23_dsper").value
-        dataitem.items.push( { "type" : "A" ,  "value" : dsper } )
+        dataitem.values.push( { "type" : "A" ,  "values" : [...dsper] } )
         let totsmp = document.getElementById("s2f23_totsmp").value
-        dataitem.items.push( { "type" : "U4" ,  "values" : [ parseInt(totsmp,10) ] } )
+        dataitem.values.push( { "type" : "U4" ,  "values" : [ parseInt(totsmp,10) ] } )
         let repgsz = document.getElementById("s2f23_repgsz").value
-        dataitem.items.push( { "type" : "U4" ,  "values" : [ parseInt(repgsz,10) ] } )
+        dataitem.values.push( { "type" : "U4" ,  "values" : [ parseInt(repgsz,10) ] } )
         let vidList = document.getElementById("s2f23_vids").value.split(",")
-        jvidLst = { "type": "L" , "items": [] }
+        jvidLst = { "type": "L" , "values": [] }
         for(let i = 0 ; i < vidList.length ; i++){
             if( vidList[i] == "" ){
                 break;
             }
-            jvidLst.items.push( { "type" : "U4" ,  "values" : [ parseInt(vidList[i],10) ]  })
+            jvidLst.values.push( { "type" : "U4" ,  "values" : [ parseInt(vidList[i],10) ]  })
         }
-         dataitem.items.push( jvidLst )
+         dataitem.values.push( jvidLst )
 
         cmd = { "stream" : 2 , "function" : 23 , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd))

@@ -3,6 +3,7 @@ package secs_message
 import (
     "fmt"
     "encoding/json"
+//    "reflect"
 )
 
 const MAX_BYTE_SIZE = 1<<24 - 1
@@ -91,6 +92,11 @@ func (n *Node) EncodeSecs() (ElementType) {
     }
     switch n.NodeType {
     case "L":
+        for k , v := range out {
+            if _ , ok := v.(ElementType); !ok {
+                out[k] = v.(*Node).EncodeSecs()
+            }
+        }
         return &ListNode{ Node : Node{ NodeType : n.NodeType , NodeValues : out } }
     case "I1" , "I2" , "I4" , "I8":
         return &IntNode{ Node : Node{ NodeType : n.NodeType , NodeValues : out } }
@@ -123,7 +129,7 @@ func (n *Node) UnmarshalJSON(data []byte) error {
     n.NodeType = w.NodeType
     switch n.NodeType {
     case "L":
-        var arr []Node
+        var arr []*Node
         if err := json.Unmarshal(w.NodeValues, &arr); err != nil {
             return fmt.Errorf("L values must be array of NodeValue: %w", err)
         }
@@ -133,14 +139,14 @@ func (n *Node) UnmarshalJSON(data []byte) error {
         }
         return nil
 
-    case "ASCII":
-            var bs []byte
+    case "A":
+            var bs []string
             if err := json.Unmarshal(w.NodeValues, &bs); err != nil {
-                return fmt.Errorf("Boolean NodeValues must be array of bool: %w", err)
+                return fmt.Errorf("Ascii NodeValues must be array of ascii: %w", err)
             }
             n.NodeValues = make([]any, 0, len(bs))
             for _, b := range bs {
-                n.NodeValues = append(n.NodeValues, b)
+                n.NodeValues = append(n.NodeValues, b[0])
             }
             return nil
 
@@ -157,10 +163,10 @@ func (n *Node) UnmarshalJSON(data []byte) error {
             }
             return nil
 
-    case "BINARY":
+    case "B":
             var bs []byte
             if err := json.Unmarshal(w.NodeValues, &bs); err != nil {
-                return fmt.Errorf("Boolean NodeValues must be array of bool: %w", err)
+                return fmt.Errorf("Binary NodeValues must be array of binary: %w", err)
             }
             n.NodeValues = make([]any, 0, len(bs))
             for _, b := range bs {

@@ -352,7 +352,7 @@ func (sd *SECS_DATA) getEC(ecLst []uint32) sm.ElementType {
         ecID := ecLst[k]
         ec, ok := sd.ecs[ecID]
         if ok {
-            ecNodeLst = append(ecNodeLst, ec.Value)
+            ecNodeLst = append(ecNodeLst, ec.Value.EncodeSecs())
         } else {
             ecNodeLst = append(ecNodeLst, sm.CreateListNode())
         }
@@ -379,8 +379,8 @@ func (sd *SECS_DATA) getECName(ecLst []uint32) sm.ElementType {
             ecNode = sm.CreateListNode(
                 sm.CreateUintNode(4, ecID),
                 sm.CreateASCIINode(ec.Name),
-                ec.Max, ec.Min,
-                ec.Defv, sm.CreateASCIINode(ec.Units),
+                ec.Max.EncodeSecs(), ec.Min.EncodeSecs(),
+                ec.Defv.EncodeSecs(), sm.CreateASCIINode(ec.Units),
             )
             ecNodeLst = append(ecNodeLst, ecNode)
         } else {

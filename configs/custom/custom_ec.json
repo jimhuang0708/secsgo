@@ -83,11 +83,11 @@
       },
       "max": {
         "type": "A",
-        "values": "maxvalue"
+        "values": ["m","a","x"]
       },
       "min": {
         "type": "A",
-        "values": "minvalue"
+        "values": ["m","i","n"]
       }
     }
   ]

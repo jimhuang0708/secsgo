@@ -3,9 +3,9 @@ package data
 import (
     "fmt"
     "os"
-    "strconv"
+    //"strconv"
     "sync"
-    "github.com/spf13/viper"
+    //"github.com/spf13/viper"
     "secs/logger"
     "encoding/json"
     sm "secs/secs_message"
@@ -151,10 +151,146 @@ func (sd *SECS_DATA)LoadECConfig() (error) {
     return nil
 }
 
+type EvtRoot struct {
+    Evt []*SECSCE `json:"evt"`
+}
 
 
-func (sd *SECS_DATA)LoadConfig() (error) {
-    err := sd.LoadSVConfig()
+func (sd *SECS_DATA)LoadEVTConfig() (error) {
+    raw, err := os.ReadFile("configs/custom/custom_evt.json")
+    if err != nil {
+        return  fmt.Errorf("read config: %w", err)
+    }
+    var cfg EvtRoot
+    if err := json.Unmarshal(raw, &cfg); err != nil {
+        return  fmt.Errorf("json unmarshal: %v", err)
+    }
+
+    for i := 0; i < len( cfg.Evt ); i++ {
+        log.Printf("customevt : %v\n", cfg.Evt[i])
+        v := cfg.Evt[i]
+        sd.evt[cfg.Evt[i].Id] = &SECSCE{Id: v.Id, Name: v.Name, RptLst: v.RptLst, DvLst: make([]uint32, 0), Enable: v.Enable}
+    }
+
+    raw, err = os.ReadFile("configs/system/system_evt.json")
+    if err != nil {
+        return  fmt.Errorf("read config: %w", err)
+    }
+    if err := json.Unmarshal(raw, &cfg); err != nil {
+        return  fmt.Errorf("json unmarshal: %v", err)
+    }
+
+    for i := 0; i < len( cfg.Evt ); i++ {
+        log.Printf("systemevt : %v\n", cfg.Evt[i])
+        v := cfg.Evt[i]
+        sd.evt[cfg.Evt[i].Id] = &SECSCE{Id: v.Id, Name: v.Name, RptLst: v.RptLst, DvLst: make([]uint32, 0), Enable: v.Enable}
+    }
+    return nil
+}
+
+type RptRoot struct {
+    Rpt []*SECSRPT `json:"rpt"`
+}
+
+func (sd *SECS_DATA)LoadRPTConfig() (error) {
+    raw, err := os.ReadFile("configs/custom/custom_rpt.json")
+    if err != nil {
+        return  fmt.Errorf("read config: %w", err)
+    }
+    var cfg RptRoot
+    if err := json.Unmarshal(raw, &cfg); err != nil {
+        return  fmt.Errorf("json unmarshal: %v", err)
+    }
+
+    for i := 0; i < len( cfg.Rpt ); i++ {
+        log.Printf("customrpt : %v\n", cfg.Rpt[i])
+        v := cfg.Rpt[i]
+        vids := make([]uint32, 0)
+        for j := 0; j < len(v.Vids); j++ {
+            vids = append(vids, uint32(v.Vids[j]))
+        }
+        sd.rpt[cfg.Rpt[i].Id] = &SECSRPT{Id: v.Id, Name: v.Name, Vids: vids }
+
+
+    }
+
+    raw, err = os.ReadFile("configs/system/system_rpt.json")
+    if err != nil {
+        return  fmt.Errorf("read config: %w", err)
+    }
+    if err := json.Unmarshal(raw, &cfg); err != nil {
+        return  fmt.Errorf("json unmarshal: %v", err)
+    }
+
+    for i := 0; i < len( cfg.Rpt ); i++ {
+        log.Printf("systemrpt : %v\n", cfg.Rpt[i])
+        v := cfg.Rpt[i]
+        vids := make([]uint32, 0)
+        for j := 0; j < len(v.Vids); j++ {
+            vids = append(vids, uint32(v.Vids[j]))
+        }
+        sd.rpt[cfg.Rpt[i].Id] = &SECSRPT{Id: v.Id, Name: v.Name, Vids : vids}
+    }
+    return nil
+}
+
+type AlarmRoot struct {
+    Alarm []*SECSALARM `json:"alarm"`
+}
+
+func (sd *SECS_DATA)LoadALARMConfig() (error) {
+    raw, err := os.ReadFile("configs/custom/custom_alarm.json")
+    if err != nil {
+        return  fmt.Errorf("read config: %w", err)
+    }
+    var cfg AlarmRoot
+    if err := json.Unmarshal(raw, &cfg); err != nil {
+        return  fmt.Errorf("json unmarshal: %v", err)
+    }
+
+    for i := 0; i < len( cfg.Alarm ); i++ {
+        log.Printf("customalarm : %v\n", cfg.Alarm[i])
+        v := cfg.Alarm[i]
+        sd.alarm[cfg.Alarm[i].Id] = &SECSALARM{Id: v.Id, Name: v.Name, Enable: v.Enable, Set: false, Text: v.Text, Evt: v.Evt}
+
+
+    }
+
+    raw, err = os.ReadFile("configs/system/system_alarm.json")
+    if err != nil {
+        return  fmt.Errorf("read config: %w", err)
+    }
+    if err := json.Unmarshal(raw, &cfg); err != nil {
+        return  fmt.Errorf("json unmarshal: %v", err)
+    }
+
+    for i := 0; i < len( cfg.Alarm ); i++ {
+        log.Printf("systemalarm : %v\n", cfg.Alarm[i])
+        v := cfg.Alarm[i]
+        sd.alarm[cfg.Alarm[i].Id] = &SECSALARM{Id: v.Id, Name: v.Name, Enable: v.Enable, Set: false, Text: v.Text, Evt: v.Evt}
+    }
+    return nil
+}
+
+func (sd *SECS_DATA)LoadConfigBase() (error) {
+    raw, err := os.ReadFile("configs/config.json")
+    if err != nil {
+        return  fmt.Errorf("read config: %w", err)
+    }
+    if err := json.Unmarshal(raw, &G_STATE); err != nil {
+        return  fmt.Errorf("json unmarshal: %v", err)
+    }
+    log.Printf("Config : %v\n", G_STATE)
+    return nil
+}
+
+
+func (sd *SECS_DATA)moduleLoadData() (error) {
+    err := sd.LoadConfigBase()
+    if(err != nil){
+        return err
+    }
+    err = sd.LoadSVConfig()
     if(err != nil){
         return err
     }
@@ -166,269 +302,22 @@ func (sd *SECS_DATA)LoadConfig() (error) {
     if(err != nil){
         return err
     }
+    err = sd.LoadEVTConfig()
+    if(err != nil){
+        return err
+    }
+    err = sd.LoadRPTConfig()
+    if(err != nil){
+        return err
+    }
+    err = sd.LoadALARMConfig()
+    if(err != nil){
+        return err
+    }
 
     return nil
 }
 
-
-func (sd *SECS_DATA) moduleLoadData() {
-
-    rpts := viper.Get("sysrpt")
-    for i := 0; i < len(rpts.([]interface{})); i++ {
-        idx := "sysrpt." + strconv.Itoa(i)
-        id := viper.GetUint32(idx + ".id")
-        name := viper.GetString(idx + ".name")
-        vid := viper.GetIntSlice(idx + ".vid")
-        temp_rpt := &SECSRPT{id: id, name: name, vids: make([]uint32, 0)}
-        for j := 0; j < len(vid); j++ {
-            temp_rpt.vids = append(temp_rpt.vids, uint32(vid[j]))
-        }
-        log.Printf("sysrpt : %v\n", temp_rpt)
-        sd.rpt[temp_rpt.id] = temp_rpt
-    }
-    rpts = viper.Get("customrpt")
-    for i := 0; i < len(rpts.([]interface{})); i++ {
-        idx := "customrpt." + strconv.Itoa(i)
-        id := viper.GetUint32(idx + ".id")
-        name := viper.GetString(idx + ".name")
-        vid := viper.GetIntSlice(idx + ".vid")
-        temp_rpt := &SECSRPT{id: id, name: name, vids: make([]uint32, 0)}
-        for j := 0; j < len(vid); j++ {
-            temp_rpt.vids = append(temp_rpt.vids, uint32(vid[j]))
-        }
-        log.Printf("customrpt : %v\n", temp_rpt)
-        sd.rpt[temp_rpt.id] = temp_rpt
-    }
-
-
-    evts := viper.Get("sysevt")
-    for i := 0; i < len(evts.([]interface{})); i++ {
-        idx := "sysevt." + strconv.Itoa(i)
-        id := viper.GetUint32(idx + ".id")
-        name := viper.GetString(idx + ".name")
-        rpt := viper.GetIntSlice(idx + ".rpt")
-        vid := viper.GetIntSlice(idx + ".vid")
-        enable := viper.GetBool(idx + ".enable")
-        temp_ce := &SECSCE{id: id, name: name, rptLst: make([]uint32, 0), dvLst: make([]uint32, 0), enable: enable}
-        for j := 0; j < len(rpt); j++ {
-            temp_ce.rptLst = append(temp_ce.rptLst, uint32(rpt[j]))
-        }
-        for j := 0; j < len(vid); j++ {
-            temp_ce.dvLst = append(temp_ce.dvLst, uint32(vid[j]))
-        }
-        log.Printf("sysevt : %v\n", temp_ce)
-        sd.evt[temp_ce.id] = temp_ce
-    }
-    evts = viper.Get("customevt")
-    for i := 0; i < len(evts.([]interface{})); i++ {
-        idx := "customevt." + strconv.Itoa(i)
-        id := viper.GetUint32(idx + ".id")
-        name := viper.GetString(idx + ".name")
-        rpt := viper.GetIntSlice(idx + ".rpt")
-        vid := viper.GetIntSlice(idx + ".vid")
-        enable := viper.GetBool(idx + ".enable")
-        temp_ce := &SECSCE{id: id, name: name, rptLst: make([]uint32, 0), dvLst: make([]uint32, 0), enable: enable}
-        for j := 0; j < len(rpt); j++ {
-            temp_ce.rptLst = append(temp_ce.rptLst, uint32(rpt[j]))
-        }
-        for j := 0; j < len(vid); j++ {
-            temp_ce.dvLst = append(temp_ce.dvLst, uint32(vid[j]))
-        }
-        log.Printf("customevt : %v\n", temp_ce)
-        sd.evt[temp_ce.id] = temp_ce
-    }
-
-/*
-    vids := viper.Get("syssv")
-    for i := 0; i < len(vids.([]interface{})); i++ {
-        idx := "syssv." + strconv.Itoa(i)
-        id := viper.GetUint32(idx + ".id")
-        limitEvt := viper.GetUint32(idx + ".limitevt")
-        name := viper.GetString(idx + ".name")
-        units := viper.GetString(idx + ".units")
-        var valueNode NodeValue
-        viper.UnmarshalKey(idx+".nodevalue", &valueNode)
-        value, _ := valueNode.EncodeSecs()
-        log.Printf("value %v\n", value)
-        var maxNode NodeValue
-        viper.UnmarshalKey(idx+".max", &maxNode)
-        max, _ := maxNode.EncodeSecs()
-        log.Printf("max %v\n", max)
-        var minNode NodeValue
-        viper.UnmarshalKey(idx+".min", &minNode)
-        min, _ := minNode.EncodeSecs()
-        log.Printf("min %v\n", min)
-
-        if value == nil {
-            panic("syssv lack of default value!\n")
-        }
-        log.Printf("id : %d | name : %s | units : %s | limitEvt : %d\n", id, name, units, limitEvt)
-        temp_sv := &SECSVARIABLE{id: id, name: name, units: units, value: value, limitEvt: limitEvt, max: max, min: min}
-        log.Printf("sysesv : %v\n", temp_sv)
-        sd.svs[temp_sv.id] = temp_sv
-    }
-    vids = viper.Get("customsv")
-    for i := 0; i < len(vids.([]interface{})); i++ {
-        idx := "customsv." + strconv.Itoa(i)
-        id := viper.GetUint32(idx + ".id")
-        limitEvt := viper.GetUint32(idx + ".limitevt")
-        name := viper.GetString(idx + ".name")
-        units := viper.GetString(idx + ".units")
-        var valueNode NodeValue
-        viper.UnmarshalKey(idx+".nodevalue", &valueNode)
-        value, _ := valueNode.EncodeSecs()
-        log.Printf("value %v\n", value)
-        var maxNode NodeValue
-        viper.UnmarshalKey(idx+".max", &maxNode)
-        max, _ := maxNode.EncodeSecs()
-        log.Printf("max %v\n", max)
-        var minNode NodeValue
-        viper.UnmarshalKey(idx+".min", &minNode)
-        min, _ := minNode.EncodeSecs()
-        log.Printf("min %v\n", min)
-
-        if value == nil {
-            panic("customsv lack of default value!\n")
-        }
-        log.Printf("id : %d | name : %s | units : %s | limitEvt : %d\n", id, name, units, limitEvt)
-        temp_sv := &SECSVARIABLE{id: id, name: name, units: units, value: value, limitEvt: limitEvt, max: max, min: min}
-        log.Printf("customsv : %v\n", temp_sv)
-        sd.svs[temp_sv.id] = temp_sv
-    }
-
-    vids = viper.Get("sysdv")
-    for i := 0; i < len(vids.([]interface{})); i++ {
-        idx := "sysdv." + strconv.Itoa(i)
-        id := viper.GetUint32(idx + ".id")
-        limitEvt := viper.GetUint32(idx + ".limitevt")
-        name := viper.GetString(idx + ".name")
-        units := viper.GetString(idx + ".units")
-        var valueNode NodeValue
-        viper.UnmarshalKey(idx+".nodevalue", &valueNode)
-        value, _ := valueNode.EncodeSecs()
-        log.Printf("value %v\n", value)
-        var maxNode NodeValue
-        viper.UnmarshalKey(idx+".max", &maxNode)
-        max, _ := maxNode.EncodeSecs()
-        log.Printf("max %v\n", max)
-        var minNode NodeValue
-        viper.UnmarshalKey(idx+".min", &minNode)
-        min, _ := minNode.EncodeSecs()
-        log.Printf("min %v\n", min)
-        if value == nil {
-            panic("sysdv lack of default value!\n")
-        }
-        log.Printf("id : %d | name : %s | units : %s | limitEvt : %d\n", id, name, units, limitEvt)
-        temp_dv := &SECSVARIABLE{id: id, name: name, units: units, value: value, limitEvt: limitEvt, max: max, min: min}
-        sd.dvs[temp_dv.id] = temp_dv
-    }
-    vids = viper.Get("customdv")
-    for i := 0; i < len(vids.([]interface{})); i++ {
-        idx := "customdv." + strconv.Itoa(i)
-        id := viper.GetUint32(idx + ".id")
-        limitEvt := viper.GetUint32(idx + ".limitevt")
-        name := viper.GetString(idx + ".name")
-        units := viper.GetString(idx + ".units")
-        var valueNode NodeValue
-        viper.UnmarshalKey(idx+".nodevalue", &valueNode)
-        value, _ := valueNode.EncodeSecs()
-        log.Printf("value %v\n", value)
-        var maxNode NodeValue
-        viper.UnmarshalKey(idx+".max", &maxNode)
-        max, _ := maxNode.EncodeSecs()
-        log.Printf("max %v\n", max)
-        var minNode NodeValue
-        viper.UnmarshalKey(idx+".min", &minNode)
-        min, _ := minNode.EncodeSecs()
-        log.Printf("min %v\n", min)
-        if value == nil {
-            panic("customdv lack of default value!\n")
-        }
-        log.Printf("id : %d | name : %s | units : %s | limitEvt : %d\n", id, name, units, limitEvt)
-        temp_dv := &SECSVARIABLE{id: id, name: name, units: units, value: value, limitEvt: limitEvt, max: max, min: min}
-        sd.dvs[temp_dv.id] = temp_dv
-    }
-
-    vids = viper.Get("sysec")
-    for i := 0; i < len(vids.([]interface{})); i++ {
-        idx := "sysec." + strconv.Itoa(i)
-        id := viper.GetUint32(idx + ".id")
-        name := viper.GetString(idx + ".name")
-        units := viper.GetString(idx + ".units")
-        var valueNode NodeValue
-        viper.UnmarshalKey(idx+".nodevalue", &valueNode)
-        value, _ := valueNode.EncodeSecs()
-        log.Printf("value %v\n", value)
-        var maxNode NodeValue
-        viper.UnmarshalKey(idx+".max", &maxNode)
-        max, _ := maxNode.EncodeSecs()
-        log.Printf("max %v\n", max)
-        var minNode NodeValue
-        viper.UnmarshalKey(idx+".min", &minNode)
-        min, _ := minNode.EncodeSecs()
-        log.Printf("min %v\n", min)
-
-        if value == nil {
-            panic("sysec lack of default value!\n")
-        }
-        log.Printf("id : %d | name : %s | units : %s \n", id, name, units)
-        temp_ec := &SECSVARIABLE{id: id, name: name, units: units, min: min, max: max, defv: value, value: value, limitEvt: nil}
-        sd.ecs[temp_ec.id] = temp_ec
-    }
-    vids = viper.Get("customec")
-    for i := 0; i < len(vids.([]interface{})); i++ {
-        idx := "customec." + strconv.Itoa(i)
-        id := viper.GetUint32(idx + ".id")
-        name := viper.GetString(idx + ".name")
-        units := viper.GetString(idx + ".units")
-        var valueNode NodeValue
-        viper.UnmarshalKey(idx+".nodevalue", &valueNode)
-        value, _ := valueNode.EncodeSecs()
-        log.Printf("value %v\n", value)
-        var maxNode NodeValue
-        viper.UnmarshalKey(idx+".max", &maxNode)
-        max, _ := maxNode.EncodeSecs()
-        log.Printf("max %v\n", max)
-        var minNode NodeValue
-        viper.UnmarshalKey(idx+".min", &minNode)
-        min, _ := minNode.EncodeSecs()
-        log.Printf("min %v\n", min)
-
-        if value == nil {
-            panic("customec lack of default value!\n")
-        }
-        log.Printf("id : %d | name : %s | units : %s \n", id, name, units)
-        temp_ec := &SECSVARIABLE{id: id, name: name, units: units, min: min, max: max, defv: value, value: value, limitEvt: nil}
-        sd.ecs[temp_ec.id] = temp_ec
-    }
-*/
-    alarms := viper.Get("sysalarm")
-    for i := 0; i < len(alarms.([]interface{})); i++ {
-        idx := "sysalarm." + strconv.Itoa(i)
-        id := viper.GetUint32(idx + ".id")
-        name := viper.GetString(idx + ".name")
-        enable := viper.GetBool(idx + ".enable")
-        text := viper.GetString(idx + ".text")
-        evt := viper.GetUint32(idx + ".evt")
-        temp_alarm := &SECSALARM{id: id, name: name, enable: enable, set: false, text: text, evt: evt}
-        log.Printf("sysalarm : %v\n", temp_alarm)
-        sd.alarm[temp_alarm.id] = temp_alarm
-    }
-    alarms = viper.Get("customalarm")
-    for i := 0; i < len(alarms.([]interface{})); i++ {
-        idx := "customalarm." + strconv.Itoa(i)
-        id := viper.GetUint32(idx + ".id")
-        name := viper.GetString(idx + ".name")
-        enable := viper.GetBool(idx + ".enable")
-        text := viper.GetString(idx + ".text")
-        evt := viper.GetUint32(idx + ".evt")
-        temp_alarm := &SECSALARM{id: id, name: name, enable: enable, set: false, text: text, evt: evt}
-        log.Printf("customalarm : %v\n", temp_alarm)
-        sd.alarm[temp_alarm.id] = temp_alarm
-    }
-    log.Printf("%v \n", gData)
-
-}
 
 // 單純呼叫 closure
 func (sd *SECS_DATA) handleAccess(e ACCESS_CMD) {
@@ -451,8 +340,6 @@ func (sd *SECS_DATA) moduleStop() {
 
 func (sd *SECS_DATA) moduleRun() {
     defer sd.wg.Done()
-    sd.LoadConfig()
-    LoadConfigViper()
     sd.moduleLoadData()
     sd.run = "run"
     for sd.run == "run" {

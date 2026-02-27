@@ -7,6 +7,25 @@ import sm "secs/secs_message"
 // Command / data structures
 // ----------------------------
 
+type DEFAULT_STATE struct{
+    DEFAULT_CTRLMAINSTATE string         `json:"DEFAULT_CTRLMAINSTATE"`
+    DEFAULT_CTRLSUBSTATE string          `json:"DEFAULT_CTRLSUBSTATE"`
+    DEFAULT_REJECT_CTRLSUBSTATE string   `json:"DEFAULT_REJECT_CTRLSUBSTATE"`
+    DEFAULT_ACCEPT_CTRLSUBSTATE string   `json:"DEFAULT_ACCEPT_CTRLSUBSTATE"`
+    DEFAULT_COMSTATE int                 `json:"DEFAULT_COMSTATE"`
+}
+
+/*func getType(v interface{})(string){
+    t := reflect.TypeOf(v)
+    if t == nil {
+        return ""
+    }
+    return t.String()
+}*/
+
+var G_STATE DEFAULT_STATE
+
+
 // 單一 goroutine 專門操作 SECS_DATA，其他 goroutine 丟 closure 進來
 type ACCESS_CMD struct {
     fn func(sd *SECS_DATA)
@@ -27,26 +46,26 @@ type SECS_DATA struct {
 }
 
 type SECSCE struct { // Event
-    id     uint32
-    name   string
-    rptLst []uint32
-    dvLst  []uint32
-    enable bool
+    Id     uint32   `json:"id"`
+    Name   string   `json:"name"`
+    RptLst []uint32 `json:"rptlst"`
+    DvLst  []uint32
+    Enable bool     `json:"enable"`
 }
 
 type SECSRPT struct { // Report
-    id   uint32
-    name string
-    vids []uint32
+    Id   uint32    `json:"id"`
+    Name string    `json:"name"`
+    Vids []uint32  `json:"vids"`
 }
 
 type SECSALARM struct {
-    id     uint32
-    name   string
-    evt    uint32
-    enable bool
-    set    bool
-    text   string
+    Id     uint32  `json:"id"`
+    Name   string  `json:"name"`
+    Evt    uint32  `json:"evt"`
+    Enable bool    `json:"enable"`
+    Set    bool
+    Text   string  `json:"text"`
 }
 
 /*

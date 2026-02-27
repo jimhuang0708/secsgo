@@ -1,5 +1,5 @@
 {
-"customalarm" : [
+"alarm" : [
         {
             "name"   : "custom_zombie_attack",
             "id"     : 3,

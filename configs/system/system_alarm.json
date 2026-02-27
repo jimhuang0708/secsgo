@@ -1,5 +1,5 @@
 {
-"sysalarm" : [
+"alarm" : [
         {
             "name"   : "zombie_attack",
             "id"     : 1,

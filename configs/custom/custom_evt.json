@@ -1,21 +1,21 @@
 {
-"customevt" :  [
+"evt" :  [
         {
             "name" : "limit_evt_vid1006",
             "id"    : 1307,
-            "rpt"   : [2],
+            "rptlst"   : [2],
             "enable": true
         },
         {
             "name" : "limit_evt_vid1007",
             "id"    : 1308,
-            "rpt"   : [3],
+            "rptlst"   : [3],
             "enable": true
         },
         {
             "name" : "limit_evt_vid1008",
             "id"    : 1309,
-            "rpt"   : [4],
+            "rptlst"   : [4],
             "enable": true
         }
 

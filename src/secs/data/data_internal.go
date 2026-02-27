@@ -12,9 +12,9 @@ import (
 
 func (sd *SECS_DATA) createReport(id uint32, v ...uint32) {
     // renew one report
-    sd.rpt[id] = &SECSRPT{id: id, vids: make([]uint32, 0)}
+    sd.rpt[id] = &SECSRPT{Id: id, Vids: make([]uint32, 0)}
     for _, value := range v {
-        sd.rpt[id].vids = append(sd.rpt[id].vids, value)
+        sd.rpt[id].Vids = append(sd.rpt[id].Vids, value)
     }
 }
 
@@ -121,13 +121,13 @@ func (sd *SECS_DATA) setEvtRptLink(id uint32, v ...uint32) string {
     // renew one event/rpt link
     _, ok := sd.evt[id]
     if ok {
-        sd.evt[id].rptLst = make([]uint32, 0)
+        sd.evt[id].RptLst = make([]uint32, 0)
         for _, value := range v {
             if !sd.isRptExtist(value) {
                 log.Printf("Error , rpt %d not exist\n", id)
                 return "norpt"
             }
-            sd.evt[id].rptLst = append(sd.evt[id].rptLst, value)
+            sd.evt[id].RptLst = append(sd.evt[id].RptLst, value)
         }
         return "ok"
     } else {
@@ -140,10 +140,10 @@ func (sd *SECS_DATA) enableEvent(act bool, v ...uint32) bool {
     if len(v) == 0 {
         for k, e := range sd.evt {
             if act {
-                e.enable = true
+                e.Enable = true
                 log.Printf("Enable All Event -> %d\n", k)
             } else {
-                e.enable = false
+                e.Enable = false
                 log.Printf("Disable All Event -> %d\n", k)
             }
         }
@@ -153,7 +153,7 @@ func (sd *SECS_DATA) enableEvent(act bool, v ...uint32) bool {
         if act {
             val, ok := sd.evt[uint32(value)]
             if ok {
-                val.enable = true
+                val.Enable = true
                 log.Printf("Enable Event %d Accept\n", value)
             } else {
                 log.Printf("Enable Event %d Reject\n", value)
@@ -162,7 +162,7 @@ func (sd *SECS_DATA) enableEvent(act bool, v ...uint32) bool {
         } else {
             val, ok := sd.evt[uint32(value)]
             if ok {
-                val.enable = false
+                val.Enable = false
                 log.Printf("Disable Event %d Accept\n", value)
             } else {
                 log.Printf("Disable Event %d Reject\n", value)
@@ -183,11 +183,11 @@ func (sd *SECS_DATA) getEventNameList(evtLst []uint32) sm.ElementType {
     evtNodes := make([]interface{}, 0)
     for k := 0; k < len(evtLst); k++ {
         if v, ok := sd.evt[evtLst[k]]; ok {
-            dvLst := make([]interface{}, len(v.dvLst))
-            for i := range v.dvLst {
-                dvLst[i] = sm.CreateUintNode(4, uint32(v.dvLst[i]))
+            dvLst := make([]interface{}, len(v.DvLst))
+            for i := range v.DvLst {
+                dvLst[i] = sm.CreateUintNode(4, uint32(v.DvLst[i]))
             }
-            n := sm.CreateListNode(sm.CreateUintNode(4, uint32(evtLst[k])), sm.CreateASCIINode(v.name), sm.CreateListNode(dvLst...))
+            n := sm.CreateListNode(sm.CreateUintNode(4, uint32(evtLst[k])), sm.CreateASCIINode(v.Name), sm.CreateListNode(dvLst...))
             evtNodes = append(evtNodes, n)
         } else {
             n := sm.CreateListNode(sm.CreateUintNode(4, uint32(evtLst[k])), sm.CreateASCIINode(""), sm.CreateListNode())
@@ -206,7 +206,7 @@ func (sd *SECS_DATA) getEventReport(evtID uint32, dvCtx map[uint32]interface{}) 
         log.Printf("event ID not found\n", evtID)
         return nil
     }
-    if !evt_entry.enable {
+    if !evt_entry.Enable {
         log.Printf("event ID %d disable\n", evtID)
         return nil
     }
@@ -215,8 +215,8 @@ func (sd *SECS_DATA) getEventReport(evtID uint32, dvCtx map[uint32]interface{}) 
     evtID_Node := sm.CreateUintNode(4, []interface{}{uint32(evtID)}...)
 
     rptLst := make([]interface{}, 0)
-    for i := 0; i < len(evt_entry.rptLst); i++ {
-        rptId := evt_entry.rptLst[i]
+    for i := 0; i < len(evt_entry.RptLst); i++ {
+        rptId := evt_entry.RptLst[i]
         rptID_Node := sm.CreateUintNode(4, uint32(rptId))
         rpt_entry, ok := sd.rpt[rptId]
         if !ok {
@@ -224,8 +224,8 @@ func (sd *SECS_DATA) getEventReport(evtID uint32, dvCtx map[uint32]interface{}) 
             return nil
         }
         vidLst := make([]interface{}, 0)
-        for j := 0; j < len(rpt_entry.vids); j++ {
-            vid := rpt_entry.vids[j]
+        for j := 0; j < len(rpt_entry.Vids); j++ {
+            vid := rpt_entry.Vids[j]
             value, ok := dvCtx[vid]
             if !ok {
                 ok, value, _, _, _, _ := sd.getVidElementType(vid)
@@ -252,8 +252,8 @@ func (sd *SECS_DATA) getRptReport(rptID uint32) sm.ElementType {
         return nil
     }
     vidLst := make([]interface{}, 0)
-    for j := 0; j < len(rpt_entry.vids); j++ {
-        vid := rpt_entry.vids[j]
+    for j := 0; j < len(rpt_entry.Vids); j++ {
+        vid := rpt_entry.Vids[j]
         ok, value, _, _, _, _ := sd.getVidElementType(vid)
         if !ok || value == nil {
             log.Printf("VID not found\n", vid)
@@ -406,10 +406,10 @@ func (sd *SECS_DATA) setAlarmEnable(alid uint64, aled uint8) int {
     for k, alarm := range sd.alarm {
         if k == uint32(alid) || alid == uint64(0xFFFFFFFFFFFFFFFF) {
             if aled == 128 {
-                alarm.enable = true
+                alarm.Enable = true
                 log.Printf("set %v %v enable\n", alid, aled)
             } else if aled == 0 {
-                alarm.enable = false
+                alarm.Enable = false
                 log.Printf("set %v %v disable\n", alid, aled)
             }
             if k == uint32(alid) {
@@ -438,12 +438,12 @@ func (sd *SECS_DATA) getAlarmsLst(alids []uint64) sm.ElementType {
         var alcdNode sm.ElementType
         var textNode sm.ElementType
         if ok {
-            if alarm.set == true {
+            if alarm.Set == true {
                 alcdNode = sm.CreateBinaryNode( byte(128) )
             } else {
                 alcdNode = sm.CreateBinaryNode( byte(0) )
             }
-            textNode = sm.CreateASCIINode(alarm.text)
+            textNode = sm.CreateASCIINode(alarm.Text)
         } else {
             alcdNode = sm.CreateBinaryNode()
             textNode = sm.CreateASCIINode("")
@@ -459,11 +459,11 @@ func (sd *SECS_DATA) setAlarm(alid uint64, alcd int) (uint32, bool) {
     alarm, ok := sd.alarm[uint32(alid)]
     if ok {
         if alcd >= 128 {
-            alarm.set = true
+            alarm.Set = true
         } else {
-            alarm.set = false
+            alarm.Set = false
         }
-        return alarm.evt, alarm.enable
+        return alarm.Evt, alarm.Enable
     }
     return 0, false
 }
@@ -484,7 +484,7 @@ func (sd *SECS_DATA) getEvtByName(namelist []string) []uint32 {
     evtList := make([]uint32, 0)
     for _, name := range namelist {
         for id, evt := range sd.evt {
-            if evt.name == name {
+            if evt.Name == name {
                 evtList = append(evtList, id)
             }
         }

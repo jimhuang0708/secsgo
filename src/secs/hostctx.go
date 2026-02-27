@@ -35,7 +35,7 @@ type UIEvt struct { //use for notify ui something happen
 type UICmd struct {
     Stream int `json:"stream"`
     Function int `json:"function"`
-    DataItem sm.Node `json:"dataitem"`
+    DataItem sm.ElementWrapper `json:"dataitem"`
 }
 
 func CreateHostContext(deviceID int,mode string,addr string, hostLog *logger.Logger ) *HostContext {
@@ -117,7 +117,7 @@ func (hc *HostContext)doUICommand(s string) {
     //
     stream := c.Stream
     function := c.Function
-    node := c.DataItem.EncodeSecs();
+    node := c.DataItem.Element;
     if(node == nil){
         node = sm.CreateEmptyElementType()
     }

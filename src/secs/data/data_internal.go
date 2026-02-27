@@ -56,8 +56,8 @@ func (sd *SECS_DATA) isVidExist(id uint32) bool {
 func (sd *SECS_DATA) setVidValue(id uint32, v sm.ElementType) bool {
     _, ok := sd.svs[id]
     if ok {
-        if(v.Type() == sd.svs[id].Value.EncodeSecs().Type()){
-            sd.svs[id].Value = sm.Node{ NodeType : v.Type(), NodeValues : v.Values()}
+        if(v.Type() == sd.svs[id].Value.Element.Type()){
+            sd.svs[id].Value.Element = v.Clone()
             return true
         } else {
             return false
@@ -65,8 +65,8 @@ func (sd *SECS_DATA) setVidValue(id uint32, v sm.ElementType) bool {
     }
     _, ok = sd.dvs[id]
     if ok {
-        if(v.Type() == sd.dvs[id].Value.EncodeSecs().Type()){
-            sd.dvs[id].Value = sm.Node{ NodeType : v.Type(), NodeValues : v.Values() }
+        if(v.Type() == sd.dvs[id].Value.Element.Type()){
+            sd.dvs[id].Value.Element = v.Clone()
             return true
         } else {
             return false
@@ -74,8 +74,8 @@ func (sd *SECS_DATA) setVidValue(id uint32, v sm.ElementType) bool {
     }
     _, ok = sd.ecs[id]
     if ok {
-        if(v.Type() == sd.ecs[id].Value.EncodeSecs().Type()){
-            sd.ecs[id].Value = sm.Node{ NodeType : v.Type(), NodeValues : v.Values() }
+        if(v.Type() == sd.ecs[id].Value.Element.Type()){
+            sd.ecs[id].Value.Element = v.Clone()
             return true
         } else {
             return false
@@ -84,18 +84,19 @@ func (sd *SECS_DATA) setVidValue(id uint32, v sm.ElementType) bool {
     return false
 }
 
+
 func (sd *SECS_DATA) getVidElementType(id uint32) (bool, sm.ElementType, sm.ElementType, sm.ElementType, interface{}, string) {
     variable, ok := sd.svs[id]
     if ok {
-        return true, variable.Value.EncodeSecs(), variable.Max.EncodeSecs(), variable.Min.EncodeSecs(), variable.LimitEvt, variable.Units
+        return true, CloneElementType(variable.Value.Element), CloneElementType(variable.Max.Element), CloneElementType(variable.Min.Element), variable.LimitEvt, variable.Units
     }
     variable, ok = sd.dvs[id]
     if ok {
-        return true, variable.Value.EncodeSecs(), variable.Max.EncodeSecs(), variable.Min.EncodeSecs(), variable.LimitEvt, variable.Units
+        return true, CloneElementType(variable.Value.Element), CloneElementType(variable.Max.Element), CloneElementType(variable.Min.Element), variable.LimitEvt, variable.Units
     }
     variable, ok = sd.ecs[id]
     if ok {
-        return true, variable.Value.EncodeSecs(), variable.Max.EncodeSecs(), variable.Min.EncodeSecs(), variable.LimitEvt, variable.Units
+        return true, CloneElementType(variable.Value.Element), CloneElementType(variable.Max.Element), CloneElementType(variable.Min.Element), variable.LimitEvt, variable.Units
     }
     return false, nil, nil, nil, nil, ""
 }
@@ -322,18 +323,18 @@ func (sd *SECS_DATA) setEC(ecs map[uint32]sm.ElementType) int {
             log.Printf("ECID : %d not exist\n", k)
             return 1 // one or more constants does not exist
         }
-        if ec.Value.EncodeSecs().Type() != v.Type() {
+        if ec.Value.Element.Type() != v.Type() {
             log.Printf("ECID : %d Type mismatch\n", k)
             return 3 // one or more values Type mismatch
         }
-        if (ec.Value.EncodeSecs().Type() != "A") && (ec.Value.EncodeSecs().Size() != v.Size()) {
+        if (ec.Value.Element.Type() != "A") && (ec.Value.Element.Size() != v.Size()) {
             log.Printf("ECID : %d Size mismatch\n", k)
             return 3 // one or more values out of range
         }
     }
 
     for k, v := range ecs {
-        sd.ecs[k].Value = sm.Node{ NodeType : v.Type(), NodeValues : v.Values()}
+        sd.ecs[k].Value.Element = v.Clone()
         log.Printf("setup%d %v\n", k, v)
     }
     return 0 // ok
@@ -352,7 +353,7 @@ func (sd *SECS_DATA) getEC(ecLst []uint32) sm.ElementType {
         ecID := ecLst[k]
         ec, ok := sd.ecs[ecID]
         if ok {
-            ecNodeLst = append(ecNodeLst, ec.Value.EncodeSecs())
+            ecNodeLst = append(ecNodeLst, ec.Value.Element)
         } else {
             ecNodeLst = append(ecNodeLst, sm.CreateListNode())
         }
@@ -379,8 +380,8 @@ func (sd *SECS_DATA) getECName(ecLst []uint32) sm.ElementType {
             ecNode = sm.CreateListNode(
                 sm.CreateUintNode(4, ecID),
                 sm.CreateASCIINode(ec.Name),
-                ec.Max.EncodeSecs(), ec.Min.EncodeSecs(),
-                ec.Defv.EncodeSecs(), sm.CreateASCIINode(ec.Units),
+                ec.Max.Element, ec.Min.Element,
+                ec.Defv.Element, sm.CreateASCIINode(ec.Units),
             )
             ecNodeLst = append(ecNodeLst, ecNode)
         } else {

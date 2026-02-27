@@ -18,6 +18,9 @@ type Node_Wire struct {
     NodeValues json.RawMessage `json:"values"`
 }
 
+type ElementWrapper struct {
+    Element ElementType
+}
 
 type ElementType interface {
     Code() byte
@@ -93,7 +96,10 @@ func (n *Node) EncodeSecs() (ElementType) {
     switch n.NodeType {
     case "L":
         for k , v := range out {
-            if _ , ok := v.(ElementType); !ok {
+            if _ , ok := v.(ElementType); ok {
+                out[k] = v
+            } else {
+fmt.Printf("zzzzzzzzzzzzzzzzzzzzzzz  %v \n",v)
                 out[k] = v.(*Node).EncodeSecs()
             }
         }
@@ -108,7 +114,8 @@ func (n *Node) EncodeSecs() (ElementType) {
         return &BinaryNode{ Node : Node{ NodeType : n.NodeType , NodeValues : out } }
     case "BOOLEAN":
         return &BooleanNode{ Node : Node{ NodeType : n.NodeType , NodeValues : out } }
-
+    case "F4" , "F8":
+        return &FloatNode{ Node : Node{ NodeType : n.NodeType , NodeValues : out } }
     }
     return nil
 }
@@ -135,66 +142,92 @@ func (n *Node) UnmarshalJSON(data []byte) error {
         }
         n.NodeValues = make([]any, 0, len(arr))
         for i := range arr {
-            n.NodeValues = append(n.NodeValues, arr[i])
+            n.NodeValues = append(n.NodeValues, arr[i].EncodeSecs())
         }
         return nil
 
     case "A":
-            var bs []string
-            if err := json.Unmarshal(w.NodeValues, &bs); err != nil {
-                return fmt.Errorf("Ascii NodeValues must be array of ascii: %w", err)
-            }
-            n.NodeValues = make([]any, 0, len(bs))
-            for _, b := range bs {
-                n.NodeValues = append(n.NodeValues, b[0])
-            }
-            return nil
-
-            return nil
+        var bs []string
+        if err := json.Unmarshal(w.NodeValues, &bs); err != nil {
+            return fmt.Errorf("Ascii NodeValues must be array of ascii: %w", err)
+        }
+        n.NodeValues = make([]any, 0, len(bs))
+        for _, b := range bs {
+            n.NodeValues = append(n.NodeValues, b[0])
+        }
+        return nil
 
     case "BOOLEAN":
-            var bs []bool
-            if err := json.Unmarshal(w.NodeValues, &bs); err != nil {
-                return fmt.Errorf("Boolean NodeValues must be array of bool: %w", err)
-            }
-            n.NodeValues = make([]any, 0, len(bs))
-            for _, b := range bs {
-                n.NodeValues = append(n.NodeValues, b)
-            }
-            return nil
+        var bs []bool
+        if err := json.Unmarshal(w.NodeValues, &bs); err != nil {
+            return fmt.Errorf("Boolean NodeValues must be array of bool: %w", err)
+        }
+        n.NodeValues = make([]any, 0, len(bs))
+        for _, b := range bs {
+            n.NodeValues = append(n.NodeValues, b)
+        }
+        return nil
 
     case "B":
-            var bs []byte
-            if err := json.Unmarshal(w.NodeValues, &bs); err != nil {
-                return fmt.Errorf("Binary NodeValues must be array of binary: %w", err)
-            }
-            n.NodeValues = make([]any, 0, len(bs))
-            for _, b := range bs {
-                n.NodeValues = append(n.NodeValues, b)
-            }
-            return nil
+        var bs []byte
+        if err := json.Unmarshal(w.NodeValues, &bs); err != nil {
+            return fmt.Errorf("Binary NodeValues must be array of binary: %w", err)
+        }
+        n.NodeValues = make([]any, 0, len(bs))
+        for _, b := range bs {
+            n.NodeValues = append(n.NodeValues, b)
+        }
+        return nil
      case "I1" , "I2" , "I4" , "I8" :
-            var bs []int64
-            if err := json.Unmarshal(w.NodeValues, &bs); err != nil {
-                return fmt.Errorf("Boolean NodeValues must be array of bool: %w", err)
-            }
-            n.NodeValues = make([]any, 0, len(bs))
-            for _, b := range bs {
-                n.NodeValues = append(n.NodeValues, b)
-            }
-
-            return nil
+        var bs []int64
+        if err := json.Unmarshal(w.NodeValues, &bs); err != nil {
+            return fmt.Errorf("Boolean NodeValues must be array of bool: %w", err)
+        }
+        n.NodeValues = make([]any, 0, len(bs))
+        for _, b := range bs {
+            n.NodeValues = append(n.NodeValues, b)
+        }
+        return nil
      case "U1" , "U2" , "U4" , "U8" :
-            var bs []uint64
-            if err := json.Unmarshal(w.NodeValues, &bs); err != nil {
-                return fmt.Errorf("Boolean NodeValues must be array of bool: %w", err)
-            }
-            n.NodeValues = make([]any, 0, len(bs))
+        var bs []uint64
+        if err := json.Unmarshal(w.NodeValues, &bs); err != nil {
+            return fmt.Errorf("Boolean NodeValues must be array of bool: %w", err)
+        }
+        n.NodeValues = make([]any, 0, len(bs))
 
-            for _, b := range bs {
-                n.NodeValues = append(n.NodeValues, b)
-            }
-            return nil
+        for _, b := range bs {
+            n.NodeValues = append(n.NodeValues, b)
+        }
+        return nil
+     case "F4" , "F8" :
+        var bs []float64
+        if err := json.Unmarshal(w.NodeValues, &bs); err != nil {
+            return fmt.Errorf("Float NodeValues must be array of bool: %w", err)
+        }
+        n.NodeValues = make([]any, 0, len(bs))
+
+        for _, b := range bs {
+            n.NodeValues = append(n.NodeValues, b)
+        }
+        return nil
+
     }
     return nil;
+}
+
+func (w *ElementWrapper) UnmarshalJSON(b []byte) error {
+    var n Node
+    if err := json.Unmarshal(b, &n); err != nil {
+        return err
+    }
+    w.Element = n.EncodeSecs()
+    return nil
+}
+
+func (w ElementWrapper) Clone()(ElementWrapper){
+    if(w.Element != nil){
+        return ElementWrapper{ Element : w.Element.Clone() }
+    } else {
+        return ElementWrapper{ Element : nil }
+    }
 }

@@ -10,36 +10,46 @@ import (
 )
 
 type FloatNode struct {
-    byteSize  int
-    values    []float64
-    symbol string
+        Node
 }
 
 func(node *FloatNode) Clone() (ElementType){
-    nodeValues := make([]float64,  len(node.values))
-    copy(nodeValues,node.values)
-    return &FloatNode{node.byteSize, nodeValues, node.symbol}
+    nodeValues := make([]any,  len(node.NodeValues))
+    copy(nodeValues,node.NodeValues)
+    return &FloatNode{ Node : Node{ NodeType : node.NodeType , NodeValues : nodeValues }  }
 }
 
 func (node *FloatNode) Values() []any {
-    out := make([]any, len(node.values))
-    for i, v := range node.values {
+    out := make([]any, len(node.NodeValues))
+    for i, v := range node.NodeValues {
         out[i] = v
     }
     return out
 }
 
 func (node *FloatNode) Type() string {
-    return node.symbol
+    return node.NodeType
 }
 
+func (node *FloatNode) ByteSize() int {
+    if(node.NodeType == "F4"){
+        return 4
+    }else if(node.NodeType == "F8"){
+        return 8
+    }else{
+        log.Printf("Error unknown Float Type %s\n",node.NodeType);
+        return 0
+    }
+}
+
+
 func (node *FloatNode) Code() byte {
-    if(node.symbol == "F4"){
+    if(node.NodeType == "F4"){
         return 0o44
-    } else if(node.symbol == "F8"){
+    } else if(node.NodeType == "F8"){
         return 0o40
     } else {
-        log.Printf("Error unknown float symbol %s\n",node.symbol);
+        log.Printf("Error unknown float symbol %s\n",node.NodeType);
         return 0 //error
     }
 }
@@ -49,7 +59,7 @@ func CreateFloatNode(byteSize int, values ...interface{}) ElementType {
         panic("Float datalength too long")
     }
 
-    nodeValues := make([]float64, 0, len(values))
+    nodeValues := make([]any, 0, len(values))
 
     for _, v := range values {
         f, err := toFloat64(v)
@@ -58,13 +68,7 @@ func CreateFloatNode(byteSize int, values ...interface{}) ElementType {
         }
         nodeValues = append(nodeValues, f)
     }
-
-    node := &FloatNode{
-        byteSize: byteSize,
-        values:   nodeValues,
-        symbol: fmt.Sprintf("F%d", byteSize),
-    }
-
+    node := &FloatNode{ Node : Node{NodeType : fmt.Sprintf("F%d", byteSize) , NodeValues : nodeValues } }
     return node
 }
 
@@ -85,12 +89,13 @@ func toFloat64(v interface{}) (float64, error) {
 
 
 func (node *FloatNode) Size() int {
-    return len(node.values)
+    return len(node.NodeValues)
 }
 
 func (node *FloatNode) DataLength() int {
-    return node.byteSize * node.Size()
+    return node.ByteSize() * node.Size()
 }
+
 
 func (node *FloatNode) EncodeBytes() []byte {
     result, err := buildHeader(node.Code(),node.DataLength())
@@ -100,16 +105,16 @@ func (node *FloatNode) EncodeBytes() []byte {
 
     buf := make([]byte, 8)
 
-    for _, value := range node.values {
+    for _, value := range node.NodeValues {
         var bits uint64
 
-        if node.byteSize == 4 {
-            bits = uint64(math.Float32bits(float32(value)))
+        if node.ByteSize() == 4 {
+            bits = uint64(math.Float32bits(value.(float32)))
         } else {
-            bits = math.Float64bits(value)
+            bits = math.Float64bits(value.(float64))
         }
         binary.BigEndian.PutUint64(buf, bits)
-        result = append(result, buf[8 - node.byteSize:]...)
+        result = append(result, buf[8 - node.ByteSize():]...)
     }
 
     return result
@@ -117,11 +122,11 @@ func (node *FloatNode) EncodeBytes() []byte {
 
 func (node *FloatNode) ToSml() string {
     if node.Size() == 0 {
-        return fmt.Sprintf("<%s[0]>", node.symbol)
+        return fmt.Sprintf("<%s[0]>", node.NodeType)
     }
     values := make([]string, 0, node.Size())
-    for _, v := range node.values {
-        values = append(values, strconv.FormatFloat(v, 'g', -1, node.byteSize*8))
+    for _, v := range node.NodeValues {
+        values = append(values, strconv.FormatFloat(v.(float64), 'g', -1, node.ByteSize()*8))
     }
-    return fmt.Sprintf("<%s[%d] %v>", node.symbol, node.Size(), strings.Join(values, " "))
+    return fmt.Sprintf("<%s[%d] %v>", node.NodeType, node.Size(), strings.Join(values, " "))
 }

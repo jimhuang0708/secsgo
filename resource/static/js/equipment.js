@@ -319,7 +319,7 @@ function bindEvents() {
 
 
     document.getElementById("btnSetEC").addEventListener("click", function () {
-        dataitem = { "type": "L", "items": [] }
+        dataitem = { "type": "L", "values": [] }
         let pairList = document.getElementById("setec_param").value.split(",")
         for(let i = 0 ; i < pairList.length ; i++){
             if( pairList[i] == "" ){
@@ -327,7 +327,7 @@ function bindEvents() {
                 return;
             }
             let pair = pairList[i].split("=")
-            dataitem.items.push( { "type" : "L", "items" :[ { "type" : "U4" , "values" : [   parseInt(pair[0],10) ] } , { "type" : "U4" , "values" : [   parseInt(pair[1],10) ] } ] } )
+            dataitem.values.push( { "type" : "L", "values" :[ { "type" : "U4" , "values" : [   parseInt(pair[0],10) ] } , { "type" : "U4" , "values" : [   parseInt(pair[1],10) ] } ] } )
         }
         sendControlEvent("setec", {  dataitem : JSON.stringify(dataitem) } );
     });

@@ -1,7 +1,7 @@
 package data
 
 import "sync"
-import "encoding/json"
+//import "encoding/json"
 import sm "secs/secs_message"
 // ----------------------------
 // Command / data structures
@@ -52,22 +52,14 @@ type SECSALARM struct {
 /*
    "JIS" not supported
 */
-type SECSVARIABLE_WIRE struct {
-    Raw json.RawMessage `json:"nodevalue"`
-}
 type SECSVARIABLE struct { // status/data variable
     Id    uint32          `json:"id"`
     Name  string          `json:"name"`
     Units string          `json:"units"`
-    Value sm.Node         `json:"nodevalue"`
-    /*
-       Equipment const variable
-       Equipment const variable list format is not allowed
-    */
-
-    Defv     sm.Node
-    Min      sm.Node  `json:"min"`// for ec only
-    Max      sm.Node  `json:"max"`// for ec only
+    Value sm.ElementWrapper `json:"nodevalue"`
+    Defv     sm.ElementWrapper
+    Min      sm.ElementWrapper  `json:"min"`// for ec only
+    Max      sm.ElementWrapper  `json:"max"`// for ec only
     LimitEvt uint32  `json:"limitevt"`// could be nil
 }
 

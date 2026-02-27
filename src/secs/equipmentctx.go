@@ -329,9 +329,9 @@ func (ec *EquipmentContext)SetAlarm(id uint64,v int){
 
 func (ec *EquipmentContext)SetEC(s string){
     raw := []byte(s)
-    var c sm.Node
+    var c sm.ElementWrapper
     json.Unmarshal( raw,&c)
-    node := c.EncodeSecs();
+    node := c.Element;
     if(node == nil){
         node = sm.CreateEmptyElementType()
     }

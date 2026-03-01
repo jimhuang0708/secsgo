@@ -84,6 +84,16 @@ func (t *Transport)SendAct( msg sm.HSMSMessage)(string){
     if(msg != nil){
         t.log.Printf("SendAct %s\n",msg.ToSml());
         t.TellUI("Send", msg.ToSml())
+        ///////////
+        /*
+        if(msg.MsgType() == 0){
+            i , _ :=  msg.(*sm.DataMessage).Get()
+        }
+        b, _ := json.Marshal(msg)
+        var w sm.HSMSMessageWrapper
+        json.Unmarshal(b, &w)
+        */
+        ////////
     }
     return "ACTOK"
 }

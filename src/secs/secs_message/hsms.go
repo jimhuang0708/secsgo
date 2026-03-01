@@ -2,6 +2,8 @@ package secs_message
 
 import (
     "encoding/binary"
+    "encoding/json"
+    "fmt"
 )
 const (
     TypeDataMessage = 0
@@ -26,6 +28,7 @@ const (
 )
 
 type HSMSMessage interface {
+    Clone() HSMSMessage
     EncodeBytes() []byte
     MsgType() int32
     ToSml() string
@@ -33,11 +36,21 @@ type HSMSMessage interface {
     SessionID() int
 }
 
+type HSMSMessageWrapper struct {
+    Message HSMSMessage
+}
+
+
 type ControlMessage struct {
     header []byte
 }
 
-func CloneHSMSControlMessage(header []byte) HSMSMessage {
+type ControlMessageWire struct {
+    Header []byte `json:"header"`
+}
+
+
+func CreateControlMessage(header []byte) HSMSMessage {
     headerCopy := make([]byte, 10)
     for i, b := range header {
     	if i > 10 {
@@ -92,6 +105,10 @@ func CreateControlMessageRsp(req HSMSMessage,parameter ...byte) HSMSMessage {
     return &ControlMessage{header}
 }
 
+func (msg *ControlMessage)Clone() HSMSMessage {
+    return CreateControlMessage(msg.header)
+}
+
 func (msg *ControlMessage) ToSml() string {
     msgtype := msg.MsgType()
     switch(msgtype){
@@ -143,3 +160,65 @@ func (msg *ControlMessage) SystemBytes() uint32 {
 func (msg *ControlMessage) SessionID() int {
     return int(binary.BigEndian.Uint16(msg.header[0:2]))
 }
+
+func (msg *ControlMessage) UnmarshalJSON(data []byte) error {
+    var w ControlMessageWire
+    if err := json.Unmarshal(data, &w); err != nil {
+        return err
+    }
+    if len( w.Header) != 10 {
+        return fmt.Errorf("ControlMessage unmarshal failed\n")
+    }
+
+    headerCopy := make([]byte, 10)
+    for i, b := range w.Header {
+        if i > 10 {
+            break
+        }
+        headerCopy[i] = b
+    }
+    msg.header  = headerCopy
+
+    return nil
+}
+
+
+func (msg ControlMessage) MarshalJSON() ([]byte, error) {
+    headerCopy := make([]byte, 10)
+    for i, b := range msg.header {
+        if i > 10 {
+            break
+        }
+        headerCopy[i] = b
+    }
+    return json.Marshal(ControlMessageWire{Header:headerCopy})
+}
+
+
+func (w *HSMSMessageWrapper) UnmarshalJSON(b []byte) error {
+    var ctrlmsg ControlMessage
+    if err := json.Unmarshal(b, &ctrlmsg); err == nil {
+        w.Message = &ctrlmsg
+        return nil
+    }
+    var datamsg DataMessage
+    if err := json.Unmarshal(b, &datamsg); err == nil {
+        w.Message = &datamsg
+        return nil
+    }
+    return fmt.Errorf("HSMSMessage unmarshal failed\n")
+}
+
+func (w HSMSMessageWrapper) MarshalJSON() ([]byte, error) {
+    return json.Marshal(w.Message)
+}
+
+
+func (w HSMSMessageWrapper) Clone()(HSMSMessageWrapper){
+    if(w.Message != nil){
+        return HSMSMessageWrapper{ Message : w.Message.Clone() }
+    } else {
+        return HSMSMessageWrapper{ Message : nil }
+    }
+}
+

@@ -83,7 +83,7 @@ func (p *decoder) decodeMessage() (ok bool) {
     case TypeSelectReq, TypeSelectRsp, TypeDeselectReq, TypeDeselectRsp,
         TypeLinktestReq, TypeLinktestRsp, TypeRejectReq, TypeSeparateReq:
 
-        p.msg = CloneHSMSControlMessage(headerBytes)
+        p.msg = CreateControlMessage(headerBytes)
         return true
     }
 

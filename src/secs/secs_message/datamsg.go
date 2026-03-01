@@ -4,17 +4,28 @@ import (
     "fmt"
     "bytes"
     "encoding/binary"
+    "encoding/json"
 	//"unicode"
 )
 
 type DataMessage struct {
-    sourceHost  string // come from where.
+    sourceHost  string
     stream      int
     function    int
     waitBit     bool
     dataItem    ElementType
     sessionID   int
     systemBytes uint32
+}
+
+type DataMessageWire struct {
+    SourceHost  string           `json:"sourcehost"`
+    Stream      int              `json:"stream"`
+    Function    int              `json:"function"`
+    WaitBit     bool             `json:"waitbit"`
+    DataItemW   ElementWrapper   `json:"dataitem"`
+    SessionID   int              `json:"sessionid"`
+    SystemBytes uint32           `json:"systembytes"`
 }
 
 
@@ -109,20 +120,18 @@ func (node *DataMessage) SetSessionID( sessionID int) *DataMessage {
     return message
 }
 
-func (node *DataMessage) Clone() *DataMessage {
+func (node *DataMessage) Clone() (HSMSMessage) {
     message := &DataMessage{
         stream:      node.stream,
         function:    node.function,
         waitBit:     node.waitBit,
-        dataItem:    node.dataItem,
+        dataItem:    node.dataItem.Clone(),
         sessionID:   node.sessionID,
         systemBytes: node.systemBytes,
         sourceHost : node.sourceHost,
     }
     return message
 }
-
-
 
 func (node *DataMessage) Header() string {
     header := fmt.Sprintf("S%dF%d", node.stream, node.function)
@@ -174,3 +183,23 @@ func (node *DataMessage) ToSml() string {
     return fmt.Sprintf("%s\n%s\n.", node.Header(), node.dataItem.ToSml())
 }
 
+
+func (node *DataMessage) UnmarshalJSON(data []byte) error {
+    var w DataMessageWire
+    if err := json.Unmarshal(data, &w); err != nil {
+        return err
+    }
+    node.sourceHost = w.SourceHost
+    node.stream = w.Stream
+    node.function = w.Function
+    node.waitBit = w.WaitBit
+    node.dataItem = w.DataItemW.Element
+    node.sessionID = w.SessionID
+    node.systemBytes = w.SystemBytes
+    return nil
+}
+
+
+func (node DataMessage) MarshalJSON() ([]byte, error) {
+    return json.Marshal(DataMessageWire{node.sourceHost,node.stream,node.function,node.waitBit,ElementWrapper{node.dataItem},node.sessionID,node.systemBytes})
+}

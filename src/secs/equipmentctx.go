@@ -37,6 +37,11 @@ type TrigerEvtCtx struct{
     dvctx map[uint32]interface{}
 }
 
+type UIEvtCtx struct {
+    datatype string
+    data any
+}
+
 type Evt struct{
     cmd string
     ctx any

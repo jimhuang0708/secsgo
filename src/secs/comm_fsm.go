@@ -208,7 +208,7 @@ type Actions interface {
 
     // Logging (optional but very useful for spec verification)
     Logf(format string, args ...any)
-        TellUI()
+    TellUI()
 }
 
 //

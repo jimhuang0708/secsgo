@@ -1,7 +1,6 @@
 package secs
 
 import (
-    "encoding/json"
     "fmt"
     "time"
     "secs/data"
@@ -117,9 +116,8 @@ func converToFloat64(n sm.ElementType)(bool,[]float64){
 }
 
 func (lm * LIMITMONITORMODULE)TellUI(vid uint32,limitid uint32, upper float64,lower float64){
-    uievt := &UIEvt{ EvtType : "S2F45" , Source : "LIMITMONITORMODULE" , Data : fmt.Sprintf("%d:%d:%f:%f",vid,limitid ,upper,lower) }
-    jsonData, _ := json.Marshal(uievt)
-    lm.oChan <- Evt{ cmd : "uievent" ,ctx : string(jsonData)  }
+    ctx := &UIEvtCtx{ Datatype : "S2F45" , Data : fmt.Sprintf("%d:%d:%f:%f",vid,limitid ,upper,lower) }
+    lm.oChan <- Evt{ cmd : "uievent" ,ctx : ctx  }
 }
 
 

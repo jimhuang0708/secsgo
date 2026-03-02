@@ -3,7 +3,6 @@ package secs
 import (
     "crypto/rand"
     "encoding/binary"
-    "encoding/json"
     "fmt"
     "time"
     "secs/logger"
@@ -60,9 +59,8 @@ func CreateCOMMUNICATESTATE(comState int,hsms_ss * HSMS_SS,cs * CTRLSTATE, log *
 }
 
 func (cs * COMMUNICATESTATE)TellUI(){ //notify UI comstate changed
-    uievt := &UIEvt{ EvtType : "CommunicateChange" , Source : "ComState" , Data : cs.comfsm.major.String() }
-    jsonData, _ := json.Marshal(uievt)
-    cs.oChan <- Evt{ cmd : "uievent" ,ctx : string(jsonData)  }
+    ctx := &UIEvtCtx{ Datatype : "CommunicateChange" , Data : cs.comfsm.major.String()}
+    cs.oChan <- Evt{ cmd : "uievent" ,ctx : ctx  }
 }
 
 func (cs *COMMUNICATESTATE)OP_SetComEnabled(enable bool){

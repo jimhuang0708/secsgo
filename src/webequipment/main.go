@@ -18,16 +18,21 @@ import (
     "github.com/gorilla/websocket"
     "secs"
     "secs/data"
+    sm "secs/secs_message"
 )
-
-
 
 type WsConn struct {
     id         string
     addr       string
     ws         *websocket.Conn
     recvBuf *bytes.Buffer
-    run bool 
+    run bool
+}
+
+type SecsObj struct {
+    MsgType string `json:"msgtype"`
+    SML string `json:"sml"`
+    TimeStamp string `json:"timestamp"`
 }
 
 var eqLog *logger.Logger = nil
@@ -259,11 +264,59 @@ func (conn *WsConn) readWebSocket(ctx context.Context, ec *secs.EquipmentContext
     }
 }
 
+func (conn *WsConn) processUIEvt(ctx *secs.UIEvtCtx)([]byte){
+    var info *secs.UIEvt = nil
+    if(ctx.Datatype == "RecvHSMSMessage"){
+        if(ctx.Data.(sm.HSMSMessage).MsgType() == sm.TypeDataMessage){
+            datamsg := ctx.Data.(*sm.DataMessage)
+            item := &SecsObj{ SML : datamsg.ToSml() , MsgType : "Receive", TimeStamp : time.Now().Format("15:04:05.000") }
+            info = &secs.UIEvt{ EvtType : "Packet" , Source : "Transport" , Data : item }
+        } else {
+            ctrlmsg := ctx.Data.(*sm.ControlMessage)
+            item := &SecsObj{ SML : ctrlmsg.ToSml() , MsgType : "Receive", TimeStamp : time.Now().Format("15:04:05.000") }
+            info = &secs.UIEvt{ EvtType : "Packet" , Source : "Transport" , Data : item }
+
+        }
+    } else if(ctx.Datatype == "SendHSMSMessage"){
+        if(ctx.Data.(sm.HSMSMessage).MsgType() == sm.TypeDataMessage){
+            datamsg := ctx.Data.(*sm.DataMessage)
+            item := &SecsObj{ SML : datamsg.ToSml() , MsgType : "Send", TimeStamp : time.Now().Format("15:04:05.000") }
+            info = &secs.UIEvt{ EvtType : "Packet" , Source : "Transport" , Data : item }
+        } else {
+            ctrlmsg := ctx.Data.(*sm.ControlMessage)
+            item := &SecsObj{ SML : ctrlmsg.ToSml() , MsgType : "Send", TimeStamp : time.Now().Format("15:04:05.000") }
+            info = &secs.UIEvt{ EvtType : "Packet" , Source : "Transport" , Data : item }
+        }
+    } else if(ctx.Datatype == "CtrlChange"){
+        info = &secs.UIEvt{ EvtType : ctx.Datatype , Source : "" , Data : ctx.Data }
+    } else if(ctx.Datatype == "S2F41" ){
+        info = &secs.UIEvt{ EvtType : ctx.Datatype , Source : "" , Data : ctx.Data }
+    } else if(ctx.Datatype == "S10F3"){
+        info = &secs.UIEvt{ EvtType : ctx.Datatype , Source : "" , Data : ctx.Data }
+    } else if(ctx.Datatype == "S2F45"){
+        info = &secs.UIEvt{ EvtType : ctx.Datatype , Source : "" , Data : ctx.Data }
+    } else if(ctx.Datatype == "S10F1"){
+        info = &secs.UIEvt{ EvtType : ctx.Datatype , Source : "" , Data : ctx.Data }
+    } else if(ctx.Datatype == "CommunicateChange"){
+        info = &secs.UIEvt{ EvtType : ctx.Datatype , Source : "" , Data : ctx.Data }
+    } else if(ctx.Datatype =="disconnect" || ctx.Datatype =="Disconnect"){
+        info = &secs.UIEvt{ EvtType : ctx.Datatype , Source : "" , Data : nil }
+    }
+    if(info == nil) {
+        eqLog.Printf("Unknown *secs.UIEvtCtx %v\n",ctx);
+        return []byte("")
+    }
+    jsonData , _ :=  json.Marshal(info)
+    return jsonData
+}
+
+
 func (conn *WsConn) readEquipment(ec *secs.EquipmentContext){
     conn.run = true
     for conn.run {
-        if s, ok := ec.GetUIEvt(); ok {
-            err := conn.ws.WriteMessage(websocket.TextMessage, []byte(s))
+        if ctx, ok := ec.GetUIEvt(); ok {
+            jsonData := conn.processUIEvt(ctx)
+            err := conn.ws.WriteMessage(websocket.TextMessage, []byte(jsonData))
             if err != nil {
                 eqLog.Printf("ws write error: %v\n", err)
                 return

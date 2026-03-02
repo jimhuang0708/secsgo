@@ -1,6 +1,5 @@
 package secs
 import (
-    "encoding/json"
     "reflect"
     "time"
     "secs/data"
@@ -46,9 +45,8 @@ func (cs * CTRLSTATE)attachSession( s *COMMUNICATESTATE ){
 }
 
 func (cs * CTRLSTATE)TellUI(){
-    uievt := &UIEvt{ EvtType : "CtrlChange" , Source : "CtrlState" , Data : cs.ctrl_fsm.state.Minor.String() + "@" + cs.ctrl_fsm.state.Major.String() }
-    jsonData, _ := json.Marshal(uievt)
-    cs.oChan <- Evt{ cmd : "uievent" ,ctx : string(jsonData)  }
+    ctx := &UIEvtCtx{ Datatype : "CtrlChange" , Data : cs.ctrl_fsm.state.Minor.String() + "@" + cs.ctrl_fsm.state.Major.String()}
+    cs.oChan <- Evt{ cmd : "uievent" ,ctx : ctx  }
 }
 
 

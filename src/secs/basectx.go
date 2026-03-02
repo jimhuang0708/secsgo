@@ -5,7 +5,7 @@ import (
 //    "time"
 //    "secs/data"
     "secs/logger"
-    "encoding/json"
+//    "encoding/json"
     "sync"
     sm "secs/secs_message"
 )
@@ -27,7 +27,7 @@ type BaseContext struct {
     attacher  SessionAttacher
     msgsender MsgSender
     UICmdChan chan string
-    UIEvtChan chan string
+    UIEvtChan chan *UIEvtCtx
     dispatchMap [255][255]MSGMODULE
     deviceID int
     log *logger.Logger
@@ -38,7 +38,7 @@ type BaseContext struct {
 func CreateBaseContext(deviceID int,log *logger.Logger) BaseContext {
     return BaseContext{
             UICmdChan : make(chan string,10),
-            UIEvtChan : make(chan string,10),
+            UIEvtChan : make(chan *UIEvtCtx,10),
             deviceID : deviceID,
             log: log,
             wg : new(sync.WaitGroup),
@@ -154,7 +154,6 @@ func (bc *BaseContext)Connect(mode string,addr string,quit <-chan struct{}) {
 }
 
 func (bc *BaseContext)TellUI(){
-    uievt := &UIEvt{ EvtType : "Disconnect" , Source : "BaseContext" , Data : "" }
-    jsonData, _ := json.Marshal(uievt)
-    bc.UIEvtChan <- string(jsonData) // prevent bc.UIEvtChan close cause panic
+    ctx := &UIEvtCtx{ Datatype : "Disconnect"  , Data : nil }
+    bc.UIEvtChan <- ctx
 }

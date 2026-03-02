@@ -38,8 +38,8 @@ type TrigerEvtCtx struct{
 }
 
 type UIEvtCtx struct {
-    datatype string
-    data any
+    Datatype string
+    Data any
 }
 
 type Evt struct{
@@ -153,14 +153,14 @@ func (ec *EquipmentContext)regProcessModule(){
 
 }
 
-func (ec *EquipmentContext)processUIEvt(uievt string){
+func (ec *EquipmentContext)processUIEvt(ctx *UIEvtCtx){
     if( ec.UIEvtChan != nil ){
         select {
-            case ec.UIEvtChan <- uievt: // not full
+            case ec.UIEvtChan <- ctx: // not full
             default:
                 // full → pop oldest
                 <-ec.UIEvtChan
-                ec.UIEvtChan <- uievt
+                ec.UIEvtChan <- ctx
         }
     }
 }
@@ -177,7 +177,7 @@ func (ec *EquipmentContext)stateTrig(evt Evt){
         ec.sendUnknownError(evt.ctx.(*RecvCtx).msg.(*sm.DataMessage))
     } else if(evt.cmd == "uievent"){
         if( ec.UIEvtChan != nil ){
-            ec.processUIEvt(evt.ctx.(string))
+            ec.processUIEvt(evt.ctx.(*UIEvtCtx))
         }
     } else if(evt.cmd == "TRIG_EVENT" || evt.cmd == "TRIG_EVENT_FORCE"){
         ec.trigEvent(evt) //just proxy to eventMod
@@ -209,7 +209,7 @@ func (ec *EquipmentContext )doEvt(act Evt){
 
     if(act.cmd == "uievent"){
         if( ec.UIEvtChan != nil ){
-            ec.processUIEvt(act.ctx.(string))
+            ec.processUIEvt(act.ctx.(*UIEvtCtx))
         }
         return
     }
@@ -346,14 +346,14 @@ func (ec *EquipmentContext)SetEC(s string){
     ec.ecModule.iChan <- Evt{ cmd : "executefn" , ctx : fn }
 }
 
-func (ec *EquipmentContext)GetUIEvt()(string,bool){
+func (ec *EquipmentContext)GetUIEvt()(*UIEvtCtx,bool){
     select {
-        case s := <- ec.UIEvtChan :
-            return s , true
+        case ctx := <- ec.UIEvtChan :
+            return ctx , true
         default:
-            return "" , false
+            return nil , false
     }
-    return "" , false
+    return nil , false
 }
 
 func (ec *EquipmentContext)PutUICmd(data string){

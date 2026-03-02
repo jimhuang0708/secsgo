@@ -19,12 +19,6 @@ type HostContext struct {
     hostModule * HOSTMODULE //for host
 }
 
-type secsObj struct {
-    MsgType string `json:"msgtype"`
-    SML string `json:"sml"`
-    TimeStamp string `json:"timestamp"`
-}
-
 type UIEvt struct { //use for notify ui something happen
     EvtType string `json:"evttype"`
     Source string `json:"source"`
@@ -124,14 +118,14 @@ func (hc *HostContext)doUICommand(s string) {
     hc.sendSXFY(stream,function,node)
 }
 
-func (hc *HostContext)processUIEvt(uievt string){
+func (hc *HostContext)processUIEvt(ctx *UIEvtCtx){
     if( hc.UIEvtChan != nil ){
         select {
-            case hc.UIEvtChan <- uievt: // not full
+            case hc.UIEvtChan <- ctx: // not full
             default:
                 // full → pop oldest
                 <-hc.UIEvtChan
-                hc.UIEvtChan <- uievt
+                hc.UIEvtChan <- ctx
         }
     }
 }
@@ -139,11 +133,10 @@ func (hc *HostContext)processUIEvt(uievt string){
 
 func (hc *HostContext)processEvt(evt Evt){
     if(evt.cmd == "uievent"){
-        hc.processUIEvt(evt.ctx.(string))
+        hc.processUIEvt(evt.ctx.(*UIEvtCtx))
     } else if(evt.cmd == "HSMS_SS_EXIT"){
-        uievt := &UIEvt{ EvtType : "disconnect" , Source : "Transport" , Data : nil }
-        jsonData, _ := json.Marshal(uievt)
-        hc.processUIEvt(string(jsonData))
+        ctx := &UIEvtCtx{Datatype : "disconnect" , Data : nil}
+        hc.processUIEvt(ctx)
         hc.ctrlChan <- "quit" //interal goroutine , don't use hc.Stop()
     } else if( evt.cmd == "recv" ) {
         //hc.hostModule.iChan <- evt
@@ -183,14 +176,14 @@ func (hc *HostContext)stateRun(mode string,addr string){
             case o := <-hc.hostModule.oChan:
                 hc.log.Printf("get from hc.hostModule.oChan %v",o);
                 if(o.cmd == "uievent"){
-                    hc.processUIEvt(o.ctx.(string))
+                    hc.processUIEvt(o.ctx.(*UIEvtCtx))
                 } else {
                     hc.hsms_ss.iChan <- o
                 }
             case o := <-hc.dstModule.oChan:
                 hc.log.Printf("get from hc.dstModule.oChan %v",o);
                 if(o.cmd == "uievent"){
-                    hc.processUIEvt(o.ctx.(string))
+                    hc.processUIEvt(o.ctx.(*UIEvtCtx))
                 } else {
                     hc.hsms_ss.iChan <- o
                 }
@@ -225,14 +218,14 @@ func (hc *HostContext)WriteEq(dsName string) {
     hc.dstModule.iChan <- Evt{ cmd : "executefn" , ctx : fn }
 }
 
-func (hc *HostContext)GetUIEvt()(string,bool){
+func (hc *HostContext)GetUIEvt()(*UIEvtCtx,bool){
     select {
-        case s := <- hc.UIEvtChan :
-            return s , true
+        case ctx := <- hc.UIEvtChan :
+            return ctx , true
         default:
-            return "" , false
+            return nil , false
     }
-    return "" , false
+    return nil , false
 }
 
 func (hc *HostContext)PutUICmd(data string){

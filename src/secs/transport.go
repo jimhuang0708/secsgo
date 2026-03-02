@@ -2,7 +2,7 @@ package secs
 
 import (
     "encoding/binary"
-    "encoding/json"
+    //"encoding/json"
     "io"
     "net"
     "time"
@@ -36,11 +36,9 @@ func (t *Transport)ReadFullTimeout(p []byte,ms int)(string){
     return "OK"
 }
 
-func (t *Transport)TellUI(msgtype string , sml string){
-    item := &secsObj{ SML : sml , MsgType : msgtype, TimeStamp : time.Now().Format("15:04:05.000") }
-    uievt := &UIEvt{ EvtType : "Packet" , Source : "Transport" , Data : item }
-    jsonData, _ := json.Marshal(uievt)
-    t.oChan <- Evt{ cmd : "uievent" ,ctx : string(jsonData)  }
+func (t *Transport)TellUI(datatype string ,msg sm.HSMSMessage){
+    ctx := &UIEvtCtx{ Datatype : datatype , Data : msg}
+    t.oChan <- Evt{ cmd : "uievent" ,ctx : ctx  }
 }
 
 func (t *Transport)ReadMsg()(string,sm.HSMSMessage){
@@ -56,7 +54,8 @@ func (t *Transport)ReadMsg()(string,sm.HSMSMessage){
             info , _ := sm.Decode(append(msgLen,msg...))
             t.log.Printf("Get %s @transport\n",info.ToSml() )
             if(info != nil){
-                t.TellUI("Receive" , info.ToSml())
+                //t.TellUI("Receive" , info.ToSml())
+                t.TellUI("RecvHSMSMessage" , info)
             }
 
             return "READOK" , info
@@ -83,7 +82,7 @@ func (t *Transport)SendAct( msg sm.HSMSMessage)(string){
     }
     if(msg != nil){
         t.log.Printf("SendAct %s\n",msg.ToSml());
-        t.TellUI("Send", msg.ToSml())
+        t.TellUI("SendHSMSMessage", msg)
         ///////////
         /*
         if(msg.MsgType() == 0){

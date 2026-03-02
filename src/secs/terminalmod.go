@@ -1,7 +1,6 @@
 package secs
 
 import (
-    "encoding/json"
     "time"
     "secs/data"
     "secs/logger"
@@ -107,9 +106,8 @@ func (tm * TERMINALMODULE)sendRecognizeEvent(){
 }
 
 func (tm * TERMINALMODULE)TellUI(text string){
-    uievt := &UIEvt{ EvtType : "S10F3" , Source : "TERMINALMODULE" , Data : text }
-    jsonData, _ := json.Marshal(uievt)
-    tm.oChan <- Evt{ cmd : "uievent" ,ctx : string(jsonData)  }
+    ctx := &UIEvtCtx{ Datatype : "S10F3" , Data : text}
+    tm.oChan <- Evt{ cmd : "uievent" ,ctx : ctx  }
 }
 
 

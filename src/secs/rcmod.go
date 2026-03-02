@@ -1,7 +1,6 @@
 package secs
 
 import (
-    "encoding/json"
     //"time"
     "strconv"
     "secs/logger"
@@ -39,9 +38,8 @@ func (rcm * RCMODULE) PutEvt(e Evt) {
 }
 
 func (rcm * RCMODULE)TellUI(text string){
-    uievt := &UIEvt{ EvtType : "S2F41" , Source : "RCMODULE" , Data : text }
-    jsonData, _ := json.Marshal(uievt)
-    rcm.oChan <- Evt{ cmd : "uievent" ,ctx : string(jsonData)  }
+    ctx := &UIEvtCtx{ Datatype : "S2F41" , Data : text}
+    rcm.oChan <- Evt{ cmd : "uievent" ,ctx : ctx  }
 }
 
 func (rcm * RCMODULE)handleS2F41(msg *sm.DataMessage){

@@ -1,7 +1,6 @@
 package secs
 
 import (
-    "encoding/json"
     "time"
     "secs/logger"
     "errors"
@@ -40,9 +39,8 @@ func (hm *HOSTMODULE) PutEvt(e Evt) {
 }
 
 func (hm * HOSTMODULE)TellUI(text string){
-    uievt := &UIEvt{ EvtType : "S10F1" , Source : "TERMINALMODULE" , Data : text }
-    jsonData, _ := json.Marshal(uievt)
-    hm.oChan <- Evt{ cmd : "uievent" ,ctx : string(jsonData)  }
+    ctx := &UIEvtCtx{ Datatype : "S10F1" , Data : text }
+    hm.oChan <- Evt{ cmd : "uievent" ,ctx : ctx  }
 }
 
 

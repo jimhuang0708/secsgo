@@ -114,13 +114,13 @@ $(document).on("change", ".type-select", function () {
         area.append(`<input class="form-control value-numbers" placeholder="1 2 3">`);
     }
     else if (type === "A") {
-        area.append(`<input class="form-control value-ascii" placeholder="Some text">`);
+        area.append(`<input class="form-control value-ascii" placeholder="s o m e">`);
     }
     else if (type === "BOOLEAN") {
         area.append(`<input class="form-control value-bools" placeholder="true false">`);
     }
     else if (type === "B") {
-        area.append(`<input class="form-control value-bytes" placeholder="FF EE DD">`);
+        area.append(`<input class="form-control value-bytes" placeholder="0 128 255">`);
     }
     else if (type === "L") {
         box.find(".add-child").show();
@@ -150,18 +150,19 @@ function buildNode($node) {
         obj.values = $node.find(".value-numbers").val().trim().split(/\s+/).map(Number);
     }
     else if (type === "A") {
-        obj.value = $node.find(".value-ascii").val();
+        obj.values = [...$node.find(".value-ascii").val()]
     }
     else if (type === "BOOLEAN") {
-        obj.bools = $node.find(".value-bools").val().trim().split(/\s+/).map(v => v==="true");
+        obj.values = $node.find(".value-bools").val().trim().split(/\s+/).map(v => v==="true");
     }
     else if (type === "B") {
-        obj.bytes = $node.find(".value-bytes").val();
+        //obj.values = $node.find(".value-bytes").val();
+        obj.values = $node.find(".value-bytes").val().trim().split(/\s+/).map(Number);
     }
     else if (type === "L") {
-        obj.items = [];
+        obj.values = [];
         $node.find("> .children > .node-box").each(function () {
-            obj.items.push(buildNode($(this)));
+            obj.values.push(buildNode($(this)));
         });
     }
 
@@ -193,20 +194,20 @@ function loadNodeToUI(nodeData, container) {
     const area = node.find(".input-area");
 
     if (nodeData.type === "A") {
-        area.find(".value-ascii").val(nodeData.value || "");
+        area.find(".value-ascii").val(nodeData.values.join(""));
     }
     else if (["U1","U2","U4","U8","I1","I2","I4","I8","F4","F8"].includes(nodeData.type)) {
         area.find(".value-numbers").val((nodeData.values || []).join(" "));
     }
     else if (nodeData.type === "BOOLEAN") {
-        area.find(".value-bools").val((nodeData.bools || []).map(v=>v?"true":"false").join(" "));
+        area.find(".value-bools").val((nodeData.values || []).map(v=>v?"true":"false").join(" "));
     }
     else if (nodeData.type === "B") {
-        area.find(".value-bytes").val(nodeData.bytes || "");
+        area.find(".value-bytes").val((nodeData.values || []).join(" "));
     }
     else if (nodeData.type === "L") {
         let childContainer = node.find("> .children");
-        (nodeData.items || []).forEach(c => loadNodeToUI(c, childContainer));
+        (nodeData.values || []).forEach(c => loadNodeToUI(c, childContainer));
     }
 }
 

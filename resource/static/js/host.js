@@ -62,8 +62,13 @@ function sendHostEvent(type , payload) {
         data: payload,
         timestamp: new Date().toISOString()
     };
+    if(type == "sxfy"){
+        $("#jsonInput").val(payload)
+        $("#output").text(payload)
+        $("#loadBtn").click();
+    }
     if (ws && ws.readyState === WebSocket.OPEN) {
-        wsSend(JSON.stringify(message))
+        wsSend(JSON.stringify(message,null,4))
         console.log("Sent:", message);
     } else {
         console.warn("WebSocket not open, cannot send:", message);
@@ -131,14 +136,14 @@ function bindEvents() {
     document.getElementById("btnOnlineRequest").addEventListener("click", function () {
         dataitem = {}
         cmd = { "stream" : 1 , "function" : 17 , "dataitem" : dataitem }
-        sendHostEvent("sxfy",JSON.stringify(cmd))
+        sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
 
     });
 
     document.getElementById("btnOfflineRequest").addEventListener("click", function () {
         dataitem = {}
         cmd = { "stream" : 1 , "function" : 15 , "dataitem" : dataitem }
-        sendHostEvent("sxfy",JSON.stringify(cmd))
+        sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
     //
@@ -156,7 +161,7 @@ function bindEvents() {
             dataitem.values.push( { "type" : "U4" ,  "values" : [ parseInt(vidList[i],10) ]  })
         }
         cmd = { "stream" : 1 , "function" : 3 , "dataitem" : dataitem }
-        sendHostEvent("sxfy",JSON.stringify(cmd))
+        sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
     document.getElementById("s1f11").addEventListener("click", function () {
@@ -170,7 +175,7 @@ function bindEvents() {
         }
 
         cmd = { "stream" : 1 , "function" : 11 , "dataitem" : dataitem }
-        sendHostEvent("sxfy",JSON.stringify(cmd))
+        sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
 
@@ -185,7 +190,7 @@ function bindEvents() {
         }
 
         cmd = { "stream" : 2 , "function" : 13 , "dataitem" : dataitem }
-        sendHostEvent("sxfy",JSON.stringify(cmd))
+        sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
     document.getElementById("s2f15").addEventListener("click", function () {
@@ -200,7 +205,7 @@ function bindEvents() {
             dataitem.values.push( { "type" : "L", "values" :[ { "type" : "U4" , "values" : [   parseInt(pair[0],10) ] } , { "type" : "U4" , "values" : [   parseInt(pair[1],10) ] } ] } )
         }
         cmd = { "stream" : 2 , "function" : 15 , "dataitem" : dataitem }
-        sendHostEvent("sxfy",JSON.stringify(cmd))
+        sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
     document.getElementById("s2f29").addEventListener("click", function () {
@@ -214,7 +219,7 @@ function bindEvents() {
         }
 
         cmd = { "stream" : 2 , "function" : 29 , "dataitem" : dataitem }
-        sendHostEvent("sxfy",JSON.stringify(cmd))
+        sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
 
@@ -223,7 +228,7 @@ function bindEvents() {
         textcontent = document.getElementById("sendtextcontent").value
         dataitem = { "type": "L", "values": [  { "type": "B", "values": [0] }, { "type": "A", "values": [...textcontent] } ] }
         cmd = { "stream" : 10 , "function" : 3 , "dataitem" : dataitem }
-        sendHostEvent("sxfy",JSON.stringify(cmd))
+        sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
 
@@ -269,7 +274,7 @@ function bindEvents() {
             dataitem.values[1].values[0].values[1].values.push( { "type" : "U4" , "values" : [ parseInt(defrptvidlst[j],10) ] })
         }
         cmd = { "stream" : 2 , "function" : 33 , "dataitem" : dataitem }
-        sendHostEvent("sxfy",JSON.stringify(cmd))
+        sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
 
     });
     document.getElementById("s2f35").addEventListener("click", function () {
@@ -314,7 +319,7 @@ function bindEvents() {
             ]
         }
         cmd = { "stream" : 2 , "function" : 35 , "dataitem" : dataitem }
-        sendHostEvent("sxfy",JSON.stringify(cmd))
+        sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
 
@@ -350,7 +355,7 @@ function bindEvents() {
                      ]
         }
         cmd = { "stream" : 2 , "function" : 41 , "dataitem" : dataitem }
-        sendHostEvent("sxfy",JSON.stringify(cmd))
+        sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
     document.getElementById("s2f45").addEventListener("click", function () {
@@ -413,7 +418,7 @@ function bindEvents() {
                 ]
         }
         cmd = { "stream" : 2 , "function" : 45 , "dataitem" : dataitem }
-        sendHostEvent("sxfy",JSON.stringify(cmd))
+        sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
 
@@ -424,7 +429,7 @@ function bindEvents() {
                                            ]
                    }
         cmd = { "stream" : 2 , "function" : 47 , "dataitem" : dataitem }
-        sendHostEvent("sxfy",JSON.stringify(cmd))
+        sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
 
@@ -453,7 +458,7 @@ function bindEvents() {
          dataitem.values.push( jvidLst )
 
         cmd = { "stream" : 2 , "function" : 23 , "dataitem" : dataitem }
-        sendHostEvent("sxfy",JSON.stringify(cmd))
+        sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
     document.getElementById("readeq").addEventListener("click", function () {
         sendHostEvent("readeq" , "storage/equipment.ds")
@@ -481,3 +486,192 @@ window.addEventListener("load", function () {
     bindEvents();
 });
 
+/////////////////////
+const DATA_TYPES = [
+    "U1","U2","U4","U8",
+    "I1","I2","I4","I8",
+    "A","BOOLEAN","B",
+    "F4","F8",
+    "L"
+];
+
+/* -----------------------------
+   Node UI Builder
+----------------------------- */
+function createNode() {
+    return $(`
+        <div class="node-box">
+
+            <div class="node-row">
+
+                <select class="form-select type-select" style="width:150px;">
+                    <option value="">--Type--</option>
+                    ${DATA_TYPES.map(t=>`<option value="${t}">${t}</option>`).join("")}
+                </select>
+
+                <div class="input-area flex-grow-1"></div>
+
+                <button class="btn btn-secondary btn-sm add-child" style="display:none;">+</button>
+
+                <button class="btn btn-danger btn-sm remove-node">X</button>
+
+            </div>
+
+            <div class="children"></div>
+        </div>
+    `);
+}
+
+/* Init root */
+$("#rootContainer").html("").append(createNode());
+
+/* -----------------------------
+   Handle type change
+----------------------------- */
+$(document).on("change", ".type-select", function () {
+    const box = $(this).closest(".node-box");
+    const area = box.find(".input-area");
+    const children = box.find(".children");
+    const type = $(this).val();
+
+    area.empty();
+    children.empty();
+    box.find(".add-child").hide();
+
+    if (["U1","U2","U4","U8","I1","I2","I4","I8","F4","F8"].includes(type)) {
+        area.append(`<input class="form-control value-numbers" placeholder="1 2 3">`);
+    }
+    else if (type === "A") {
+        area.append(`<input class="form-control value-ascii" placeholder="some text">`);
+    }
+    else if (type === "BOOLEAN") {
+        area.append(`<input class="form-control value-bools" placeholder="true false">`);
+    }
+    else if (type === "B") {
+        area.append(`<input class="form-control value-bytes" placeholder="0 128 255">`);
+    }
+    else if (type === "L") {
+        box.find(".add-child").show();
+    }
+});
+
+/* Add Child */
+$(document).on("click", ".add-child", function () {
+    $(this).closest(".node-box").find("> .children").append(createNode());
+});
+
+/* Remove Node */
+$(document).on("click", ".remove-node", function () {
+    $(this).closest(".node-box").remove();
+});
+
+/* -----------------------------
+   Build JSON Recursively
+----------------------------- */
+function buildNode($node) {
+    const type = $node.find("> .node-row .type-select").val();
+    if (!type) return null;
+
+    let obj = { type };
+
+    if (["U1","U2","U4","U8","I1","I2","I4","I8","F4","F8"].includes(type)) {
+        obj.values = $node.find(".value-numbers").val().trim().split(/\s+/).map(Number);
+    }
+    else if (type === "A") {
+        obj.values = [...$node.find(".value-ascii").val()]
+    }
+    else if (type === "BOOLEAN") {
+        obj.values = $node.find(".value-bools").val().trim().split(/\s+/).map(v => v==="true");
+    }
+    else if (type === "B") {
+        //obj.values = $node.find(".value-bytes").val();
+        obj.values = $node.find(".value-bytes").val().trim().split(/\s+/).map(Number);
+    }
+    else if (type === "L") {
+        obj.values = [];
+        $node.find("> .children > .node-box").each(function () {
+            obj.values.push(buildNode($(this)));
+        });
+    }
+
+    return obj;
+}
+
+$("#generateBtn").click(function () {
+    const root = $("#rootContainer .node-box").first();
+    const dataItem = buildNode(root);
+    jsonStr = JSON.stringify({
+        stream: parseInt($("#streamInput").val()),
+        function: parseInt($("#functionInput").val()),
+        dataitem: dataItem
+    }, null, 4);
+    $("#output").text(jsonStr);
+    sendHostEvent("sxfy",jsonStr)
+
+});
+
+/* -----------------------------
+   JSON → UI Loader
+----------------------------- */
+function loadNodeToUI(nodeData, container) {
+    const node = createNode();
+    container.append(node);
+
+    // set type
+    const typeSelect = node.find("> .node-row .type-select");
+    typeSelect.val(nodeData.type).trigger("change");
+
+    const area = node.find(".input-area");
+
+    if (nodeData.type === "A") {
+        area.find(".value-ascii").val(nodeData.values.join(""));
+    }
+    else if (["U1","U2","U4","U8","I1","I2","I4","I8","F4","F8"].includes(nodeData.type)) {
+        area.find(".value-numbers").val((nodeData.values || []).join(" "));
+    }
+    else if (nodeData.type === "BOOLEAN") {
+        area.find(".value-bools").val((nodeData.values || []).map(v=>v?"true":"false").join(" "));
+    }
+    else if (nodeData.type === "B") {
+        area.find(".value-bytes").val((nodeData.values || []).join(" "));
+    }
+    else if (nodeData.type === "L") {
+        let childContainer = node.find("> .children");
+        (nodeData.values || []).forEach(c => loadNodeToUI(c, childContainer));
+    }
+}
+
+$("#loadBtn").click(function () {
+    try {
+        let json = JSON.parse($("#jsonInput").val().trim());
+
+        $("#streamInput").val(json.stream);
+        $("#functionInput").val(json.function);
+
+        $("#rootContainer").html("");
+
+        loadNodeToUI(json.dataitem, $("#rootContainer"));
+        //alert("JSON Loaded Successfully!");
+    }
+    catch (e) {
+        alert("Invalid JSON!");
+        console.error(e);
+    }
+});
+
+
+function initLoadJsonExample(){
+    dataitem = { "type": "L", "values": [] }
+    let vidList = document.getElementById("s1f3_param").value.split(",")
+    for(let i = 0 ; i < vidList.length ; i++){
+        if( vidList[i] == "" ){
+            break;
+        }
+        dataitem.values.push( { "type" : "U4" ,  "values" : [ parseInt(vidList[i],10) ]  })
+    }
+    cmd = { "stream" : 1 , "function" : 3 , "dataitem" : dataitem }
+    $("#jsonInput").val(JSON.stringify(cmd,null,4))
+    $("#loadBtn").click();
+}
+
+initLoadJsonExample()

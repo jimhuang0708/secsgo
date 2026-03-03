@@ -1,10 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <link rel=stylesheet type="text/css" href="static/css/host.css">
     <meta charset="UTF-8">
     <title>Host Control Panel</title>
 </head>
+
 <body>
     <h1>Host Control Panel</h1>
 
@@ -85,7 +89,7 @@
     <fieldset>
         <legend>Trace Data Collection</legend>
         <div>
-            <button type="button" id="s2f23" style="height:25px;width:200px">(S2F23)Trace Initialize Send</button>
+            <button type="button" id="s2f23" style="height:25px;width:300px">(S2F23)Trace Initialize Send</button>
             TRID&nbsp  <input type="number" id="s2f23_trid" style="height:25px;width:50px" value=1>
             DSPER&nbsp<input type="text" id="s2f23_dsper" style="height:25px;width:50px" value="000001"></input>
             TOTSMP&nbsp<input type="number" id="s2f23_totsmp" style="height:25px;width:50px" value=10 >
@@ -96,10 +100,10 @@
     <fieldset>
         <legend>Report define & link</legend>
         <div>
-            <button type="button" id="s2f33" style="height:25px;width:200px">(S2F33)Define Report
+            <button type="button" id="s2f33" style="height:25px;width:300px">(S2F33)Define Report
             </button><input type="text" id="defrptid" style="margin:10px" value="8888">
             </button><input type="text" id="defrptvidlst" style="margin:10px" value="1007,1008"> <br>
-            <button type="button" id="s2f35" style="height:25px;width:200px">(S2F35)Link Report To Event</button>
+            <button type="button" id="s2f35" style="height:25px;width:300px">(S2F35)Link Report To Event</button>
             </button><input type="text" id="linkevtid" style="margin:10px" value="300">
             </button><input type="text" id="linkrptid" style="margin:10px" value="8888"> <br>
         </div>
@@ -116,7 +120,28 @@
         <button type="button" id="writeeq">(STREAM13)Write</button>
     </fieldset>
 
-
+    <fieldset>
+         <legend>Free Build Secs</legend>
+        <div class="mb-3">
+            <label>Stream</label>
+            <input id="streamInput" type="number" class="form-control" value="1">
+        </div>
+        <div class="mb-3">
+           <label>Function</label>
+            <input id="functionInput" type="number" class="form-control" value="3">
+        </div>
+        <hr>
+        <h5>Data Item</h5>
+        <div id="rootContainer"></div>
+        <hr>
+        <div style="display:none">
+            <h5 class="mt-4">Load JSON → UI</h5>
+            <textarea id="jsonInput" class="form-control" rows="8" placeholder="Paste JSON here..."></textarea>
+            <button id="loadBtn" class="btn btn-success mt-2">Load JSON</button>
+        </div>
+        <pre id="output" class="bg-dark text-light p-3 mt-3" style="min-height:300px;"></pre>
+        <button id="generateBtn" class="btn btn-primary mt-3">Generate JSON & Send to Equipment</button>
+    </fieldset>
 
 
     <div id="status">WebSocket: <span id="wsState">Connecting…</span></div>

@@ -90,3 +90,8 @@
         padding-left: 15px;
         border-left: 1px solid #aaa;
     }
+
+    #waitbitInput {
+        transform: scale(1.5);   /* 1.2 ~ 2 都可 */
+        margin-left: 10px;
+    }

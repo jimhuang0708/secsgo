@@ -135,14 +135,14 @@ function bindEvents() {
     // 第二組：四個按鈕
     document.getElementById("btnOnlineRequest").addEventListener("click", function () {
         dataitem = {}
-        cmd = { "stream" : 1 , "function" : 17 , "dataitem" : dataitem }
+        cmd = { "stream" : 1 , "function" : 17 ,"waitbit" : true , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
 
     });
 
     document.getElementById("btnOfflineRequest").addEventListener("click", function () {
         dataitem = {}
-        cmd = { "stream" : 1 , "function" : 15 , "dataitem" : dataitem }
+        cmd = { "stream" : 1 , "function" : 15 ,"waitbit" : true , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
@@ -160,7 +160,7 @@ function bindEvents() {
             }
             dataitem.values.push( { "type" : "U4" ,  "values" : [ parseInt(vidList[i],10) ]  })
         }
-        cmd = { "stream" : 1 , "function" : 3 , "dataitem" : dataitem }
+        cmd = { "stream" : 1 , "function" : 3 ,"waitbit" : true , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
@@ -174,7 +174,7 @@ function bindEvents() {
             dataitem.values.push( { "type" : "U4" ,  "values" : [ parseInt(vidList[i],10) ]  })
         }
 
-        cmd = { "stream" : 1 , "function" : 11 , "dataitem" : dataitem }
+        cmd = { "stream" : 1 , "function" : 11 ,"waitbit" : true , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
@@ -189,7 +189,7 @@ function bindEvents() {
             dataitem.values.push( { "type" : "U4" ,  "values" : [ parseInt(vidList[i],10) ]  })
         }
 
-        cmd = { "stream" : 2 , "function" : 13 , "dataitem" : dataitem }
+        cmd = { "stream" : 2 , "function" : 13 ,"waitbit" : true , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
@@ -204,7 +204,7 @@ function bindEvents() {
             let pair = pairList[i].split("=")
             dataitem.values.push( { "type" : "L", "values" :[ { "type" : "U4" , "values" : [   parseInt(pair[0],10) ] } , { "type" : "U4" , "values" : [   parseInt(pair[1],10) ] } ] } )
         }
-        cmd = { "stream" : 2 , "function" : 15 , "dataitem" : dataitem }
+        cmd = { "stream" : 2 , "function" : 15 ,"waitbit" : true , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
@@ -218,7 +218,7 @@ function bindEvents() {
             dataitem.values.push( { "type" : "U4" ,  "values" : [ parseInt(vidList[i],10) ]  })
         }
 
-        cmd = { "stream" : 2 , "function" : 29 , "dataitem" : dataitem }
+        cmd = { "stream" : 2 , "function" : 29 ,"waitbit" : true , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
@@ -227,7 +227,7 @@ function bindEvents() {
     document.getElementById("s10f3").addEventListener("click", function () {
         textcontent = document.getElementById("sendtextcontent").value
         dataitem = { "type": "L", "values": [  { "type": "B", "values": [0] }, { "type": "A", "values": [...textcontent] } ] }
-        cmd = { "stream" : 10 , "function" : 3 , "dataitem" : dataitem }
+        cmd = { "stream" : 10 , "function" : 3 ,"waitbit" : true , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
@@ -273,7 +273,7 @@ function bindEvents() {
         for (let j = 0 ; j < defrptvidlst.length;j++){
             dataitem.values[1].values[0].values[1].values.push( { "type" : "U4" , "values" : [ parseInt(defrptvidlst[j],10) ] })
         }
-        cmd = { "stream" : 2 , "function" : 33 , "dataitem" : dataitem }
+        cmd = { "stream" : 2 , "function" : 33 ,"waitbit" : true , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
 
     });
@@ -318,7 +318,7 @@ function bindEvents() {
                 }
             ]
         }
-        cmd = { "stream" : 2 , "function" : 35 , "dataitem" : dataitem }
+        cmd = { "stream" : 2 , "function" : 35 ,"waitbit" : true , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
@@ -354,7 +354,7 @@ function bindEvents() {
                           }
                      ]
         }
-        cmd = { "stream" : 2 , "function" : 41 , "dataitem" : dataitem }
+        cmd = { "stream" : 2 , "function" : 41 ,"waitbit" : true , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
@@ -417,7 +417,7 @@ function bindEvents() {
                     }
                 ]
         }
-        cmd = { "stream" : 2 , "function" : 45 , "dataitem" : dataitem }
+        cmd = { "stream" : 2 , "function" : 45 ,"waitbit" : true , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
@@ -428,7 +428,7 @@ function bindEvents() {
                                                { "type" : "U4" , "values" : [ 1007 ]  },
                                            ]
                    }
-        cmd = { "stream" : 2 , "function" : 47 , "dataitem" : dataitem }
+        cmd = { "stream" : 2 , "function" : 47 ,"waitbit" : true , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
 
@@ -457,7 +457,7 @@ function bindEvents() {
         }
          dataitem.values.push( jvidLst )
 
-        cmd = { "stream" : 2 , "function" : 23 , "dataitem" : dataitem }
+        cmd = { "stream" : 2 , "function" : 23 ,"waitbit" : true , "dataitem" : dataitem }
         sendHostEvent("sxfy",JSON.stringify(cmd,null,4))
     });
     document.getElementById("readeq").addEventListener("click", function () {
@@ -603,6 +603,7 @@ $("#generateBtn").click(function () {
     jsonStr = JSON.stringify({
         stream: parseInt($("#streamInput").val()),
         function: parseInt($("#functionInput").val()),
+        waitbit : $('#waitbitInput').prop('checked'),
         dataitem: dataItem
     }, null, 4);
     $("#output").text(jsonStr);
@@ -647,7 +648,7 @@ $("#loadBtn").click(function () {
 
         $("#streamInput").val(json.stream);
         $("#functionInput").val(json.function);
-
+        $('#waitbitInput').prop('checked',json.waitbit);
         $("#rootContainer").html("");
 
         loadNodeToUI(json.dataitem, $("#rootContainer"));
@@ -669,7 +670,7 @@ function initLoadJsonExample(){
         }
         dataitem.values.push( { "type" : "U4" ,  "values" : [ parseInt(vidList[i],10) ]  })
     }
-    cmd = { "stream" : 1 , "function" : 3 , "dataitem" : dataitem }
+    cmd = { "stream" : 1 , "function" : 3 ,"waitbit" : true, "dataitem" : dataitem }
     $("#jsonInput").val(JSON.stringify(cmd,null,4))
     $("#loadBtn").click();
 }

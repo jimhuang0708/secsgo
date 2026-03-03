@@ -29,6 +29,7 @@ type UIEvt struct { //use for notify ui something happen
 type UICmd struct {
     Stream int `json:"stream"`
     Function int `json:"function"`
+    Waitbit bool `json:"waitbit"`
     DataItem sm.ElementWrapper `json:"dataitem"`
 }
 
@@ -95,8 +96,8 @@ func (hc *HostContext) GenericCB(err error,s *SendCtx,r * RecvCtx)(int){
 }
 
 
-func (hc *HostContext)sendSXFY(stream int , function int , node sm.ElementType) {
-    msg := sm.CreateDataMessage( stream, function , true , node , hc.deviceID , 0 , "ALL" )
+func (hc *HostContext)sendSXFY(stream int , function int ,waitBit bool , node sm.ElementType) {
+    msg := sm.CreateDataMessage( stream, function , waitBit , node , hc.deviceID , 0 , "ALL" )
     ctx := &SendCtx{ msg : msg , cb : hc.GenericCB , timeout : time.Now().Unix() + (T3/1000) }
     act := Evt{ cmd : "send" , ctx : ctx }
     hc.hsms_ss.iChan <- act
@@ -111,11 +112,12 @@ func (hc *HostContext)doUICommand(s string) {
     //
     stream := c.Stream
     function := c.Function
+    waitbit := c.Waitbit
     node := c.DataItem.Element;
     if(node == nil){
         node = sm.CreateEmptyElementType()
     }
-    hc.sendSXFY(stream,function,node)
+    hc.sendSXFY(stream,function,waitbit,node)
 }
 
 func (hc *HostContext)processUIEvt(ctx *UIEvtCtx){
